@@ -4,11 +4,12 @@ import { router } from "@/routes";
 import AuthProvider from "@/app/providers/AuthProvider";
 import { Toaster } from "react-hot-toast";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
+import InstallBanner from "@/components/ui/InstallBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 min
+      staleTime: 1000 * 60 * 5,
       retry: 1,
     },
   },
@@ -29,6 +30,7 @@ export default function App() {
               },
             }}
           />
+          <InstallBanner />
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
