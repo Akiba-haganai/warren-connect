@@ -1,8 +1,7 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, Link } from "react-router-dom";
 import Navbar from "@/components/navigation/Navbar";
 import BottomNav from "@/components/navigation/BottomNav";
 import InstallBanner from "@/components/ui/InstallBanner";
-import PushNotificationPrompt from "@/components/ui/PushNotificationPrompt";
 
 export default function MainLayout() {
   return (
@@ -10,10 +9,9 @@ export default function MainLayout() {
       className="flex flex-col h-[100dvh] overflow-hidden"
       style={{ background: "var(--color-bg)" }}
     >
-      {/* ===== TOP NAVBAR ===== */}
       <Navbar />
 
-      {/* ===== SCROLLABLE CONTENT AREA ===== */}
+      {/* SCROLLABLE CONTENT AREA */}
       <div
         className="flex-1 overflow-y-auto"
         style={{
@@ -23,13 +21,23 @@ export default function MainLayout() {
         }}
       >
         <Outlet />
+
+        {/* Footer – Terms & Privacy */}
+        <div
+          className="text-center text-xs py-6 px-4"
+          style={{ color: "var(--color-text-muted)" }}
+        >
+          <Link to="/terms" style={{ color: "inherit", textDecoration: "underline" }}>
+            Terms of Service
+          </Link>
+          {" · "}
+          <Link to="/privacy" style={{ color: "inherit", textDecoration: "underline" }}>
+            Privacy Policy
+          </Link>
+        </div>
       </div>
 
-      {/* ===== PROMPTS ===== */}
-      <PushNotificationPrompt />
       <InstallBanner />
-
-      {/* ===== BOTTOM NAVIGATION ===== */}
       <BottomNav />
     </div>
   );

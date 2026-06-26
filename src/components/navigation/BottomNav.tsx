@@ -39,7 +39,7 @@ export default function BottomNav() {
               ? location.pathname === "/"
               : location.pathname.startsWith(tab.path);
           const Icon = tab.icon;
-          const showBadge = tab.path === "/" && unreadCount > 0;
+          const showBadge = tab.path === "/" && unreadCount > 0; // badge on Home tab
 
           return (
             <Link
@@ -62,6 +62,7 @@ export default function BottomNav() {
                 <Icon
                   size={20}
                   strokeWidth={active ? 2.5 : 1.8}
+                  className={active ? "nav-bounce" : ""}
                   style={{
                     color: active ? "var(--color-primary)" : "var(--color-text-muted)",
                   }}

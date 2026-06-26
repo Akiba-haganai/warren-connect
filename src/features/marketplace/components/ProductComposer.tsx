@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { productService } from "@/services/products/productService";
 import { storageService } from "@/services/storage/storageService";
+import { shopService } from "@/services/shop/shopService";
 import { compressImage } from "@/utils/compressImage";
 
 interface Props {
@@ -18,6 +19,16 @@ export default function ProductComposer({ onClose, onCreated }: Props) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+  const [shops, setShops] = useState<any[]>([]);
+  const [selectedShopId, setSelectedShopId] = useState<string>("");
+
+  useEffect(() => {
+    if (!user) return;
+    // Fetch user's shops (in future a user could have multiple shops; for now we get the first one)
+    shopService.getMyShop(user.id).then((shop) => {
+      if (shop) setShops([shop]);
+    }).catch(() => {});
+  }, [user]);
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -38,7 +49,17 @@ export default function ProductComposer({ onClose, onCreated }: Props) {
         const compressed = await compressImage(imageFile);
         image_url = await storageService.uploadFile("product-images", compressed, user.id);
       }
-      await productService.createProduct(user.id, title.trim(), description.trim(), Number(price), image_url);
+      const newProduct = await productService.createProduct(
+        user.id,
+        title.trim(),
+        description.trim(),
+        Number(price),
+        image_url
+      );
+      // If a shop is selected, assign the product to that shop
+      if (selectedShopId && newProduct) {
+        await shopService.addProductToShop(newProduct.id, selectedShopId);
+      }
       onCreated();
       onClose();
     } finally {
@@ -120,6 +141,24 @@ export default function ProductComposer({ onClose, onCreated }: Props) {
               onChange={(e) => setPrice(e.target.value)}
             />
           </div>
+
+          {/* Shop selection */}
+          {shops.length > 0 && (
+            <div>
+              <label className="field-label" htmlFor="product-shop">Add to Shop (optional)</label>
+              <select
+                id="product-shop"
+                className="input-field"
+                value={selectedShopId}
+                onChange={(e) => setSelectedShopId(e.target.value)}
+              >
+                <option value="">No shop</option>
+                {shops.map((shop) => (
+                  <option key={shop.id} value={shop.id}>{shop.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="field-label">Photo (optional)</label>

@@ -14,12 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      accommodation_amenities: {
+        Row: {
+          accommodation_id: string
+          amenity: string
+          id: string
+        }
+        Insert: {
+          accommodation_id: string
+          amenity: string
+          id?: string
+        }
+        Update: {
+          accommodation_id?: string
+          amenity?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accommodation_amenities_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "accommodations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accommodation_images: {
+        Row: {
+          accommodation_id: string
+          created_at: string | null
+          id: string
+          image_url: string
+        }
+        Insert: {
+          accommodation_id: string
+          created_at?: string | null
+          id?: string
+          image_url: string
+        }
+        Update: {
+          accommodation_id?: string
+          created_at?: string | null
+          id?: string
+          image_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accommodation_images_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "accommodations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accommodations: {
         Row: {
           created_at: string | null
           description: string | null
           id: string
           image_url: string | null
+          is_hidden: boolean | null
           location: string
           monthly_rent: number
           owner_id: string
@@ -31,6 +87,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_hidden?: boolean | null
           location: string
           monthly_rent: number
           owner_id: string
@@ -42,6 +99,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_hidden?: boolean | null
           location?: string
           monthly_rent?: number
           owner_id?: string
@@ -49,6 +107,68 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      blocked_users: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string | null
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string | null
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_users_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_users_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "post_comments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversations: {
         Row: {
@@ -77,6 +197,7 @@ export type Database = {
           conversation_id: string
           created_at: string | null
           id: string
+          read_at: string | null
           sender_id: string
         }
         Insert: {
@@ -84,6 +205,7 @@ export type Database = {
           conversation_id: string
           created_at?: string | null
           id?: string
+          read_at?: string | null
           sender_id: string
         }
         Update: {
@@ -91,6 +213,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string | null
           id?: string
+          read_at?: string | null
           sender_id?: string
         }
         Relationships: [
@@ -109,6 +232,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_read: boolean | null
+          link: string | null
           title: string
           type: string
           user_id: string
@@ -118,6 +242,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_read?: boolean | null
+          link?: string | null
           title: string
           type: string
           user_id: string
@@ -127,6 +252,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_read?: boolean | null
+          link?: string | null
           title?: string
           type?: string
           user_id?: string
@@ -200,6 +326,7 @@ export type Database = {
           created_at: string | null
           id: string
           image_url: string | null
+          is_hidden: boolean | null
           user_id: string
         }
         Insert: {
@@ -207,6 +334,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           image_url?: string | null
+          is_hidden?: boolean | null
           user_id: string
         }
         Update: {
@@ -214,6 +342,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           image_url?: string | null
+          is_hidden?: boolean | null
           user_id?: string
         }
         Relationships: []
@@ -225,8 +354,10 @@ export type Database = {
           id: string
           image_url: string | null
           in_stock: boolean | null
+          is_hidden: boolean | null
           price: number
           seller_id: string
+          shop_id: string | null
           title: string
         }
         Insert: {
@@ -235,8 +366,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           in_stock?: boolean | null
+          is_hidden?: boolean | null
           price: number
           seller_id: string
+          shop_id?: string | null
           title: string
         }
         Update: {
@@ -245,15 +378,26 @@ export type Database = {
           id?: string
           image_url?: string | null
           in_stock?: boolean | null
+          is_hidden?: boolean | null
           price?: number
           seller_id?: string
+          shop_id?: string | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
           avatar_url: string | null
+          avg_rating: number | null
           bio: string | null
           course: string | null
           cover_photo_url: string | null
@@ -262,10 +406,13 @@ export type Database = {
           full_name: string | null
           id: string
           is_admin: boolean
+          is_banned: boolean | null
           is_landlord: boolean | null
           is_verified: boolean
+          last_seen: string | null
           referral_code: string | null
           referred_by: string | null
+          review_count: number | null
           university: string | null
           updated_at: string | null
           username: string | null
@@ -273,6 +420,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          avg_rating?: number | null
           bio?: string | null
           course?: string | null
           cover_photo_url?: string | null
@@ -281,10 +429,13 @@ export type Database = {
           full_name?: string | null
           id: string
           is_admin?: boolean
+          is_banned?: boolean | null
           is_landlord?: boolean | null
           is_verified?: boolean
+          last_seen?: string | null
           referral_code?: string | null
           referred_by?: string | null
+          review_count?: number | null
           university?: string | null
           updated_at?: string | null
           username?: string | null
@@ -292,6 +443,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          avg_rating?: number | null
           bio?: string | null
           course?: string | null
           cover_photo_url?: string | null
@@ -300,10 +452,13 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_admin?: boolean
+          is_banned?: boolean | null
           is_landlord?: boolean | null
           is_verified?: boolean
+          last_seen?: string | null
           referral_code?: string | null
           referred_by?: string | null
+          review_count?: number | null
           university?: string | null
           updated_at?: string | null
           username?: string | null
@@ -338,6 +493,63 @@ export type Database = {
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          content_id: string
+          content_type: string
+          created_at: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          status: string | null
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          created_at?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+          status?: string | null
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          created_at?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          id: string
+          rating: number
+          reviewed_user_id: string
+          reviewer_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rating: number
+          reviewed_user_id: string
+          reviewer_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rating?: number
+          reviewed_user_id?: string
+          reviewer_id?: string
+        }
+        Relationships: []
+      }
       saved_items: {
         Row: {
           created_at: string | null
@@ -361,6 +573,77 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      shop_collaborators: {
+        Row: {
+          id: string
+          role: string | null
+          shop_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: string | null
+          shop_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: string | null
+          shop_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_collaborators_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_collaborators_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shops: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shops_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       verification_requests: {
         Row: {
@@ -406,6 +689,33 @@ export type Database = {
       approve_verification: {
         Args: { p_request_id: string; p_reviewer_id: string; p_user_id: string }
         Returns: undefined
+      }
+      get_hot_deals: {
+        Args: { limit_count?: number }
+        Returns: {
+          product_id: string
+          save_count: number
+          title: string
+        }[]
+      }
+      get_trending_posts: {
+        Args: { limit_count?: number }
+        Returns: {
+          content: string
+          likes_count: number
+          post_id: string
+        }[]
+      }
+      search_all: {
+        Args: { search_term: string }
+        Returns: {
+          id: string
+          image_url: string
+          link: string
+          subtitle: string
+          title: string
+          type: string
+        }[]
       }
     }
     Enums: {

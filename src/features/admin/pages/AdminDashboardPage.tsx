@@ -3,21 +3,43 @@ import { adminService } from "@/services/admin/adminService";
 import { verificationService } from "@/services/verification/verificationService";
 import { useAuthStore } from "@/store/auth/authStore";
 import type { Tables } from "@/types/database/database.types";
+import {
+  ShieldAlert,
+  UserX,
+  EyeOff,
+  CheckCircle,
+  Loader2,
+} from "lucide-react";
 
 type Profile = Tables<"profiles">;
 type VerificationRequest = Tables<"verification_requests">;
+type Report = Tables<"reports"> & {
+  reporter?: { full_name: string | null; avatar_url: string | null } | null;
+};
 
 export default function AdminDashboardPage() {
   const user = useAuthStore((s) => s.user);
   const [users, setUsers] = useState<Profile[]>([]);
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
-  const [tab, setTab] = useState<"users" | "verifications">("verifications");
+  const [reports, setReports] = useState<Report[]>([]);
+  const [tab, setTab] = useState<"reports" | "verifications" | "users">("reports");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    adminService.getUsers().then(setUsers).catch(console.error);
-    verificationService.getAllRequests().then(setRequests).catch(console.error);
+    Promise.all([
+      adminService.getUsers(),
+      verificationService.getAllRequests(),
+      adminService.getReports(),
+    ])
+      .then(([u, r, rep]) => {
+        setUsers(u);
+        setRequests(r);
+        setReports(rep);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
+  // Verification handlers
   const handleApprove = async (request: VerificationRequest) => {
     if (!user) return;
     await verificationService.approveRequest(request.id, user.id, request.user_id);
@@ -41,40 +63,129 @@ export default function AdminDashboardPage() {
     );
   };
 
+  // Report handlers
+  const handleReportAction = async (reportId: string, action: "reviewed" | "resolved") => {
+    await adminService.updateReportStatus(reportId, action);
+    setReports((prev) =>
+      prev.map((r) => (r.id === reportId ? { ...r, status: action } : r))
+    );
+  };
+
+  const handleHideContent = async (type: string, id: string) => {
+    if (type === "post") await adminService.hidePost(id, true);
+    else if (type === "product") await adminService.hideProduct(id, true);
+    else if (type === "accommodation") await adminService.hideAccommodation(id, true);
+    alert(`${type} hidden.`);
+  };
+
+  // User ban
+  const handleBanUser = async (userId: string, currentlyBanned: boolean) => {
+    await adminService.toggleBanUser(userId, !currentlyBanned);
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, is_banned: !currentlyBanned } : u))
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="animate-spin" style={{ color: "var(--color-text-muted)" }} />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-xl font-bold">Admin Dashboard</h1>
+      <h1 className="text-xl font-bold" style={{ color: "var(--color-text)" }}>
+        Admin Dashboard
+      </h1>
 
       {/* Tabs */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setTab("verifications")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-            tab === "verifications" ? "bg-black text-white" : "bg-gray-200"
-          }`}
-        >
-          Verifications ({requests.length})
-        </button>
-        <button
-          onClick={() => setTab("users")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-            tab === "users" ? "bg-black text-white" : "bg-gray-200"
-          }`}
-        >
-          Users ({users.length})
-        </button>
+      <div className="flex gap-2 flex-wrap">
+        {(["reports", "verifications", "users"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${
+              tab === t ? "bg-primary text-white" : "bg-gray-200 dark:bg-gray-700"
+            }`}
+            style={
+              tab === t
+                ? { background: "var(--color-primary)", color: "white" }
+                : { background: "var(--color-border)", color: "var(--color-text)" }
+            }
+          >
+            {t === "reports" && `Reports (${reports.length})`}
+            {t === "verifications" && `Verifications (${requests.length})`}
+            {t === "users" && `Users (${users.length})`}
+          </button>
+        ))}
       </div>
+
+      {/* Reports */}
+      {tab === "reports" && (
+        <div className="space-y-3">
+          {reports.length === 0 && (
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+              No reports yet.
+            </p>
+          )}
+          {reports.map((report) => (
+            <div key={report.id} className="card p-4 space-y-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                    {report.reporter?.full_name || "Unknown"} reported a {report.content_type}
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                    {report.reason}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+                    Status: {report.status || "pending"}
+                  </p>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => handleReportAction(report.id, "reviewed")}
+                    className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800"
+                  >
+                    <ShieldAlert size={12} /> Review
+                  </button>
+                  <button
+                    onClick={() => handleReportAction(report.id, "resolved")}
+                    className="text-xs px-2 py-1 rounded bg-green-100 text-green-800"
+                  >
+                    <CheckCircle size={12} /> Resolve
+                  </button>
+                  {report.content_type !== "user" && (
+                    <button
+                      onClick={() => handleHideContent(report.content_type, report.content_id)}
+                      className="text-xs px-2 py-1 rounded bg-red-100 text-red-800"
+                    >
+                      <EyeOff size={12} /> Hide {report.content_type}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Verification Requests */}
       {tab === "verifications" && (
         <div className="space-y-3">
           {requests.length === 0 && (
-            <p className="text-sm text-gray-500">No verification requests yet.</p>
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+              No verification requests yet.
+            </p>
           )}
           {requests.map((req) => (
-            <div key={req.id} className="border p-4 rounded bg-white space-y-2">
+            <div key={req.id} className="card p-4 space-y-2">
               <div className="flex justify-between">
-                <p className="font-semibold">{req.full_name}</p>
+                <p className="font-semibold" style={{ color: "var(--color-text)" }}>
+                  {req.full_name}
+                </p>
                 <span
                   className={`text-xs px-2 py-1 rounded-full ${
                     req.status === "pending"
@@ -97,9 +208,13 @@ export default function AdminDashboardPage() {
                   View ID Document
                 </a>
               )}
-              {req.reason && <p className="text-sm text-gray-500">{req.reason}</p>}
+              {req.reason && (
+                <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  {req.reason}
+                </p>
+              )}
               {req.status === "pending" && (
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2">
                   <button
                     onClick={() => handleApprove(req)}
                     className="px-3 py-1 bg-green-500 text-white rounded text-sm"
@@ -119,16 +234,30 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Users List */}
+      {/* Users */}
       {tab === "users" && (
         <div className="space-y-3">
           {users.map((u) => (
-            <div key={u.id} className="border p-3 rounded bg-white">
-              <p className="font-semibold">{u.full_name}</p>
-              <p className="text-sm">{u.email}</p>
-              <p className="text-xs mt-1">
-                Admin: {u.is_admin ? "Yes" : "No"} · Verified: {u.is_verified ? "Yes" : "No"}
-              </p>
+            <div key={u.id} className="card p-4 flex justify-between items-center">
+              <div>
+                <p className="font-semibold" style={{ color: "var(--color-text)" }}>
+                  {u.full_name || u.username || u.email}
+                </p>
+                <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  {u.email}
+                </p>
+                <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+                  Admin: {u.is_admin ? "Yes" : "No"} · Verified: {u.is_verified ? "Yes" : "No"} · Banned: {u.is_banned ? "Yes" : "No"}
+                </p>
+              </div>
+              <button
+                onClick={() => handleBanUser(u.id, u.is_banned ?? false)}
+                className={`text-xs px-3 py-1 rounded ${
+                  u.is_banned ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                }`}
+              >
+                <UserX size={12} /> {u.is_banned ? "Unban" : "Ban"}
+              </button>
             </div>
           ))}
         </div>

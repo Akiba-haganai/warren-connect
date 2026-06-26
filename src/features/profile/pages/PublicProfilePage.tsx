@@ -4,8 +4,13 @@ import { useAuthStore } from "@/store/auth/authStore";
 import { profileService } from "@/services/profiles/profileService";
 import { postService, type FeedPost } from "@/services/posts/postService";
 import { accommodationService } from "@/services/accommodation/accommodationService";
+import { reportService } from "@/services/reports/reportService";
+import { blockService } from "@/services/safety/blockService";
 import type { Tables } from "@/types/database/database.types";
-import { ArrowLeft, BadgeCheck, GraduationCap, BookOpen, MessageCircle, Loader2 } from "lucide-react";
+import {
+  ArrowLeft, BadgeCheck, GraduationCap, BookOpen, MessageCircle,
+  Loader2, Flag, Star, ShieldOff, Shield
+} from "lucide-react";
 
 type Profile = Tables<"profiles">;
 type Accommodation = Tables<"accommodations">;
@@ -18,6 +23,8 @@ export default function PublicProfilePage() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [listings, setListings] = useState<Accommodation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockToggling, setBlockToggling] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -29,13 +36,19 @@ export default function PublicProfilePage() {
         setPosts(allPosts.filter((p) => p.user_id === id));
         const acc = await accommodationService.getMyAccommodations(id);
         setListings(acc);
+
+        // Check block status
+        if (currentUser) {
+          const blocked = await blockService.isBlocked(currentUser.id, id);
+          setIsBlocked(blocked);
+        }
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [id, currentUser]);
 
   const handleMessage = async () => {
     if (!currentUser || !profile) return;
@@ -53,6 +66,41 @@ export default function PublicProfilePage() {
     }
     navigate(`/messages?conversation=${convId}`);
   };
+
+  const handleReport = async () => {
+    if (!currentUser) return;
+    const reason = prompt("Why are you reporting this user?");
+    if (reason) {
+      try {
+        await reportService.submitReport(currentUser.id, "user", profile!.id, reason);
+        alert("Report submitted. Thank you.");
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleBlockToggle = async () => {
+    if (!currentUser || !profile) return;
+    setBlockToggling(true);
+    try {
+      if (isBlocked) {
+        await blockService.unblockUser(currentUser.id, profile.id);
+        setIsBlocked(false);
+      } else {
+        if (confirm("Block this user? They won't be able to message you or see your posts.")) {
+          await blockService.blockUser(currentUser.id, profile.id);
+          setIsBlocked(true);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBlockToggling(false);
+    }
+  };
+
+  const isOnline = profile?.last_seen && (Date.now() - new Date(profile.last_seen).getTime()) < 5 * 60 * 1000;
 
   if (loading) {
     return (
@@ -86,12 +134,26 @@ export default function PublicProfilePage() {
         <h1 className="text-sm font-bold" style={{ color: "var(--color-primary)" }}>
           {profile.full_name ?? "Profile"}
         </h1>
-        {!isOwnProfile && (
-          <button onClick={handleMessage} className="p-1" aria-label="Send message">
-            <MessageCircle size={20} style={{ color: "var(--color-primary)" }} />
-          </button>
-        )}
-        {isOwnProfile && <div className="w-8" />}
+        <div className="flex items-center gap-2">
+          {!isOwnProfile && (
+            <>
+              <button onClick={handleBlockToggle} disabled={blockToggling} className="p-1" aria-label={isBlocked ? "Unblock user" : "Block user"}>
+                {isBlocked ? (
+                  <ShieldOff size={18} style={{ color: "var(--color-danger)" }} />
+                ) : (
+                  <Shield size={18} style={{ color: "var(--color-text-muted)" }} />
+                )}
+              </button>
+              <button onClick={handleReport} className="p-1" aria-label="Report user">
+                <Flag size={18} style={{ color: "var(--color-text-muted)" }} />
+              </button>
+              <button onClick={handleMessage} className="p-1" aria-label="Send message">
+                <MessageCircle size={20} style={{ color: "var(--color-primary)" }} />
+              </button>
+            </>
+          )}
+          {isOwnProfile && <div className="w-8" />}
+        </div>
       </div>
 
       {/* Profile info */}
@@ -117,11 +179,25 @@ export default function PublicProfilePage() {
             <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
               @{profile.username ?? "no-username"}
             </p>
+            {isOnline && (
+              <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1">
+                <span className="w-2 h-2 rounded-full bg-green-500" /> Online now
+              </span>
+            )}
           </div>
         </div>
 
         {profile.bio && (
           <p className="text-sm mt-3" style={{ color: "var(--color-text)" }}>{profile.bio}</p>
+        )}
+
+        {!isOwnProfile && (
+          <button
+            onClick={() => navigate(`/review/${profile.id}`)}
+            className="btn-primary mt-4 flex items-center gap-2"
+          >
+            <Star size={14} /> Rate & Review
+          </button>
         )}
 
         <div className="flex flex-col gap-1 mt-3">

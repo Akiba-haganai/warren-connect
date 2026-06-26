@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Send, Loader2 } from "lucide-react";
+import { Heart, MessageCircle, Send, Loader2, Flag } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { likeService } from "@/services/posts/likeService";
 import { commentService } from "@/services/posts/commentService";
 import { useAuthStore } from "@/store/auth/authStore";
 import { triggerNotification } from "@/services/notifications/triggerService";
+import { reportService } from "@/services/reports/reportService";
 import type { FeedPost } from "@/services/posts/postService";
 import type { Tables } from "@/types/database/database.types";
 import CommentItem from "@/features/feed/components/CommentItem";
@@ -22,6 +23,7 @@ export default function PostCard({ post }: { post: FeedPost }) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
 
+  // Fetch comments with profiles
   const { data: comments, isLoading: commentsLoading } = useQuery({
     queryKey: ["comments", post.id],
     queryFn: async () => {
@@ -45,6 +47,7 @@ export default function PostCard({ post }: { post: FeedPost }) {
     enabled: showComments,
   });
 
+  // Like mutation
   const likeMutation = useMutation({
     mutationFn: async () => {
       if (!user) return;
@@ -63,12 +66,13 @@ export default function PostCard({ post }: { post: FeedPost }) {
     },
   });
 
+  // Add comment mutation – now captures the comment text reliably
   const commentMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!user) throw new Error("Not logged in");
       await commentService.createComment(post.id, user.id, content);
     },
-    onSuccess: () => {
+    onSuccess: (_data, content) => {
       queryClient.invalidateQueries({ queryKey: ["comments", post.id] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
       setNewComment("");
@@ -77,7 +81,7 @@ export default function PostCard({ post }: { post: FeedPost }) {
           post.user_id,
           post.id,
           profile?.full_name ?? "Someone",
-          newComment.trim()
+          content               // ← uses the captured value, not stale state
         );
       }
     },
@@ -89,6 +93,7 @@ export default function PostCard({ post }: { post: FeedPost }) {
     commentMutation.mutate(newComment.trim());
   };
 
+  // Delete comment
   const handleDeleteComment = async (commentId: string) => {
     if (!user) return;
     try {
@@ -97,6 +102,20 @@ export default function PostCard({ post }: { post: FeedPost }) {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     } catch (err) {
       console.error("Delete comment failed:", err);
+    }
+  };
+
+  // Report post
+  const handleReport = async () => {
+    if (!user) return;
+    const reason = prompt("Why are you reporting this post?");
+    if (reason) {
+      try {
+        await reportService.submitReport(user.id, "post", post.id, reason);
+        alert("Report submitted. Thank you.");
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -158,6 +177,9 @@ export default function PostCard({ post }: { post: FeedPost }) {
           aria-label="Toggle comments"
         >
           <MessageCircle size={16} /> {post.comments_count}
+        </button>
+        <button onClick={handleReport} className="flex items-center gap-1" aria-label="Report post">
+          <Flag size={14} /> Report
         </button>
       </div>
 

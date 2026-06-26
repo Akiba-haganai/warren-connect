@@ -4,7 +4,6 @@ import { router } from "@/routes";
 import AuthProvider from "@/app/providers/AuthProvider";
 import { Toaster } from "react-hot-toast";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
-import InstallBanner from "@/components/ui/InstallBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,7 +29,6 @@ export default function App() {
               },
             }}
           />
-          <InstallBanner />
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

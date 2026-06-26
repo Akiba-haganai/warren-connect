@@ -24,7 +24,9 @@ export default function AccommodationPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const locations = useMemo(
     () => [...new Set(listings.map((l) => l.location))].sort(),
@@ -40,6 +42,8 @@ export default function AccommodationPage() {
       return matchSearch && matchLocation;
     });
   }, [listings, search, locationFilter]);
+
+  const noListings = !loading && filtered.length === 0;
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
@@ -84,7 +88,8 @@ export default function AccommodationPage() {
               </div>
             ))}
           </>
-        ) : filtered.length === 0 ? (
+        ) : noListings ? (
+          /* Better empty state */
           <div
             className="rounded-2xl py-16 text-center"
             style={{
@@ -92,10 +97,26 @@ export default function AccommodationPage() {
               border: "1px dashed var(--color-border)",
             }}
           >
-            <Building2 size={32} style={{ color: "var(--color-text-muted)", margin: "0 auto 8px" }} />
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              No listings found
+            <Building2
+              size={40}
+              style={{ color: "var(--color-text-muted)", margin: "0 auto 12px" }}
+            />
+            <h3 className="text-lg font-bold mb-1" style={{ color: "var(--color-text)" }}>
+              {search || locationFilter ? "No listings match your criteria" : "No listings yet"}
+            </h3>
+            <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)" }}>
+              {search || locationFilter
+                ? "Try adjusting your filters."
+                : "Add the first accommodation!"}
             </p>
+            {!search && !locationFilter && (
+              <button
+                onClick={() => setShowComposer(true)}
+                className="btn-primary w-auto px-6 mx-auto inline-flex items-center gap-2"
+              >
+                <Plus size={16} /> Add your first listing
+              </button>
+            )}
           </div>
         ) : (
           filtered.map((listing) => (

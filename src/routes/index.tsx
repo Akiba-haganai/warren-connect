@@ -31,9 +31,15 @@ const NotificationsPage = lazy(() => import("@/features/notifications/pages/Noti
 
 const VerificationRequestPage = lazy(() => import("@/features/verification/pages/VerificationRequestPage"));
 
-const SavedItemsPage = lazy(() => import("@/features/saved/SavedItemsPage")); // new
+const SavedItemsPage = lazy(() => import("@/features/saved/SavedItemsPage"));
+
+const ShopPage = lazy(() => import("@/features/marketplace/pages/ShopPage"));
 
 const AdminDashboardPage = lazy(() => import("@/features/admin/pages/AdminDashboardPage"));
+
+// Legal pages (unprotected)
+const TermsPage = lazy(() => import("@/features/legal/TermsPage"));
+const PrivacyPage = lazy(() => import("@/features/legal/PrivacyPage"));
 
 // ---------- FALLBACK ----------
 const PageLoader = () => (
@@ -87,7 +93,26 @@ export const router = createBrowserRouter([
       { path: "/notifications", element: withBoundary(NotificationsPage) },
       { path: "/verification", element: withBoundary(VerificationRequestPage) },
       { path: "/saved", element: withBoundary(SavedItemsPage) },
+      { path: "/shop/:id", element: withBoundary(ShopPage) },
     ],
+  },
+
+  // PUBLIC LEGAL ROUTES (no guards)
+  {
+    path: "/terms",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <TermsPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/privacy",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <PrivacyPage />
+      </Suspense>
+    ),
   },
 
   // ADMIN ROUTES

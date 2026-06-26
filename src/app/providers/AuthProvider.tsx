@@ -3,9 +3,6 @@ import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth/authStore";
 import { profileService } from "@/services/profiles/profileService";
 
-
-
-
 export default function AuthProvider({
   children,
 }: {
@@ -13,11 +10,10 @@ export default function AuthProvider({
 }) {
   const initialize = useAuthStore((state) => state.initialize);
   const setState = useAuthStore.setState;
-  
+
   useEffect(() => {
-    // Make sure your authStore.ts initialize() also has a try/catch!
     initialize();
-    
+
     const { data } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (!session?.user) {
@@ -31,31 +27,38 @@ export default function AuthProvider({
         }
 
         try {
-          // Attempt to fetch the profile
           const profile = await profileService.getProfile(session.user.id);
-
           setState({
             user: session.user,
             session,
             profile,
             loading: false,
           });
+
+          // Update last_seen immediately
+          await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", session.user.id);
         } catch (error) {
           console.error("Error fetching profile during auth state change:", error);
-          
-          // Failsafe: Ensure loading is set to false even if the profile fetch fails!
-          // We still set the user and session so they aren't completely locked out.
           setState({
             user: session.user,
             session,
-            profile: null, 
-            loading: false, 
+            profile: null,
+            loading: false,
           });
         }
       }
     );
 
+    // Periodic last_seen update (every 60 seconds)
+    const interval = setInterval(async () => {
+      const user = useAuthStore.getState().user;
+      if (user) {
+        await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", user.id);
+      }
+    }, 60000);
+
     return () => {
+      clearInterval(interval);
       data.subscription.unsubscribe();
     };
   }, [initialize, setState]);

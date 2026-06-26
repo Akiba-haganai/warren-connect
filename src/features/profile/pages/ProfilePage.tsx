@@ -7,6 +7,8 @@ import ProfileInfo from "@/features/profile/components/ProfileInfo";
 import MyListings from "@/features/profile/components/MyListings";
 import ReferralCodeCard from "@/features/profile/components/ReferralCodeCard";
 import VerificationBanner from "@/features/profile/components/VerificationBanner";
+import ProfileCompletionMeter from "@/features/profile/components/ProfileCompletionMeter";
+
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
@@ -47,6 +49,8 @@ export default function ProfilePage() {
       <div className="mt-2 px-4">
         <ProfileBio />
       </div>
+
+      <ProfileCompletionMeter />
 
       {/* Verification prompt */}
       <VerificationBanner />

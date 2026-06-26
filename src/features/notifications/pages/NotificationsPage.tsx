@@ -3,13 +3,13 @@ import { notificationService } from "@/services/notifications/notificationServic
 import { useAuthStore } from "@/store/auth/authStore";
 import { useNotificationSubscription } from "@/hooks/useNotificationSubscription";
 import NotificationItem from "@/features/notifications/components/NotificationItem";
+import type { Tables } from "@/types/database/database.types";
 import { CheckCheck, Loader2 } from "lucide-react";
 
 export default function NotificationsPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
 
-  // Real‑time subscription
   useNotificationSubscription();
 
   const { data: notifications, isLoading } = useQuery({
@@ -18,9 +18,32 @@ export default function NotificationsPage() {
     enabled: !!user,
   });
 
+  // ✅ Optimistically mark all as read
   const markAllMutation = useMutation({
     mutationFn: () => notificationService.markAllAsRead(user!.id),
-    onSuccess: () => {
+    onMutate: () => {
+      // Immediately update the cache to reflect all as read
+      queryClient.setQueryData<Tables<"notifications">[]>(["notifications"], (old) =>
+        old ? old.map((n) => ({ ...n, is_read: true })) : []
+      );
+    },
+    onSettled: () => {
+      // Refetch from server to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  // ✅ Optimistically mark one as read
+  const markOneMutation = useMutation({
+    mutationFn: (id: string) => notificationService.markAsRead(id),
+    onMutate: (id) => {
+      queryClient.setQueryData<Tables<"notifications">[]>(["notifications"], (old) =>
+        old
+          ? old.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+          : []
+      );
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
@@ -33,7 +56,7 @@ export default function NotificationsPage() {
       <div
         className="sticky top-0 z-10 px-4 py-3 flex items-center justify-between"
         style={{
-          background: "rgba(250,250,248,0.92)",
+          background: "var(--color-surface)",
           backdropFilter: "blur(12px)",
           borderBottom: "1px solid var(--color-border)",
         }}
@@ -59,7 +82,13 @@ export default function NotificationsPage() {
             <Loader2 className="animate-spin" style={{ color: "var(--color-text-muted)" }} />
           </div>
         ) : !notifications || notifications.length === 0 ? (
-          <div className="rounded-2xl py-16 text-center" style={{ background: "var(--color-surface)", border: "1px dashed var(--color-border)" }}>
+          <div
+            className="rounded-2xl py-16 text-center"
+            style={{
+              background: "var(--color-surface)",
+              border: "1px dashed var(--color-border)",
+            }}
+          >
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
               No notifications yet
             </p>
@@ -67,7 +96,13 @@ export default function NotificationsPage() {
         ) : (
           <div className="flex flex-col gap-2">
             {notifications.map((n) => (
-              <NotificationItem key={n.id} notification={n} />
+              <NotificationItem
+                key={n.id}
+                notification={n}
+                onMarkRead={() => {
+                  if (!n.is_read) markOneMutation.mutate(n.id);
+                }}
+              />
             ))}
           </div>
         )}

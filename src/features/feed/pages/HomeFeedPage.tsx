@@ -3,16 +3,19 @@ import { Link } from "react-router-dom";
 import { useInView } from "react-intersection-observer";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { postService } from "@/services/posts/postService";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, MessageCircle } from "lucide-react";
 import PostCard from "@/features/feed/components/PostCard";
 import PostComposer from "@/features/feed/components/PostComposer";
+import TrendingRow from "@/features/feed/components/TrendingRow";
 import { useRecentlyViewed } from "@/hooks/useRecentlyviewed";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 export default function HomeFeedPage() {
   const queryClient = useQueryClient();
   const [showComposer, setShowComposer] = useState(false);
   const { recentItems } = useRecentlyViewed();
 
+  // ----- Normal feed with pagination -----
   const fetchPosts = async ({ pageParam = 0 }) => {
     const all = await postService.getFeed();
     const pageSize = 10;
@@ -25,12 +28,13 @@ export default function HomeFeedPage() {
     };
   };
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useInfiniteQuery({
-    queryKey: ["feed"],
-    queryFn: fetchPosts,
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextPage,
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
+    useInfiniteQuery({
+      queryKey: ["feed"],
+      queryFn: fetchPosts,
+      initialPageParam: 0,
+      getNextPageParam: (lastPage) => lastPage.nextPage,
+    });
 
   const { ref: loadMoreRef, inView } = useInView();
   if (inView && hasNextPage && !isFetchingNextPage) {
@@ -39,10 +43,24 @@ export default function HomeFeedPage() {
 
   const handlePostCreated = () => {
     queryClient.invalidateQueries({ queryKey: ["feed"] });
+    queryClient.invalidateQueries({ queryKey: ["trending"] });
   };
 
+  // Pull‑to‑refresh
+  const { containerRef } = usePullToRefresh({
+    onRefresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["feed"] });
+      await queryClient.invalidateQueries({ queryKey: ["trending"] });
+    },
+  });
+
+  const noPostsYet = status !== "pending" && data?.pages.every((p) => p.posts.length === 0);
+
   return (
-    <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
+    <div
+      ref={containerRef}
+      style={{ background: "var(--color-bg)", minHeight: "100%", overflowY: "auto" }}
+    >
       {/* Sticky header */}
       <div
         className="sticky top-0 z-10 px-4 py-3 flex items-center justify-between"
@@ -55,6 +73,9 @@ export default function HomeFeedPage() {
           Feed
         </h1>
       </div>
+
+      {/* Trending Section */}
+      <TrendingRow />
 
       {/* Recently Viewed */}
       {recentItems.length > 0 && (
@@ -70,11 +91,7 @@ export default function HomeFeedPage() {
                 aria-label={`View ${item.title}`}
               >
                 {item.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt=""
-                    className="w-16 h-16 rounded-lg object-cover mx-auto"
-                  />
+                  <img src={item.imageUrl} alt="" className="w-16 h-16 rounded-lg object-cover mx-auto" />
                 ) : (
                   <div
                     className="w-16 h-16 rounded-lg mx-auto"
@@ -92,26 +109,55 @@ export default function HomeFeedPage() {
         </div>
       )}
 
+      {/* Empty state */}
+      {noPostsYet && (
+        <div className="px-4 pt-8">
+          <div
+            className="rounded-2xl py-16 text-center"
+            style={{
+              background: "var(--color-surface)",
+              border: "1px dashed var(--color-border)",
+            }}
+          >
+            <MessageCircle size={40} style={{ color: "var(--color-text-muted)", margin: "0 auto 12px" }} />
+            <h3 className="text-lg font-bold mb-1" style={{ color: "var(--color-text)" }}>
+              Welcome to the feed!
+            </h3>
+            <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)" }}>
+              Share your first post with the community.
+            </p>
+            <button
+              onClick={() => setShowComposer(true)}
+              className="btn-primary w-auto px-6 mx-auto inline-flex items-center gap-2"
+            >
+              <PlusCircle size={16} /> Create your first post
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Post list */}
-      <div className="px-4 pt-2 pb-8">
-        {status === "pending" ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="card p-4 skeleton" style={{ height: 120 }} />
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {data?.pages.map((page) =>
-              page.posts.map((post) => <PostCard key={post.id} post={post} />)
-            )}
-            <div ref={loadMoreRef} className="h-4" />
-            {isFetchingNextPage && (
-              <Loader2 className="animate-spin mx-auto" style={{ color: "var(--color-text-muted)" }} />
-            )}
-          </div>
-        )}
-      </div>
+      {!noPostsYet && (
+        <div className="px-4 pt-2 pb-8">
+          {status === "pending" ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="card p-4 skeleton" style={{ height: 120 }} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {data?.pages.map((page) =>
+                page.posts.map((post) => <PostCard key={post.id} post={post} />)
+              )}
+              <div ref={loadMoreRef} className="h-4" />
+              {isFetchingNextPage && (
+                <Loader2 className="animate-spin mx-auto" style={{ color: "var(--color-text-muted)" }} />
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* FAB */}
       <button
@@ -124,10 +170,7 @@ export default function HomeFeedPage() {
       </button>
 
       {showComposer && (
-        <PostComposer
-          onClose={() => setShowComposer(false)}
-          onCreated={handlePostCreated}
-        />
+        <PostComposer onClose={() => setShowComposer(false)} onCreated={handlePostCreated} />
       )}
     </div>
   );

@@ -21,19 +21,43 @@ async function sendPush(userId: string, title: string, message: string, url?: st
 
 export const triggerNotification = {
   async like(userId: string, postId: string, likerName: string) {
-    await notificationService.createNotification(userId, "like", "New Like", `${likerName} liked your post.`);
+    await notificationService.createNotification(
+      userId,
+      "like",
+      "New Like",
+      `${likerName} liked your post.`,
+      `/post/${postId}`          // ✅ link
+    );
     await sendPush(userId, "New Like", `${likerName} liked your post.`, `/post/${postId}`);
   },
   async comment(userId: string, postId: string, commenterName: string, text: string) {
-    await notificationService.createNotification(userId, "comment", "New Comment", `${commenterName} commented: ${text}`);
+    await notificationService.createNotification(
+      userId,
+      "comment",
+      "New Comment",
+      `${commenterName} commented: ${text}`,
+      `/post/${postId}`
+    );
     await sendPush(userId, "New Comment", `${commenterName} commented: ${text}`, `/post/${postId}`);
   },
   async accommodationInterest(ownerId: string, accommodationId: string, title: string, senderName: string) {
-    await notificationService.createNotification(ownerId, "system", "Accommodation Interest", `${senderName} is interested in ${title}.`);
+    await notificationService.createNotification(
+      ownerId,
+      "accommodation",
+      "Accommodation Interest",
+      `${senderName} is interested in ${title}.`,
+      `/accommodation/${accommodationId}`
+    );
     await sendPush(ownerId, "Accommodation Interest", `${senderName} is interested in ${title}.`, `/accommodation/${accommodationId}`);
   },
   async message(receiverId: string, senderName: string, text: string) {
-    await notificationService.createNotification(receiverId, "message", "New Message", `${senderName}: ${text}`);
+    await notificationService.createNotification(
+      receiverId,
+      "message",
+      "New Message",
+      `${senderName}: ${text}`,
+      `/messages`
+    );
     await sendPush(receiverId, "New Message", `${senderName}: ${text}`, `/messages`);
   }
 };
