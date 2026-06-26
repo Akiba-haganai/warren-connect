@@ -2,6 +2,7 @@ import { Outlet, Link } from "react-router-dom";
 import Navbar from "@/components/navigation/Navbar";
 import BottomNav from "@/components/navigation/BottomNav";
 import InstallBanner from "@/components/ui/InstallBanner";
+import OnboardingCarousel from "@/components/ui/OnBoardingCarousel";   // 👈 new
 
 export default function MainLayout() {
   return (
@@ -11,7 +12,6 @@ export default function MainLayout() {
     >
       <Navbar />
 
-      {/* SCROLLABLE CONTENT AREA */}
       <div
         className="flex-1 overflow-y-auto"
         style={{
@@ -22,7 +22,7 @@ export default function MainLayout() {
       >
         <Outlet />
 
-        {/* Footer – Terms & Privacy */}
+        {/* Footer */}
         <div
           className="text-center text-xs py-6 px-4"
           style={{ color: "var(--color-text-muted)" }}
@@ -38,6 +38,7 @@ export default function MainLayout() {
       </div>
 
       <InstallBanner />
+      <OnboardingCarousel />   {/* 👈 now inside Router context */}
       <BottomNav />
     </div>
   );
