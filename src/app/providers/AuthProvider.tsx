@@ -14,8 +14,17 @@ export default function AuthProvider({
   useEffect(() => {
     initialize();
 
+    // Failsafe: if auth doesn't resolve in 5 seconds, force loading off
+    const timeout = setTimeout(() => {
+      const state = useAuthStore.getState();
+      if (state.loading) {
+        setState({ loading: false });
+      }
+    }, 5000);
+
     const { data } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        clearTimeout(timeout);
         if (!session?.user) {
           setState({
             user: null,
@@ -36,7 +45,10 @@ export default function AuthProvider({
           });
 
           // Update last_seen immediately
-          await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", session.user.id);
+          await supabase
+            .from("profiles")
+            .update({ last_seen: new Date().toISOString() })
+            .eq("id", session.user.id);
         } catch (error) {
           console.error("Error fetching profile during auth state change:", error);
           setState({
@@ -53,11 +65,15 @@ export default function AuthProvider({
     const interval = setInterval(async () => {
       const user = useAuthStore.getState().user;
       if (user) {
-        await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", user.id);
+        await supabase
+          .from("profiles")
+          .update({ last_seen: new Date().toISOString() })
+          .eq("id", user.id);
       }
     }, 60000);
 
     return () => {
+      clearTimeout(timeout);
       clearInterval(interval);
       data.subscription.unsubscribe();
     };
