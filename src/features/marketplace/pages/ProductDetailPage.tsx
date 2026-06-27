@@ -8,7 +8,7 @@ import { reportService } from "@/services/reports/reportService";
 import { useRecentlyViewed } from "@/hooks/useRecentlyviewed";
 import type { Tables } from "@/types/database/database.types";
 import {
-  ArrowLeft, MessageCircle, Share2, Loader2, ShieldCheck, Flag
+  ArrowLeft, MessageCircle, Share2, Loader2, ShieldCheck, Flag, ShoppingBag
 } from "lucide-react";
 
 type Product = Tables<"products">;
@@ -27,20 +27,21 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [contacting, setContacting] = useState(false);
   const { addToRecent } = useRecentlyViewed();
+  const [images, setImages] = useState<{ id: string; image_url: string }[]>([]);
+  const [selectedImage, setSelectedImage] = useState(0);
 
   useEffect(() => {
     if (!id) return;
     productService.getProductWithSeller(id).then((data) => {
       setProduct(data);
       setLoading(false);
-
-      // Add to recently viewed
       addToRecent({
         id: data.id,
         type: "product",
         title: data.title,
         imageUrl: data.image_url,
       });
+      productService.getProductImages(data.id).then(setImages);
     }).catch(() => setLoading(false));
   }, [id, addToRecent]);
 
@@ -112,7 +113,41 @@ export default function ProductDetailPage() {
           </button>
         </div>
       </div>
-      {product.image_url && <img src={product.image_url} alt={product.title} className="w-full h-64 object-cover" />}
+
+      {/* Gallery */}
+      {images.length > 0 ? (
+        <div>
+          <img
+            src={images[selectedImage]?.image_url}
+            alt={product.title}
+            className="w-full h-64 object-cover"
+            loading="lazy"
+          />
+          {images.length > 1 && (
+            <div className="flex gap-2 px-4 mt-2 overflow-x-auto pb-1">
+              {images.map((img, i) => (
+                <button
+                  key={img.id}
+                  onClick={() => setSelectedImage(i)}
+                  className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 ${
+                    i === selectedImage ? "border-primary" : "border-transparent"
+                  }`}
+                  style={{ borderColor: i === selectedImage ? "var(--color-primary)" : "transparent" }}
+                >
+                  <img src={img.image_url} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : product.image_url ? (
+        <img src={product.image_url} alt={product.title} className="w-full h-64 object-cover" />
+      ) : (
+        <div className="w-full h-64 flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))" }}>
+          <ShoppingBag size={48} color="rgba(255,255,255,0.3)" />
+        </div>
+      )}
+
       <div className="px-4 pt-4 pb-8 space-y-4">
         <h2 className="text-xl font-bold" style={{ color: "var(--color-text)" }}>{product.title}</h2>
         <p className="text-2xl font-extrabold" style={{ color: "var(--color-primary)" }}>K{product.price.toLocaleString()}</p>
@@ -141,30 +176,30 @@ export default function ProductDetailPage() {
 
         {product.description && <p className="text-sm" style={{ color: "var(--color-text)" }}>{product.description}</p>}
         {product.seller && (
-  <div className="card p-4 flex items-center gap-4">
-    <Link to={`/user/${product.seller.id}`} className="flex-shrink-0">
-      {product.seller.avatar_url ? (
-        <img src={product.seller.avatar_url} alt="" className="w-10 h-10 rounded-full" />
-      ) : (
-        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-          {(product.seller.full_name?.[0] ?? "?")}
-        </div>
-      )}
-    </Link>
-    <div className="flex-1">
-      <Link to={`/user/${product.seller.id}`} className="font-semibold text-sm flex items-center gap-1" style={{ color: "var(--color-text)" }}>
-        {product.seller.full_name}
-        {product.seller.is_verified && <ShieldCheck size={14} style={{ color: "var(--color-accent)" }} />}
-      </Link>
-      <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{product.seller.is_verified ? "Verified" : "Unverified"}</p>
-    </div>
-    {!isOwner && (
-      <button onClick={handleContactSeller} disabled={contacting} className="btn-primary w-auto px-4 py-2 text-sm" aria-label="Contact seller">
-        {contacting ? <Loader2 size={14} className="animate-spin" /> : <MessageCircle size={14} />} Contact
-      </button>
-    )}
-  </div>
-)}
+          <div className="card p-4 flex items-center gap-4">
+            <Link to={`/user/${product.seller.id}`} className="flex-shrink-0">
+              {product.seller.avatar_url ? (
+                <img src={product.seller.avatar_url} alt="" className="w-10 h-10 rounded-full" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+                  {(product.seller.full_name?.[0] ?? "?")}
+                </div>
+              )}
+            </Link>
+            <div className="flex-1">
+              <Link to={`/user/${product.seller.id}`} className="font-semibold text-sm flex items-center gap-1" style={{ color: "var(--color-text)" }}>
+                {product.seller.full_name}
+                {product.seller.is_verified && <ShieldCheck size={14} style={{ color: "var(--color-accent)" }} />}
+              </Link>
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{product.seller.is_verified ? "Verified" : "Unverified"}</p>
+            </div>
+            {!isOwner && (
+              <button onClick={handleContactSeller} disabled={contacting} className="btn-primary w-auto px-4 py-2 text-sm" aria-label="Contact seller">
+                {contacting ? <Loader2 size={14} className="animate-spin" /> : <MessageCircle size={14} />} Contact
+              </button>
+            )}
+          </div>
+        )}
         {isOwner && (
           <button onClick={async () => { if (confirm("Delete?")) { await productService.deleteProduct(product.id); navigate(-1); } }}
                   className="w-full py-2 rounded-lg text-sm font-semibold bg-red-100 text-red-600"

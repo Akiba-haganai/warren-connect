@@ -13,14 +13,10 @@ export const profileService = {
       .single();
 
     if (error) throw error;
-
     return data;
   },
 
-  async updateProfile(
-    userId: string,
-    updates: Partial<Profile>
-  ): Promise<Profile> {
+  async updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile> {
     const { data, error } = await supabase
       .from("profiles")
       .update(updates)
@@ -29,7 +25,6 @@ export const profileService = {
       .single();
 
     if (error) throw error;
-
     return data;
   },
 
@@ -41,51 +36,43 @@ export const profileService = {
       .single();
 
     if (error) throw error;
-
     return data;
   },
 
-  async uploadAvatar(
-    userId: string,
-    file: File
-  ): Promise<string> {
-    const url = await storageService.uploadFile(
+  async uploadAvatar(userId: string, file: File): Promise<string> {
+    const { publicUrl: url, thumbUrl } = await storageService.uploadFile(
       "avatars",
       file,
-      userId
+      userId,
+      true
     );
 
     const { error } = await supabase
       .from("profiles")
       .update({
         avatar_url: url,
+        avatar_thumb: thumbUrl,
       })
       .eq("id", userId);
 
     if (error) throw error;
-
     return url;
   },
 
-  async uploadCover(
-    userId: string,
-    file: File
-  ): Promise<string> {
-    const url = await storageService.uploadFile(
+  async uploadCover(userId: string, file: File): Promise<string> {
+    const { publicUrl: url } = await storageService.uploadFile(
       "covers",
       file,
-      userId
+      userId,
+      true
     );
 
     const { error } = await supabase
       .from("profiles")
-      .update({
-        cover_photo_url: url,
-      })
+      .update({ cover_photo_url: url })
       .eq("id", userId);
 
     if (error) throw error;
-
     return url;
   },
 
@@ -94,12 +81,9 @@ export const profileService = {
       .from("posts")
       .select("*")
       .eq("user_id", userId)
-      .order("created_at", {
-        ascending: false,
-      });
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
-
     return data;
   },
 
@@ -108,13 +92,28 @@ export const profileService = {
       .from("products")
       .select("*")
       .eq("seller_id", userId)
-      .order("created_at", {
-        ascending: false,
-      });
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
-
     return data;
+  },
+
+  async recordLandlordReply(landlordId: string, messageCreatedAt: string) {
+    const responseTime = Date.now() - new Date(messageCreatedAt).getTime();
+    if (responseTime < 0) return;
+
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    if (responseTime > ONE_DAY_MS) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        response_count: (supabase as any).raw("response_count + 1"),
+        total_response_time_ms: (supabase as any).raw(`total_response_time_ms + ${responseTime}`),
+      })
+      .eq("id", landlordId);
+
+    if (error) throw error;
   },
 
   async getUserAccommodations(userId: string) {
@@ -122,12 +121,9 @@ export const profileService = {
       .from("accommodations")
       .select("*")
       .eq("owner_id", userId)
-      .order("created_at", {
-        ascending: false,
-      });
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
-
     return data;
   },
 };

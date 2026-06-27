@@ -16,27 +16,33 @@ export default function ProductComposer({ onClose, onCreated }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
   const [shops, setShops] = useState<any[]>([]);
   const [selectedShopId, setSelectedShopId] = useState<string>("");
 
   useEffect(() => {
     if (!user) return;
-    // Fetch user's shops (in future a user could have multiple shops; for now we get the first one)
     shopService.getMyShop(user.id).then((shop) => {
       if (shop) setShops([shop]);
     }).catch(() => {});
   }, [user]);
 
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      setPreview(URL.createObjectURL(file));
-    }
+  const handleImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setImageFiles((prev) => [...prev, ...files]);
+    const newPreviews = files.map((f) => URL.createObjectURL(f));
+    setPreviews((prev) => [...prev, ...newPreviews]);
     e.target.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,22 +50,45 @@ export default function ProductComposer({ onClose, onCreated }: Props) {
     if (!user || !title.trim() || !price) return;
     setPosting(true);
     try {
-      let image_url: string | undefined;
-      if (imageFile) {
-        const compressed = await compressImage(imageFile);
-        image_url = await storageService.uploadFile("product-images", compressed, user.id);
+      // Upload all images
+      let imageUrls: string[] = [];
+      if (imageFiles.length > 0) {
+        const uploads = await Promise.all(
+          imageFiles.map(async (file) => {
+            const compressed = await compressImage(file);
+            const { publicUrl } = await storageService.uploadFile(
+              "product-images",
+              compressed,
+              user.id,
+              true
+            );
+            return publicUrl;
+          })
+        );
+        imageUrls = uploads;
       }
+
       const newProduct = await productService.createProduct(
         user.id,
         title.trim(),
         description.trim(),
         Number(price),
-        image_url
+        imageUrls[0]   // primary image
       );
-      // If a shop is selected, assign the product to that shop
+
+      // Add extra images
+      if (newProduct && imageUrls.length > 1) {
+        await Promise.all(
+          imageUrls.slice(1).map((url) =>
+            productService.addProductImage(newProduct.id, url)
+          )
+        );
+      }
+
       if (selectedShopId && newProduct) {
         await shopService.addProductToShop(newProduct.id, selectedShopId);
       }
+
       onCreated();
       onClose();
     } finally {
@@ -160,34 +189,43 @@ export default function ProductComposer({ onClose, onCreated }: Props) {
             </div>
           )}
 
+          {/* Multi‑image */}
           <div>
-            <label className="field-label">Photo (optional)</label>
-            {preview ? (
-              <div className="relative">
-                <img src={preview} alt="Preview" className="w-full rounded-xl object-cover" style={{ maxHeight: 200 }} />
-                <button
-                  type="button"
-                  onClick={() => { setImageFile(null); setPreview(null); }}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
-                  style={{ background: "rgba(0,0,0,0.55)", color: "#fff" }}
-                  aria-label="Remove image"
-                >
-                  <X size={14} />
-                </button>
+            <label className="field-label">Photos (optional)</label>
+            {previews.length > 0 && (
+              <div className="flex gap-2 flex-wrap mb-2">
+                {previews.map((preview, i) => (
+                  <div key={i} className="relative w-20 h-20">
+                    <img src={preview} alt="" className="w-full h-full rounded-lg object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <label
-                className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-sm font-medium cursor-pointer"
-                style={{
-                  background: "var(--color-bg)",
-                  border: "1.5px dashed var(--color-border)",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                <Plus size={16} /> Add photo
-                <input type="file" accept="image/*" className="hidden" onChange={handleImage} aria-label="Select product image" />
-              </label>
             )}
+            <label
+              className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-sm font-medium cursor-pointer"
+              style={{
+                background: "var(--color-bg)",
+                border: "1.5px dashed var(--color-border)",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              <Plus size={16} /> Add photos
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImages}
+                aria-label="Select product images"
+              />
+            </label>
           </div>
 
           <button type="submit" disabled={posting} className="btn-primary" aria-label="Publish listing">

@@ -3,6 +3,7 @@ import { Camera } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { profileService } from "@/services/profiles/profileService";
 import { compressImage } from "@/utils/compressImage";
+import { storageService } from "@/services/storage/storageService";
 
 interface Props {
   uploading: "avatar" | "cover" | null;
@@ -18,13 +19,24 @@ export default function ProfileHeader({ uploading, setUploading }: Props) {
 
   if (!user || !profile) return null;
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setUploading("avatar");
     try {
+      // upload original + thumb
       const compressed = await compressImage(file);
-      await profileService.uploadAvatar(user.id, compressed);
+      const { publicUrl: originalUrl, thumbUrl } =
+        await storageService.uploadFile("avatars", compressed, user.id, true);
+
+      await profileService.updateProfile(user.id, {
+        avatar_url: originalUrl,
+        avatar_thumb: thumbUrl,
+      });
+
       await refreshProfile(user.id);
     } finally {
       setUploading(null);
@@ -32,12 +44,16 @@ export default function ProfileHeader({ uploading, setUploading }: Props) {
     }
   };
 
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setUploading("cover");
     try {
       const compressed = await compressImage(file);
+      // cover uses uploadCover; it will call storageService.uploadFile with thumb generation when needed
       await profileService.uploadCover(user.id, compressed);
       await refreshProfile(user.id);
     } finally {
@@ -46,14 +62,23 @@ export default function ProfileHeader({ uploading, setUploading }: Props) {
     }
   };
 
+  const avatarSrc = profile.avatar_thumb || profile.avatar_url;
+
   return (
     <div className="relative" style={{ height: 180 }}>
       {profile.cover_photo_url ? (
-        <img src={profile.cover_photo_url} alt="Cover" className="w-full h-full object-cover" />
+        <img
+          src={profile.cover_photo_url}
+          alt="Cover"
+          className="w-full h-full object-cover"
+        />
       ) : (
         <div
           className="w-full h-full"
-          style={{ background: "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)" }}
+          style={{
+            background:
+              "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)",
+          }}
         />
       )}
 
@@ -61,17 +86,42 @@ export default function ProfileHeader({ uploading, setUploading }: Props) {
         onClick={() => coverRef.current?.click()}
         disabled={uploading !== null}
         className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-        style={{ background: "rgba(0,0,0,0.55)", color: "#fff", backdropFilter: "blur(6px)" }}
+        style={{
+          background: "rgba(0,0,0,0.55)",
+          color: "#fff",
+          backdropFilter: "blur(6px)",
+        }}
         aria-label="Change cover photo"
       >
-        {uploading === "cover" ? "Uploading…" : <><Camera size={12} /> Edit cover</>}
+        {uploading === "cover" ? (
+          "Uploading…"
+        ) : (
+          <>
+            <Camera size={12} /> Edit cover
+          </>
+        )}
       </button>
-      <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} aria-label="Upload cover photo" />
+      <input
+        ref={coverRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleCoverUpload}
+        aria-label="Upload cover photo"
+      />
 
-      <div className="flex items-end justify-between px-4" style={{ marginTop: -44 }}>
+      <div
+        className="flex items-end justify-between px-4"
+        style={{ marginTop: -44 }}
+      >
         <div className="relative">
-          {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt={profile.full_name ?? "Avatar"} className="avatar" style={{ width: 88, height: 88 }} />
+          {avatarSrc ? (
+            <img
+              src={avatarSrc}
+              alt={profile.full_name ?? "Avatar"}
+              className="avatar"
+              style={{ width: 88, height: 88 }}
+            />
           ) : (
             <div
               className="rounded-full flex items-center justify-center text-2xl font-bold text-white"
@@ -85,14 +135,30 @@ export default function ProfileHeader({ uploading, setUploading }: Props) {
             onClick={() => avatarRef.current?.click()}
             disabled={uploading !== null}
             className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center"
-            style={{ background: "var(--color-accent)", border: "2px solid var(--color-surface)", color: "var(--color-primary)" }}
+            style={{
+              background: "var(--color-accent)",
+              border: "2px solid var(--color-surface)",
+              color: "var(--color-primary)",
+            }}
             aria-label="Change profile photo"
           >
-            {uploading === "avatar" ? <span className="text-[9px] font-bold">…</span> : <Camera size={12} strokeWidth={2.5} />}
+            {uploading === "avatar" ? (
+              <span className="text-[9px] font-bold">…</span>
+            ) : (
+              <Camera size={12} strokeWidth={2.5} />
+            )}
           </button>
-          <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} aria-label="Upload profile photo" />
+          <input
+            ref={avatarRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarUpload}
+            aria-label="Upload profile photo"
+          />
         </div>
       </div>
     </div>
   );
 }
+

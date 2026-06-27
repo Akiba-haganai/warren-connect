@@ -26,8 +26,10 @@ const MarketplacePage = lazy(() => import("@/features/marketplace/pages/Marketpl
 const ProductDetailPage = lazy(() => import("@/features/marketplace/pages/ProductDetailPage"));
 const AccommodationPage = lazy(() => import("@/features/accommodation/pages/AccommodationPage"));
 const AccommodationDetailPage = lazy(() => import("@/features/accommodation/pages/AccomodationDetailPage"));
+const RoommateFinderPage = lazy(() => import("@/features/accommodation/pages/RoommateFinderPage")); // new
 const MessagesPage = lazy(() => import("@/features/messages/pages/MessagesPage"));
 const NotificationsPage = lazy(() => import("@/features/notifications/pages/NotificationsPage"));
+const PostDetailPage = lazy(() => import("@/features/feed/pages/PostDetailPage"));
 
 const VerificationRequestPage = lazy(() => import("@/features/verification/pages/VerificationRequestPage"));
 
@@ -89,11 +91,13 @@ export const router = createBrowserRouter([
       { path: "/marketplace", element: withBoundary(MarketplacePage) },
       { path: "/accommodation/:id", element: withBoundary(AccommodationDetailPage) },
       { path: "/accommodation", element: withBoundary(AccommodationPage) },
+      { path: "/roommates", element: withBoundary(RoommateFinderPage) },   // new
       { path: "/messages", element: withBoundary(MessagesPage) },
       { path: "/notifications", element: withBoundary(NotificationsPage) },
       { path: "/verification", element: withBoundary(VerificationRequestPage) },
       { path: "/saved", element: withBoundary(SavedItemsPage) },
       { path: "/shop/:id", element: withBoundary(ShopPage) },
+      { path: "/post/:id", element: withBoundary(PostDetailPage) },
     ],
   },
 

@@ -3,13 +3,15 @@ import { useAuthStore } from "@/store/auth/authStore";
 import { supabase } from "@/lib/supabase/client";
 import { messageService } from "@/services/messages/messageService";
 import { triggerNotification } from "@/services/notifications/triggerService";
+import { profileService } from "@/services/profiles/profileService";
 import type { Tables } from "@/types/database/database.types";
 import { MessageCircle, Send, Loader2, ArrowLeft } from "lucide-react";
 import ConversationItem from "@/features/messages/components/ConversationItem";
 import ChatBubble from "@/features/messages/components/ChatBubble";
 
-type Conversation = Tables<"conversations">;
+type Conversation = Tables<"conversations"> & { unread_count?: number };
 type Message = Tables<"messages">;
+type UserProfile = { full_name: string; avatar_url: string | null };
 
 export default function MessagesPage() {
   const user = useAuthStore((s) => s.user);
@@ -22,18 +24,35 @@ export default function MessagesPage() {
   const [msgLoading, setMsgLoading] = useState(false);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
 
+  // Load conversations + profiles
   useEffect(() => {
     if (!user) return;
-    messageService
-      .getConversations(user.id)
-      .then((data) => {
-        setConversations(data);
+    (async () => {
+      try {
+        const convs = await messageService.getConversations(user.id);
+        setConversations(convs as Conversation[]);
+
+        const otherIds = convs.map((c) =>
+          c.user1_id === user.id ? c.user2_id : c.user1_id
+        );
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url")
+          .in("id", otherIds);
+        const map: Record<string, UserProfile> = {};
+        profiles?.forEach((p) => {
+          map[p.id] = { full_name: p.full_name || "Unknown", avatar_url: p.avatar_url };
+        });
+        setUserProfiles(map);
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+    })();
   }, [user]);
 
+  // Real‑time for active conversation
   useEffect(() => {
     if (!active) return;
     const channel = supabase
@@ -67,6 +86,13 @@ export default function MessagesPage() {
     try {
       const data = await messageService.getMessages(conv.id);
       setMessages(data);
+      await supabase
+        .from("conversations")
+        .update({ unread_count: 0 })
+        .eq("id", conv.id);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conv.id ? { ...c, unread_count: 0 } : c))
+      );
     } finally {
       setMsgLoading(false);
     }
@@ -80,19 +106,37 @@ export default function MessagesPage() {
       setMessages((prev) => [...prev, msg]);
       setInput("");
 
-      const otherUserId = active.user1_id === user.id ? active.user2_id : active.user1_id;
-      // ✅ Fixed: removed the extra conversationId argument
+      const otherUserId =
+        active.user1_id === user.id ? active.user2_id : active.user1_id;
       triggerNotification.message(
         otherUserId,
         profile?.full_name ?? "Someone",
         input.trim()
       );
+
+      if (profile?.is_landlord) {
+        const otherMessages = messages.filter((m) => m.sender_id !== user.id);
+        if (otherMessages.length > 0) {
+          const lastOtherMsg = otherMessages[otherMessages.length - 1];
+          await profileService.recordLandlordReply(user.id, lastOtherMsg.created_at!);
+        }
+      }
     } finally {
       setSending(false);
     }
   };
 
+  const handleDeleteMessage = async (msgId: string) => {
+    await messageService.deleteMessage(msgId);
+    setMessages((prev) => prev.filter((m) => m.id !== msgId));
+  };
+
+  // --- Conversation detail view ---
   if (active) {
+    const otherId =
+      active.user1_id === user?.id ? active.user2_id : active.user1_id;
+    const otherProfile = userProfiles[otherId];
+
     return (
       <div className="flex flex-col h-full" style={{ background: "var(--color-bg)" }}>
         <div
@@ -102,19 +146,25 @@ export default function MessagesPage() {
             borderBottom: "1px solid var(--color-border)",
           }}
         >
-          <button aria-label="click" onClick={() => setActive(null)} className="p-1">
+          <button aria-label="Back" onClick={() => setActive(null)} className="p-1">
             <ArrowLeft size={20} style={{ color: "var(--color-text-secondary)" }} />
           </button>
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
-            style={{ background: "var(--color-primary)" }}
-          >
-            {active.user1_id === user?.id
-              ? active.user2_id.slice(0, 1).toUpperCase()
-              : active.user1_id.slice(0, 1).toUpperCase()}
-          </div>
+          {otherProfile?.avatar_url ? (
+            <img
+              src={otherProfile.avatar_url}
+              className="w-9 h-9 rounded-full object-cover"
+              alt=""
+            />
+          ) : (
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+              style={{ background: "var(--color-primary)" }}
+            >
+              {(otherProfile?.full_name?.[0] || otherId?.charAt(0))?.toUpperCase() ?? "?"}
+            </div>
+          )}
           <span className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>
-            Conversation
+            {otherProfile?.full_name || otherId?.slice(0, 8) + "…"}
           </span>
         </div>
 
@@ -134,6 +184,7 @@ export default function MessagesPage() {
                 content={msg.content}
                 isMe={msg.sender_id === user?.id}
                 timestamp={msg.created_at ?? undefined}
+                onDelete={() => handleDeleteMessage(msg.id)}
               />
             ))
           )}
@@ -178,6 +229,7 @@ export default function MessagesPage() {
     );
   }
 
+  // --- Conversation list view ---
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
       <div
@@ -220,14 +272,22 @@ export default function MessagesPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {conversations.map((conv) => (
-              <ConversationItem
-                key={conv.id}
-                conversation={conv}
-                currentUserId={user!.id}
-                onClick={() => openConversation(conv)}
-              />
-            ))}
+            {conversations.map((conv) => {
+              const otherId =
+                conv.user1_id === user!.id ? conv.user2_id : conv.user1_id;
+              const otherProfile = userProfiles[otherId];
+              return (
+                <ConversationItem
+                  key={conv.id}
+                  conversation={conv}
+                  currentUserId={user!.id}
+                  onClick={() => openConversation(conv)}
+                  unreadCount={(conv as any).unread_count ?? 0}
+                  otherUserName={otherProfile?.full_name || otherId.slice(0, 8) + "…"}
+                  otherUserAvatar={otherProfile?.avatar_url || null}
+                />
+              );
+            })}
           </div>
         )}
       </div>

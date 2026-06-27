@@ -20,7 +20,7 @@ export const notificationService = {
     type: Notification["type"],
     title: string,
     body?: string,
-    link?: string              // ✅ new parameter
+    link?: string              // ⬅️ THIS MUST BE HERE
   ) {
     const { data, error } = await supabase
       .from("notifications")
@@ -29,7 +29,7 @@ export const notificationService = {
         type,
         title,
         body: body ?? null,
-        link: link ?? null,     // ✅ save link
+        link: link ?? null,     // ⬅️ THIS MUST BE HERE
       })
       .select()
       .single();

@@ -22,7 +22,7 @@ export const accommodationService = {
         location,
         monthly_rent,
         image_url: image_url ?? null,
-        status: "available", // new listings start as available
+        status: "available",
       })
       .select()
       .single();
@@ -52,6 +52,16 @@ export const accommodationService = {
     return data;
   },
 
+  async getAccommodationsByIds(ids: string[]) {
+    if (!ids.length) return [];
+    const { data, error } = await supabase
+      .from("accommodations")
+      .select("*")
+      .in("id", ids);
+    if (error) throw error;
+    return data || [];
+  },
+
   /** Fetch single accommodation with landlord profile */
   async getAccommodationWithLandlord(id: string) {
     const { data: acc, error } = await supabase
@@ -62,7 +72,6 @@ export const accommodationService = {
 
     if (error || !acc) throw error || new Error("Not found");
 
-    // Fetch landlord profile using owner_id
     const { data: landlord } = await supabase
       .from("profiles")
       .select("id, full_name, avatar_url, is_verified, is_landlord")
@@ -71,55 +80,54 @@ export const accommodationService = {
 
     return { ...acc, landlord: landlord ?? undefined };
   },
+
   // Upload additional image for an accommodation
-async addImage(accommodationId: string, imageUrl: string) {
-  const { error } = await supabase
-    .from("accommodation_images")
-    .insert({ accommodation_id: accommodationId, image_url: imageUrl });
-  if (error) throw error;
-},
-
-// Get all images for an accommodation
-async getImages(accommodationId: string) {
-  const { data, error } = await supabase
-    .from("accommodation_images")
-    .select("*")
-    .eq("accommodation_id", accommodationId)
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return data || [];
-},
-
-// Delete an image
-async deleteImage(imageId: string) {
-  const { error } = await supabase
-    .from("accommodation_images")
-    .delete()
-    .eq("id", imageId);
-  if (error) throw error;
-},
-
-// Set amenities (overwrite entire list)
-async setAmenities(accommodationId: string, amenities: string[]) {
-  // Remove existing
-  await supabase.from("accommodation_amenities").delete().eq("accommodation_id", accommodationId);
-  // Insert new
-  if (amenities.length > 0) {
-    const rows = amenities.map(a => ({ accommodation_id: accommodationId, amenity: a }));
-    const { error } = await supabase.from("accommodation_amenities").insert(rows);
+  async addImage(accommodationId: string, imageUrl: string) {
+    const { error } = await supabase
+      .from("accommodation_images")
+      .insert({ accommodation_id: accommodationId, image_url: imageUrl });
     if (error) throw error;
-  }
-},
+  },
 
-// Get amenities for an accommodation
-async getAmenities(accommodationId: string) {
-  const { data, error } = await supabase
-    .from("accommodation_amenities")
-    .select("amenity")
-    .eq("accommodation_id", accommodationId);
-  if (error) throw error;
-  return (data || []).map(r => r.amenity);
-},
+  // Get all images for an accommodation
+  async getImages(accommodationId: string) {
+    const { data, error } = await supabase
+      .from("accommodation_images")
+      .select("*")
+      .eq("accommodation_id", accommodationId)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Delete an image
+  async deleteImage(imageId: string) {
+    const { error } = await supabase
+      .from("accommodation_images")
+      .delete()
+      .eq("id", imageId);
+    if (error) throw error;
+  },
+
+  // Set amenities (overwrite entire list)
+  async setAmenities(accommodationId: string, amenities: string[]) {
+    await supabase.from("accommodation_amenities").delete().eq("accommodation_id", accommodationId);
+    if (amenities.length > 0) {
+      const rows = amenities.map((a) => ({ accommodation_id: accommodationId, amenity: a }));
+      const { error } = await supabase.from("accommodation_amenities").insert(rows);
+      if (error) throw error;
+    }
+  },
+
+  // Get amenities for an accommodation
+  async getAmenities(accommodationId: string) {
+    const { data, error } = await supabase
+      .from("accommodation_amenities")
+      .select("amenity")
+      .eq("accommodation_id", accommodationId);
+    if (error) throw error;
+    return (data || []).map((r) => r.amenity);
+  },
 
   /** Get all accommodations for a specific landlord */
   async getMyAccommodations(ownerId: string): Promise<Accommodation[]> {
@@ -151,5 +159,14 @@ async getAmenities(accommodationId: string) {
       .eq("id", id);
     if (error) throw error;
   },
-  
+  async getAccommodationsPaginated(limit: number, offset: number) {
+  const { data, error } = await supabase
+    .from("accommodations")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (error) throw error;
+  return data || [];
+},
+
 };

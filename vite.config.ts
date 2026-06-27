@@ -13,8 +13,38 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         cleanupOutdatedCaches: true,
-        skipWaiting: true,
+        skipWaiting: false,         // don't auto‑activate new SW
         clientsClaim: true,
+        runtimeCaching: [
+          // Cache static assets with Cache First
+          {
+            urlPattern: /\.(?:js|css|html|ico|png|svg|woff2)$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "static-assets",
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+          // Cache Supabase REST API (GET) with Stale While Revalidate
+          {
+            urlPattern: /^https:\/\/[a-z]+\.supabase\.co\/rest\/v1\/.*/i,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "supabase-api",
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 5 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // Cache Supabase storage images with Cache First
+          {
+            urlPattern: /^https:\/\/[a-z]+\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "supabase-images",
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 },
+            },
+          },
+        ],
       },
       manifest: {
         name: "Warren Connect",

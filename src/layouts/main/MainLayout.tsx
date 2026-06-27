@@ -2,6 +2,7 @@ import { Outlet, Link } from "react-router-dom";
 import Navbar from "@/components/navigation/Navbar";
 import BottomNav from "@/components/navigation/BottomNav";
 import InstallBanner from "@/components/ui/InstallBanner";
+import OfflineBanner from "@/components/ui/OfflineBanner";
 import OnboardingCarousel from "@/components/ui/OnBoardingCarousel";   // 👈 new
 
 export default function MainLayout() {
@@ -10,6 +11,7 @@ export default function MainLayout() {
       className="flex flex-col h-[100dvh] overflow-hidden"
       style={{ background: "var(--color-bg)" }}
     >
+      <OfflineBanner />
       <Navbar />
 
       <div

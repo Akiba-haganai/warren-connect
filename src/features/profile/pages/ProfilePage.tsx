@@ -8,7 +8,7 @@ import MyListings from "@/features/profile/components/MyListings";
 import ReferralCodeCard from "@/features/profile/components/ReferralCodeCard";
 import VerificationBanner from "@/features/profile/components/VerificationBanner";
 import ProfileCompletionMeter from "@/features/profile/components/ProfileCompletionMeter";
-
+import RoommatePreferencesCard from "@/features/profile/components/RoommatePreferencesCard";
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
@@ -28,10 +28,8 @@ export default function ProfilePage() {
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
-      {/* Cover photo + avatar */}
       <ProfileHeader uploading={uploading} setUploading={setUploading} />
 
-      {/* Sign out */}
       <div className="flex justify-end px-4 mt-2">
         <button
           onClick={signOut}
@@ -42,79 +40,44 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      {/* Name, username, academic info */}
       <ProfileInfo />
 
-      {/* Bio */}
       <div className="mt-2 px-4">
         <ProfileBio />
       </div>
 
       <ProfileCompletionMeter />
 
-      {/* Verification prompt */}
       <VerificationBanner />
 
-      {/* Referral code */}
       <ReferralCodeCard />
 
-      {/* Landlord dashboard */}
+      {/* Roommate preferences card (toggle + detailed preferences) */}
+      <RoommatePreferencesCard />
+
       <MyListings />
 
-      {/* Divider */}
       <div className="divider" />
 
-      {/* Posts */}
       <div className="px-4">
-        <h2
-          className="text-sm font-semibold mb-3"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
+        <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text-secondary)" }}>
           Posts ({posts.length})
         </h2>
         {posts.length === 0 ? (
-          <div
-            className="rounded-xl py-10 text-center"
-            style={{
-              background: "var(--color-surface)",
-              border: "1px dashed var(--color-border)",
-            }}
-          >
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              No posts yet — share something on the feed
-            </p>
+          <div className="rounded-xl py-10 text-center" style={{ background: "var(--color-surface)", border: "1px dashed var(--color-border)" }}>
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No posts yet — share something on the feed</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {posts.map((post) => (
               <div key={post.id} className="card p-4">
-                <p
-                  className="text-sm whitespace-pre-wrap"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  {post.content}
-                </p>
+                <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--color-text)" }}>{post.content}</p>
                 {post.image_url && (
-                  <img
-                    src={post.image_url}
-                    alt="Post"
-                    className="mt-3 rounded-xl w-full object-cover"
-                    style={{ maxHeight: 300 }}
-                    loading="lazy"
-                  />
+                  <img src={post.image_url} alt="Post" className="mt-3 rounded-xl w-full object-cover" style={{ maxHeight: 300 }} loading="lazy" />
                 )}
-                <div
-                  className="flex justify-end mt-3 text-xs"
-                  style={{ color: "var(--color-text-muted)" }}
-                >
+                <div className="flex justify-end mt-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
                   {post.created_at && (
-                    <span>
-                      {new Date(post.created_at).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </span>
+                    <span>{new Date(post.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
                   )}
                 </div>
               </div>
@@ -123,7 +86,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Bottom spacing for nav */}
       <div className="h-20" />
     </div>
   );

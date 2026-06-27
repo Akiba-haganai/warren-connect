@@ -3,8 +3,8 @@ import { notificationService } from "@/services/notifications/notificationServic
 import { useAuthStore } from "@/store/auth/authStore";
 import { useNotificationSubscription } from "@/hooks/useNotificationSubscription";
 import NotificationItem from "@/features/notifications/components/NotificationItem";
-import type { Tables } from "@/types/database/database.types";
 import { CheckCheck, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
 
 export default function NotificationsPage() {
   const user = useAuthStore((s) => s.user);
@@ -18,41 +18,43 @@ export default function NotificationsPage() {
     enabled: !!user,
   });
 
-  // ✅ Optimistically mark all as read
+  // Mark all – use React Query mutation (optimistic + refetch)
   const markAllMutation = useMutation({
     mutationFn: () => notificationService.markAllAsRead(user!.id),
     onMutate: () => {
-      // Immediately update the cache to reflect all as read
-      queryClient.setQueryData<Tables<"notifications">[]>(["notifications"], (old) =>
-        old ? old.map((n) => ({ ...n, is_read: true })) : []
+      // Optimistically mark all as read in cache
+      queryClient.setQueriesData({ queryKey: ["notifications"] }, (old: any) =>
+        old?.map ? old.map((n: any) => ({ ...n, is_read: true })) : old
       );
     },
     onSettled: () => {
-      // Refetch from server to ensure consistency
+      // Refetch to ensure server state is reflected
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 
-  // ✅ Optimistically mark one as read
-  const markOneMutation = useMutation({
-    mutationFn: (id: string) => notificationService.markAsRead(id),
-    onMutate: (id) => {
-      queryClient.setQueryData<Tables<"notifications">[]>(["notifications"], (old) =>
-        old
-          ? old.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-          : []
-      );
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-    },
-  });
+  // Mark one – directly call Supabase to avoid cache issues, then invalidate
+  const handleMarkOne = async (id: string): Promise<void> => {
+    // Direct DB update – bypasses cache until refetch
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("id", id)
+      .eq("user_id", user!.id);   // ensure only own notification
+
+    if (error) {
+      console.error("Failed to mark as read:", error);
+      throw error;
+    }
+
+    // Invalidate so the list refreshes next time
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
+  };
 
   if (!user) return null;
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
-      {/* Header */}
       <div
         className="sticky top-0 z-10 px-4 py-3 flex items-center justify-between"
         style={{
@@ -99,9 +101,7 @@ export default function NotificationsPage() {
               <NotificationItem
                 key={n.id}
                 notification={n}
-                onMarkRead={() => {
-                  if (!n.is_read) markOneMutation.mutate(n.id);
-                }}
+                onMarkRead={() => handleMarkOne(n.id)}
               />
             ))}
           </div>

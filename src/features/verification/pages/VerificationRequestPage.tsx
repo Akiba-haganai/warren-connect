@@ -45,10 +45,11 @@ export default function VerificationRequestPage() {
     try {
       // Upload ID document
       const compressed = await compressImage(idFile);
-      const documentUrl = await storageService.uploadFile(
+      const { publicUrl: documentUrl } = await storageService.uploadFile(
         "verification-documents",
         compressed,
-        user.id
+        user.id,
+        true
       );
 
       // Submit verification request

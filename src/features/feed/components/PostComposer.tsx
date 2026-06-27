@@ -34,7 +34,13 @@ export default function PostComposer({ onClose, onCreated }: Props) {
       let image_url: string | undefined;
       if (imageFile) {
         const compressed = await compressImage(imageFile);
-        image_url = await storageService.uploadFile("post-images", compressed, user.id);
+        const { publicUrl } = await storageService.uploadFile(
+          "post-images",
+          compressed,
+          user.id,
+          true
+        );
+        image_url = publicUrl;
       }
       await postService.createPost(user.id, content.trim(), image_url);
       onCreated();

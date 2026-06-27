@@ -1,49 +1,65 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
 import { accommodationService } from "@/services/accommodation/accommodationService";
-import type { Tables } from "@/types/database/database.types";
-import { Plus, Building2 } from "lucide-react";
+
+import { Plus, Building2, Loader2 } from "lucide-react";
 import AccommodationCard from "@/features/accommodation/components/AccommodationCard";
 import AccommodationFilters from "@/features/accommodation/components/AccommodationFilters";
 import AccommodationComposer from "@/features/accommodation/components/AccomodationComposer";
 
-type Accommodation = Tables<"accommodations">;
+const PAGE_SIZE = 10;
 
 export default function AccommodationPage() {
-  const [listings, setListings] = useState<Accommodation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showComposer, setShowComposer] = useState(false);
   const [search, setSearch] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
+  const [roommateFilter, setRoommateFilter] = useState(false);
 
-  const load = async () => {
-    try {
-      const data = await accommodationService.getAccommodations();
-      setListings(data);
-    } finally {
-      setLoading(false);
-    }
+  const fetchAccommodations = async ({ pageParam = 0 }) => {
+    const offset = pageParam * PAGE_SIZE;
+    const data = await accommodationService.getAccommodationsPaginated(PAGE_SIZE, offset);
+    return {
+      listings: data,
+      nextPage: data.length === PAGE_SIZE ? pageParam + 1 : undefined,
+    };
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
+    useInfiniteQuery({
+      queryKey: ["accommodations", search, locationFilter, roommateFilter],
+      queryFn: fetchAccommodations,
+      initialPageParam: 0,
+      getNextPageParam: (lastPage) => lastPage.nextPage,
+    });
+
+  const { ref: loadMoreRef, inView } = useInView();
+  if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
+
+  const allListings = data?.pages.flatMap((p) => p.listings) ?? [];
 
   const locations = useMemo(
-    () => [...new Set(listings.map((l) => l.location))].sort(),
-    [listings]
+    () => [...new Set(allListings.map((l) => l.location))].sort(),
+    [allListings]
   );
 
   const filtered = useMemo(() => {
-    return listings.filter((item) => {
+    return allListings.filter((item) => {
       const matchSearch =
         item.title.toLowerCase().includes(search.toLowerCase()) ||
         (item.description ?? "").toLowerCase().includes(search.toLowerCase());
       const matchLocation = !locationFilter || item.location === locationFilter;
-      return matchSearch && matchLocation;
+      const matchRoommate = !roommateFilter || item.looking_for_roommate;
+      return matchSearch && matchLocation && matchRoommate;
     });
-  }, [listings, search, locationFilter]);
+  }, [allListings, search, locationFilter, roommateFilter]);
 
-  const noListings = !loading && filtered.length === 0;
+  const noListings = status !== "pending" && filtered.length === 0;
+
+  const handleCreated = () => {
+    queryClient.invalidateQueries({ queryKey: ["accommodations"] });
+  };
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
@@ -74,9 +90,11 @@ export default function AccommodationPage() {
           locationFilter={locationFilter}
           onLocationChange={setLocationFilter}
           locations={locations}
+          roommateFilter={roommateFilter}
+          onRoommateChange={setRoommateFilter}
         />
 
-        {loading ? (
+        {status === "pending" ? (
           <>
             {[1, 2, 3].map((i) => (
               <div key={i} className="card overflow-hidden">
@@ -89,7 +107,6 @@ export default function AccommodationPage() {
             ))}
           </>
         ) : noListings ? (
-          /* Better empty state */
           <div
             className="rounded-2xl py-16 text-center"
             style={{
@@ -97,19 +114,18 @@ export default function AccommodationPage() {
               border: "1px dashed var(--color-border)",
             }}
           >
-            <Building2
-              size={40}
-              style={{ color: "var(--color-text-muted)", margin: "0 auto 12px" }}
-            />
+            <Building2 size={40} style={{ color: "var(--color-text-muted)", margin: "0 auto 12px" }} />
             <h3 className="text-lg font-bold mb-1" style={{ color: "var(--color-text)" }}>
-              {search || locationFilter ? "No listings match your criteria" : "No listings yet"}
+              {search || locationFilter || roommateFilter
+                ? "No listings match your criteria"
+                : "No listings yet"}
             </h3>
             <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)" }}>
-              {search || locationFilter
+              {search || locationFilter || roommateFilter
                 ? "Try adjusting your filters."
                 : "Add the first accommodation!"}
             </p>
-            {!search && !locationFilter && (
+            {!search && !locationFilter && !roommateFilter && (
               <button
                 onClick={() => setShowComposer(true)}
                 className="btn-primary w-auto px-6 mx-auto inline-flex items-center gap-2"
@@ -119,17 +135,20 @@ export default function AccommodationPage() {
             )}
           </div>
         ) : (
-          filtered.map((listing) => (
-            <AccommodationCard key={listing.id} listing={listing} />
-          ))
+          <>
+            {filtered.map((listing) => (
+              <AccommodationCard key={listing.id} listing={listing} />
+            ))}
+            <div ref={loadMoreRef} className="h-4" />
+            {isFetchingNextPage && (
+              <Loader2 className="animate-spin mx-auto" style={{ color: "var(--color-text-muted)" }} />
+            )}
+          </>
         )}
       </div>
 
       {showComposer && (
-        <AccommodationComposer
-          onClose={() => setShowComposer(false)}
-          onCreated={() => load()}
-        />
+        <AccommodationComposer onClose={() => setShowComposer(false)} onCreated={handleCreated} />
       )}
     </div>
   );

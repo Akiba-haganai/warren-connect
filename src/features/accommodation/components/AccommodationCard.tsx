@@ -65,6 +65,9 @@ export default function AccommodationCard({ listing, onView }: Props) {
               /mo
             </span>
           </span>
+          {listing.looking_for_roommate && (
+  <span className="badge badge-amber ml-1">🧑‍🤝‍🧑 Roommate</span>
+)}
           <span className={`badge ${listing.status === "available" ? "badge-amber" : "badge-green"}`}>
             {listing.status || "available"}
           </span>

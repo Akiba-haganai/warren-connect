@@ -2,6 +2,7 @@ import { Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { savedService } from "@/services/saved/savedService";
+import { supabase } from "@/lib/supabase/client";
 
 interface Props {
   itemType: "product" | "accommodation";
@@ -23,10 +24,21 @@ export default function SaveButton({ itemType, itemId, size = 18 }: Props) {
     try {
       if (saved) {
         await savedService.unsaveItem(user.id, itemType, itemId);
+        setSaved(false);
       } else {
-        await savedService.saveItem(user.id, itemType, itemId);
+        // For products, fetch current price and save as metadata
+        let metadata;
+        if (itemType === "product") {
+          const { data: product } = await supabase
+            .from("products")
+            .select("price")
+            .eq("id", itemId)
+            .single();
+          metadata = { price: product?.price };
+        }
+        await savedService.saveItem(user.id, itemType, itemId, metadata);
+        setSaved(true);
       }
-      setSaved(!saved);
     } catch (err) {
       console.error(err);
     }

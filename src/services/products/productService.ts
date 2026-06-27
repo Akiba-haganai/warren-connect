@@ -36,7 +36,27 @@ export const productService = {
       .eq("id", id)
       .single();
     if (error) throw error;
-    return data;
+    return data || [];
+  },
+
+  async getProductsByIds(ids: string[]) {
+    if (!ids.length) return [];
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .in("id", ids);
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getProductsPaginated(limit: number, offset: number) {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (error) throw error;
+    return data || [];
   },
 
   /** Fetch product with seller profile */
@@ -69,4 +89,28 @@ export const productService = {
     const { error } = await supabase.from("products").delete().eq("id", id);
     if (error) throw error;
   },
+  async addProductImage(productId: string, imageUrl: string) {
+  const { error } = await supabase
+    .from("product_images")
+    .insert({ product_id: productId, image_url: imageUrl });
+  if (error) throw error;
+},
+
+async getProductImages(productId: string) {
+  const { data, error } = await supabase
+    .from("product_images")
+    .select("*")
+    .eq("product_id", productId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data || [];
+},
+
+async deleteProductImage(imageId: string) {
+  const { error } = await supabase
+    .from("product_images")
+    .delete()
+    .eq("id", imageId);
+  if (error) throw error;
+},
 };

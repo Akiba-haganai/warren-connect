@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth/authStore";
+import type { Tables } from "@/types/database/database.types";
 
 export function useNotificationSubscription() {
   const user = useAuthStore((s) => s.user);
@@ -20,9 +21,13 @@ export function useNotificationSubscription() {
           table: "notifications",
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          // Invalidate notifications query to refetch
-          queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        (payload) => {
+          const newNotification = payload.new as Tables<"notifications">;
+          // Append to cache instead of refetching
+          queryClient.setQueryData<Tables<"notifications">[]>(
+            ["notifications"],
+            (old) => (old ? [newNotification, ...old] : [newNotification])
+          );
         }
       )
       .subscribe();

@@ -1,0 +1,99 @@
+Update everywhere dates are shown
+In PostCard.tsx, replace the date span:
+
+tsx
+<span>{timeAgo(post.created_at!)}</span>
+In NotificationItem.tsx, replace the date:
+
+tsx
+<p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+  {notification.created_at ? timeAgo(notification.created_at) : ""}
+</p>
+In ChatBubble.tsx, replace the time:
+
+tsx
+{timestamp && (
+  <p className="text-[10px] mt-1 opacity-70" style={{ color: isMe ? "rgba(255,255,255,0.7)" : "var(--color-text-muted)" }}>
+    {timeAgo(timestamp)}
+  </p>
+)}
+Import timeAgo at the top of each file:
+
+tsx
+import { timeAgo } from "@/utils/timeAgo";
+2. Toast Feedback for Actions
+We already have react-hot-toast installed. Use it in key interaction points.
+
+In src/features/feed/components/PostCard.tsx
+tsx
+import toast from "react-hot-toast";
+
+// In handleReport, after successful submission:
+toast.success("Report submitted. Thank you!");
+
+// In handleDeleteComment, after successful delete:
+toast.success("Comment deleted.");
+
+// In commentMutation.onSuccess:
+toast.success("Comment posted.");
+In src/components/ui/SaveButton.tsx
+tsx
+import toast from "react-hot-toast";
+
+// In toggle function:
+if (saved) {
+  await savedService.unsaveItem(user.id, itemType, itemId);
+  toast.success("Removed from saved.");
+} else {
+  await savedService.saveItem(user.id, itemType, itemId);
+  toast.success("Saved!");
+}
+In src/features/profile/pages/PublicProfilePage.tsx
+tsx
+// In handleReport:
+toast.success("Report submitted.");
+In src/features/marketplace/pages/ProductDetailPage.tsx
+tsx
+// In handleReport:
+toast.success("Report submitted.");
+3. Haptic Feedback
+We already have triggerHaptic() in src/utils/haptic.ts. Import and call it on all button presses that feel satisfying (like, save, send message).
+
+tsx
+import { triggerHaptic } from "@/utils/haptic";
+
+// In PostCard like button, SaveButton toggle, MessagesPage send button:
+triggerHaptic();
+4. Skeleton Loaders Everywhere
+Replace Loader2 spinners with skeleton cards in Marketplace, Accommodations, Saved Items, and Messages list. You already have the .skeleton class in index.css. Just replace the loading section:
+
+tsx
+{loading ? (
+  <div className="grid grid-cols-2 gap-3">
+    {Array.from({ length: 4 }).map((_, i) => (
+      <div key={i} className="card overflow-hidden">
+        <div className="skeleton" style={{ height: 160 }} />
+        <div className="p-3 flex flex-col gap-2">
+          <div className="skeleton rounded" style={{ height: 12, width: "80%" }} />
+          <div className="skeleton rounded" style={{ height: 12, width: "40%" }} />
+        </div>
+      </div>
+    ))}
+  </div>
+) : /* actual content */}
+You already do this in MarketplacePage and AccommodationPage – verify that SavedItemsPage and MessagesPage (conversation list) also use skeletons instead of spinners.
+
+5. Focus Rings for Accessibility
+Add this to src/index.css:
+
+css
+/* ===== FOCUS RINGS ===== */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
+}
+These five changes will make the app feel polished, responsive, and trustworthy. After applying them,

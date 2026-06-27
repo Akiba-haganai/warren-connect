@@ -8,14 +8,8 @@ import { reportService } from "@/services/reports/reportService";
 import { useRecentlyViewed } from "@/hooks/useRecentlyviewed";
 import type { Tables } from "@/types/database/database.types";
 import {
-  ArrowLeft,
-  MapPin,
-  MessageCircle,
-  Share2,
-  Loader2,
-  ShieldCheck,
-  Building2,
-  Flag,
+  ArrowLeft, MapPin, MessageCircle, Share2, Loader2,
+  ShieldCheck, Building2, Flag, Calendar
 } from "lucide-react";
 
 type Accommodation = Tables<"accommodations">;
@@ -26,14 +20,8 @@ type AccommodationWithLandlord = Accommodation & {
 };
 
 const COMMON_AMENITIES = [
-  "WiFi",
-  "Water included",
-  "Electricity included",
-  "Furnished",
-  "Parking",
-  "Security",
-  "Study desk",
-  "Private bathroom",
+  "WiFi", "Water included", "Electricity included", "Furnished",
+  "Parking", "Security", "Study desk", "Private bathroom",
 ];
 
 export default function AccommodationDetailPage() {
@@ -62,8 +50,6 @@ export default function AccommodationDetailPage() {
         const ams = await accommodationService.getAmenities(id);
         setAmenities(ams);
         setSelectedAmenities(ams);
-
-        // Add to recently viewed
         addToRecent({
           id: data.id,
           type: "accommodation",
@@ -92,16 +78,45 @@ export default function AccommodationDetailPage() {
         convId = newConv.id;
       }
       triggerNotification.accommodationInterest(
-        accommodation.owner_id,
-        accommodation.id,
-        accommodation.title,
-        profile?.full_name ?? "Someone"
+        accommodation.owner_id, accommodation.id,
+        accommodation.title, profile?.full_name ?? "Someone"
       );
       navigate(`/messages?conversation=${convId}`);
     } catch (error) {
       console.error(error);
     } finally {
       setContacting(false);
+    }
+  };
+
+  const handleRequestBooking = async () => {
+    if (!user || !accommodation) return;
+    try {
+      // Notify the landlord
+      triggerNotification.accommodationInterest(
+        accommodation.owner_id, accommodation.id,
+        accommodation.title, profile?.full_name ?? "Someone"
+      );
+      // Start a conversation with a pre‑filled message
+      const existingConvos = await messageService.getConversations(user.id);
+      const existing = existingConvos.find(
+        (c) =>
+          (c.user1_id === user.id && c.user2_id === accommodation.owner_id) ||
+          (c.user2_id === user.id && c.user1_id === accommodation.owner_id)
+      );
+      let convId = existing?.id;
+      if (!convId) {
+        const newConv = await messageService.createConversation(user.id, accommodation.owner_id);
+        convId = newConv.id;
+        await messageService.sendMessage(
+          convId,
+          user.id,
+          `Hi, I'm interested in booking "${accommodation.title}". Is it still available?`
+        );
+      }
+      navigate(`/messages?conversation=${convId}`);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -160,7 +175,9 @@ export default function AccommodationDetailPage() {
   }
 
   const isOwner = user?.id === accommodation.owner_id;
-  const displayImages = images.length > 0 ? images : (accommodation.image_url ? [{ id: "main", image_url: accommodation.image_url }] : []);
+  const displayImages = images.length > 0
+    ? images
+    : (accommodation.image_url ? [{ id: "main", image_url: accommodation.image_url }] : []);
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
@@ -294,33 +311,38 @@ export default function AccommodationDetailPage() {
 
         {/* Landlord Card */}
         {accommodation.landlord && (
-  <div className="card p-4 flex items-center gap-4">
-    <Link to={`/user/${accommodation.landlord.id}`} className="flex-shrink-0">
-      {accommodation.landlord.avatar_url ? (
-        <img alt="avatar" src={accommodation.landlord.avatar_url} className="w-12 h-12 rounded-full object-cover" />
-      ) : (
-        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: "var(--color-primary)" }}>
-          {(accommodation.landlord.full_name?.[0] ?? "?").toUpperCase()}
-        </div>
-      )}
-    </Link>
-    <div className="flex-1 min-w-0">
-      <Link to={`/user/${accommodation.landlord.id}`} className="font-semibold text-sm flex items-center gap-1" style={{ color: "var(--color-text)" }}>
-        {accommodation.landlord.full_name || "Landlord"}
-        {accommodation.landlord.is_verified && <ShieldCheck size={14} style={{ color: "var(--color-accent)", fill: "var(--color-accent)" }} />}
-        {accommodation.landlord.is_landlord && (
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--color-accent-light)", color: "#0C4A6E" }}>Landlord</span>
+          <div className="card p-4 flex items-center gap-4">
+            <Link to={`/user/${accommodation.landlord.id}`} className="flex-shrink-0">
+              {accommodation.landlord.avatar_url ? (
+                <img src={accommodation.landlord.avatar_url} className="w-12 h-12 rounded-full object-cover" alt="" />
+              ) : (
+                <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: "var(--color-primary)" }}>
+                  {(accommodation.landlord.full_name?.[0] ?? "?").toUpperCase()}
+                </div>
+              )}
+            </Link>
+            <div className="flex-1 min-w-0">
+              <Link to={`/user/${accommodation.landlord.id}`} className="font-semibold text-sm flex items-center gap-1" style={{ color: "var(--color-text)" }}>
+                {accommodation.landlord.full_name || "Landlord"}
+                {accommodation.landlord.is_verified && <ShieldCheck size={14} style={{ color: "var(--color-accent)", fill: "var(--color-accent)" }} />}
+                {accommodation.landlord.is_landlord && (
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--color-accent-light)", color: "#0C4A6E" }}>Landlord</span>
+                )}
+              </Link>
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{accommodation.landlord.is_verified ? "Verified" : "Unverified"} profile</p>
+            </div>
+            {!isOwner && (
+              <div className="flex flex-col gap-2">
+                <button onClick={handleRequestBooking} className="btn-accent w-auto px-4 py-2 text-sm flex items-center gap-2">
+                  <Calendar size={14} /> Request to Book
+                </button>
+                <button onClick={handleContactLandlord} disabled={contacting} className="btn-primary w-auto px-4 py-2 text-sm flex items-center gap-2">
+                  {contacting ? <Loader2 size={14} className="animate-spin" /> : <MessageCircle size={14} />} Contact
+                </button>
+              </div>
+            )}
+          </div>
         )}
-      </Link>
-      <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{accommodation.landlord.is_verified ? "Verified" : "Unverified"} profile</p>
-    </div>
-    {!isOwner && (
-      <button onClick={handleContactLandlord} disabled={contacting} className="btn-primary w-auto px-4 py-2 text-sm flex items-center gap-2">
-        {contacting ? <Loader2 size={14} className="animate-spin" /> : <MessageCircle size={14} />} Contact
-      </button>
-    )}
-  </div>
-)}
 
         {/* Owner actions */}
         {isOwner && (

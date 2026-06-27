@@ -13,17 +13,31 @@ const iconMap: Record<string, React.FC<{ size?: number; className?: string; colo
 
 interface Props {
   notification: Notification;
-  onMarkRead: () => void;
+  onMarkRead: () => Promise<void>;
 }
 
 export default function NotificationItem({ notification, onMarkRead }: Props) {
   const navigate = useNavigate();
   const Icon = iconMap[notification.type] ?? Bell;
 
-  const handleClick = () => {
-    onMarkRead();                          // mark as read
+  const handleClick = async () => {
+    // TEMP: log the notification to verify link exists
+    console.log("Notification clicked:", notification);
+
+    // Navigate immediately if a link exists
     if (notification.link) {
-      navigate(notification.link);        // go to the linked content
+      navigate(notification.link);
+    } else {
+      console.warn("Notification has no link:", notification);
+    }
+
+    // Mark as read in background (don't block navigation)
+    if (!notification.is_read) {
+      try {
+        await onMarkRead();
+      } catch (err) {
+        console.error("Mark as read failed (navigation still happened):", err);
+      }
     }
   };
 

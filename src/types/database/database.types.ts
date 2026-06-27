@@ -74,9 +74,11 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          image_thumb: string | null
           image_url: string | null
           is_hidden: boolean | null
           location: string
+          looking_for_roommate: boolean | null
           monthly_rent: number
           owner_id: string
           status: string | null
@@ -86,9 +88,11 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          image_thumb?: string | null
           image_url?: string | null
           is_hidden?: boolean | null
           location: string
+          looking_for_roommate?: boolean | null
           monthly_rent: number
           owner_id: string
           status?: string | null
@@ -98,9 +102,11 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          image_thumb?: string | null
           image_url?: string | null
           is_hidden?: boolean | null
           location?: string
+          looking_for_roommate?: boolean | null
           monthly_rent?: number
           owner_id?: string
           status?: string | null
@@ -174,18 +180,21 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          unread_count: number | null
           user1_id: string
           user2_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          unread_count?: number | null
           user1_id: string
           user2_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          unread_count?: number | null
           user1_id?: string
           user2_id?: string
         }
@@ -347,11 +356,41 @@ export type Database = {
         }
         Relationships: []
       }
+      product_images: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_url: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           created_at: string | null
           description: string | null
           id: string
+          image_thumb: string | null
           image_url: string | null
           in_stock: boolean | null
           is_hidden: boolean | null
@@ -364,6 +403,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          image_thumb?: string | null
           image_url?: string | null
           in_stock?: boolean | null
           is_hidden?: boolean | null
@@ -376,6 +416,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          image_thumb?: string | null
           image_url?: string | null
           in_stock?: boolean | null
           is_hidden?: boolean | null
@@ -396,69 +437,105 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_thumb: string | null
           avatar_url: string | null
           avg_rating: number | null
           bio: string | null
           course: string | null
           cover_photo_url: string | null
           created_at: string | null
+          drinking_preference: string | null
           email: string
           full_name: string | null
+          going_out_pattern: string | null
           id: string
           is_admin: boolean
           is_banned: boolean | null
           is_landlord: boolean | null
           is_verified: boolean
           last_seen: string | null
+          looking_for_roommate: boolean | null
           referral_code: string | null
           referred_by: string | null
+          response_count: number | null
           review_count: number | null
+          roommate_budget_max: number | null
+          roommate_budget_min: number | null
+          roommate_gender_preference: string | null
+          roommate_preferences: string | null
+          smoking_preference: string | null
+          study_habit: string | null
+          total_response_time_ms: number | null
           university: string | null
           updated_at: string | null
           username: string | null
           year_of_study: number | null
         }
         Insert: {
+          avatar_thumb?: string | null
           avatar_url?: string | null
           avg_rating?: number | null
           bio?: string | null
           course?: string | null
           cover_photo_url?: string | null
           created_at?: string | null
+          drinking_preference?: string | null
           email: string
           full_name?: string | null
+          going_out_pattern?: string | null
           id: string
           is_admin?: boolean
           is_banned?: boolean | null
           is_landlord?: boolean | null
           is_verified?: boolean
           last_seen?: string | null
+          looking_for_roommate?: boolean | null
           referral_code?: string | null
           referred_by?: string | null
+          response_count?: number | null
           review_count?: number | null
+          roommate_budget_max?: number | null
+          roommate_budget_min?: number | null
+          roommate_gender_preference?: string | null
+          roommate_preferences?: string | null
+          smoking_preference?: string | null
+          study_habit?: string | null
+          total_response_time_ms?: number | null
           university?: string | null
           updated_at?: string | null
           username?: string | null
           year_of_study?: number | null
         }
         Update: {
+          avatar_thumb?: string | null
           avatar_url?: string | null
           avg_rating?: number | null
           bio?: string | null
           course?: string | null
           cover_photo_url?: string | null
           created_at?: string | null
+          drinking_preference?: string | null
           email?: string
           full_name?: string | null
+          going_out_pattern?: string | null
           id?: string
           is_admin?: boolean
           is_banned?: boolean | null
           is_landlord?: boolean | null
           is_verified?: boolean
           last_seen?: string | null
+          looking_for_roommate?: boolean | null
           referral_code?: string | null
           referred_by?: string | null
+          response_count?: number | null
           review_count?: number | null
+          roommate_budget_max?: number | null
+          roommate_budget_min?: number | null
+          roommate_gender_preference?: string | null
+          roommate_preferences?: string | null
+          smoking_preference?: string | null
+          study_habit?: string | null
+          total_response_time_ms?: number | null
           university?: string | null
           updated_at?: string | null
           username?: string | null
@@ -550,12 +627,34 @@ export type Database = {
         }
         Relationships: []
       }
+      roommate_likes: {
+        Row: {
+          created_at: string | null
+          id: string
+          liked_id: string
+          liker_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          liked_id: string
+          liker_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          liked_id?: string
+          liker_id?: string
+        }
+        Relationships: []
+      }
       saved_items: {
         Row: {
           created_at: string | null
           id: string
           item_id: string
           item_type: string
+          metadata: Json | null
           user_id: string
         }
         Insert: {
@@ -563,6 +662,7 @@ export type Database = {
           id?: string
           item_id: string
           item_type: string
+          metadata?: Json | null
           user_id: string
         }
         Update: {
@@ -570,6 +670,7 @@ export type Database = {
           id?: string
           item_id?: string
           item_type?: string
+          metadata?: Json | null
           user_id?: string
         }
         Relationships: []
@@ -606,6 +707,41 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          id: string
+          rating: number
+          reviewer_id: string
+          shop_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rating: number
+          reviewer_id: string
+          shop_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rating?: number
+          reviewer_id?: string
+          shop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_reviews_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
         ]

@@ -4,6 +4,8 @@ import { router } from "@/routes";
 import AuthProvider from "@/app/providers/AuthProvider";
 import { Toaster } from "react-hot-toast";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
+import UpdateToast from "@/components/ui/UpdateToast";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,6 +31,7 @@ export default function App() {
               },
             }}
           />
+          <UpdateToast />
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

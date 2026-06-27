@@ -7,16 +7,15 @@ export const savedService = {
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
-
     if (error) throw error;
     return data || [];
   },
 
-  async saveItem(userId: string, itemType: "product" | "accommodation", itemId: string) {
+  async saveItem(userId: string, itemType: "product" | "accommodation", itemId: string, metadata?: Record<string, any>) {
     const { error } = await supabase
       .from("saved_items")
-      .insert({ user_id: userId, item_type: itemType, item_id: itemId });
-    if (error) throw error;
+      .insert({ user_id: userId, item_type: itemType, item_id: itemId, metadata: metadata || {} });
+    if (error && error.code !== "23505") throw error;
   },
 
   async unsaveItem(userId: string, itemType: string, itemId: string) {
@@ -39,5 +38,5 @@ export const savedService = {
       .maybeSingle();
     if (error) return false;
     return !!data;
-  }
+  },
 };
