@@ -29,8 +29,8 @@ export default function Navbar() {
         }}
       >
         <div className="flex items-center justify-between h-14 px-4">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2" aria-label="Warren Connect home">
+          {/* Logo – now points to /feed */}
+          <Link to="/feed" className="flex items-center gap-2" aria-label="Warren Connect home">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
               style={{ background: "rgba(255,255,255,0.2)" }}

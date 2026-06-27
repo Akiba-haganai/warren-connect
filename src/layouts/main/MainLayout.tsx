@@ -3,7 +3,7 @@ import Navbar from "@/components/navigation/Navbar";
 import BottomNav from "@/components/navigation/BottomNav";
 import InstallBanner from "@/components/ui/InstallBanner";
 import OfflineBanner from "@/components/ui/OfflineBanner";
-import OnboardingCarousel from "@/components/ui/OnBoardingCarousel";   // 👈 new
+import OnboardingCarousel from "@/components/ui/OnBoardingCarousel";
 
 export default function MainLayout() {
   return (
@@ -40,7 +40,7 @@ export default function MainLayout() {
       </div>
 
       <InstallBanner />
-      <OnboardingCarousel />   {/* 👈 now inside Router context */}
+      <OnboardingCarousel />
       <BottomNav />
     </div>
   );

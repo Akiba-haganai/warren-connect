@@ -161,13 +161,13 @@ export default function HomeFeedPage() {
 
       {/* FAB */}
       <button
-        onClick={() => setShowComposer(true)}
-        className="fixed bottom-28 right-5 z-[100] w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
-        style={{ background: "var(--color-primary)", color: "#fff" }}
-        aria-label="Create post"
-      >
-        <PlusCircle size={28} />
-      </button>
+  onClick={() => setShowComposer(true)}
+  className="fixed bottom-28 right-5 z-[100] w-14 h-14 rounded-full flex items-center justify-center fab-glow fab-float active:scale-90 transition-transform"
+  style={{ background: "var(--color-primary)", color: "#fff" }}
+  aria-label="Create post"
+>
+  <PlusCircle size={28} />
+</button>
 
       {showComposer && (
         <PostComposer onClose={() => setShowComposer(false)} onCreated={handlePostCreated} />

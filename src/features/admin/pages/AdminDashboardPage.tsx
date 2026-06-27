@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { adminService } from "@/services/admin/adminService";
 import { verificationService } from "@/services/verification/verificationService";
 import { useAuthStore } from "@/store/auth/authStore";
+import { triggerNotification } from "@/services/notifications/triggerService";
+import FeatureProgressBar from "@/components/ui/FeaturesProgressBar";    // ✅ new
 import type { Tables } from "@/types/database/database.types";
 import {
   ShieldAlert,
@@ -9,6 +11,7 @@ import {
   EyeOff,
   CheckCircle,
   Loader2,
+  Trash2
 } from "lucide-react";
 
 type Profile = Tables<"profiles">;
@@ -51,6 +54,12 @@ export default function AdminDashboardPage() {
     setUsers((prev) =>
       prev.map((u) => (u.id === request.user_id ? { ...u, is_verified: true } : u))
     );
+    await triggerNotification.accommodationInterest(
+      request.user_id,
+      request.id,
+      "Verification Approved ✅",
+      "Your verification request has been approved."
+    );
   };
 
   const handleReject = async (request: VerificationRequest) => {
@@ -61,6 +70,12 @@ export default function AdminDashboardPage() {
         r.id === request.id ? { ...r, status: "rejected", reviewed_by: user.id } : r
       )
     );
+    await triggerNotification.accommodationInterest(
+      request.user_id,
+      request.id,
+      "Verification Rejected ❌",
+      "Your verification request was not approved."
+    );
   };
 
   // Report handlers
@@ -69,6 +84,19 @@ export default function AdminDashboardPage() {
     setReports((prev) =>
       prev.map((r) => (r.id === reportId ? { ...r, status: action } : r))
     );
+  };
+
+  const handleDeleteContent = async (type: string, id: string) => {
+    if (!confirm(`Permanently delete this ${type}? This cannot be undone.`)) return;
+    try {
+      if (type === "post") await adminService.deletePost(id);
+      else if (type === "product") await adminService.deleteProduct(id);
+      else if (type === "accommodation") await adminService.deleteAccommodation(id);
+      alert(`${type} deleted.`);
+      adminService.getReports().then(setReports);
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   const handleHideContent = async (type: string, id: string) => {
@@ -99,6 +127,9 @@ export default function AdminDashboardPage() {
       <h1 className="text-xl font-bold" style={{ color: "var(--color-text)" }}>
         Admin Dashboard
       </h1>
+
+      {/* ===== PROJECT COMPLETION PROGRESS ===== */}
+      <FeatureProgressBar />
 
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
@@ -157,14 +188,18 @@ export default function AdminDashboardPage() {
                   >
                     <CheckCircle size={12} /> Resolve
                   </button>
-                  {report.content_type !== "user" && (
-                    <button
-                      onClick={() => handleHideContent(report.content_type, report.content_id)}
-                      className="text-xs px-2 py-1 rounded bg-red-100 text-red-800"
-                    >
-                      <EyeOff size={12} /> Hide {report.content_type}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleHideContent(report.content_type, report.content_id)}
+                    className="text-xs px-2 py-1 rounded bg-red-100 text-red-800"
+                  >
+                    <EyeOff size={12} /> Hide
+                  </button>
+                  <button
+                    onClick={() => handleDeleteContent(report.content_type, report.content_id)}
+                    className="text-xs px-2 py-1 rounded bg-red-200 text-red-900"
+                  >
+                    <Trash2 size={12} /> Delete
+                  </button>
                 </div>
               </div>
             </div>

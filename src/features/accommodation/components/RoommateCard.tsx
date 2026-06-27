@@ -104,6 +104,10 @@ export default function RoommateCard({
             K{user.roommate_budget_min || 0} – K{user.roommate_budget_max || "∞"}
           </span>
         )}
+        {/* Privacy needed badge */}
+        {user.privacy_needed && (
+          <span className="badge badge-amber text-[10px]">🔒 Occasional privacy needed</span>
+        )}
       </div>
       {user.roommate_preferences && (
         <p className="text-xs mt-2 italic" style={{ color: "var(--color-text-muted)" }}>

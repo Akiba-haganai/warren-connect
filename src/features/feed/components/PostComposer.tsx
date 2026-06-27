@@ -4,6 +4,8 @@ import { useAuthStore } from "@/store/auth/authStore";
 import { postService } from "@/services/posts/postService";
 import { storageService } from "@/services/storage/storageService";
 import { compressImage } from "@/utils/compressImage";
+import TagInput from "@/components/ui/TagInput";
+import { tagService } from "@/services/tags/tagService";
 
 interface Props {
   onClose: () => void;
@@ -15,6 +17,7 @@ export default function PostComposer({ onClose, onCreated }: Props) {
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -42,7 +45,18 @@ export default function PostComposer({ onClose, onCreated }: Props) {
         );
         image_url = publicUrl;
       }
-      await postService.createPost(user.id, content.trim(), image_url);
+      const newPost = await postService.createPost(user.id, content.trim(), image_url);
+
+      // Save tags
+      if (tags.length > 0 && newPost) {
+        const tagRecords = await Promise.all(
+          tags.map((tagName) => tagService.createTag(tagName))
+        );
+        await Promise.all(
+          tagRecords.map((tag) => tagService.addTagToPost(newPost.id, tag!.id))
+        );
+      }
+
       onCreated();
       onClose();
     } finally {
@@ -84,6 +98,16 @@ export default function PostComposer({ onClose, onCreated }: Props) {
           onChange={(e) => setContent(e.target.value)}
           aria-label="Post content"
         />
+
+        {/* Tags */}
+        <div className="mt-3">
+          <label className="field-label">Tags</label>
+          <TagInput
+            selectedTags={tags}
+            onChange={setTags}
+            placeholder="Add tags (e.g., textbooks, electronics)"
+          />
+        </div>
 
         {preview && (
           <div className="relative mt-3">

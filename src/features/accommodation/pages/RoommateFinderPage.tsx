@@ -55,6 +55,7 @@ export default function RoommateFinderPage() {
   const [genderFilter, setGenderFilter] = useState("no-preference");
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
+  const [privacyFilter, setPrivacyFilter] = useState<boolean | null>(null);   // ← new
 
   // Like state
   const [likedUsers, setLikedUsers] = useState<Set<string>>(new Set());
@@ -66,7 +67,7 @@ export default function RoommateFinderPage() {
       let query = supabase
         .from("profiles")
         .select(
-          "id, full_name, username, avatar_url, last_seen, course, year_of_study, university, roommate_preferences, smoking_preference, drinking_preference, study_habit, going_out_pattern, roommate_budget_min, roommate_budget_max, roommate_gender_preference"
+          "id, full_name, username, avatar_url, last_seen, course, year_of_study, university, roommate_preferences, smoking_preference, drinking_preference, study_habit, going_out_pattern, roommate_budget_min, roommate_budget_max, roommate_gender_preference, privacy_needed"
         )
         .eq("looking_for_roommate", true)
         .order("created_at", { ascending: false })
@@ -77,6 +78,7 @@ export default function RoommateFinderPage() {
       if (studyFilter !== "no-preference") query = query.eq("study_habit", studyFilter);
       if (goingOutFilter !== "no-preference") query = query.eq("going_out_pattern", goingOutFilter);
       if (genderFilter !== "no-preference") query = query.eq("roommate_gender_preference", genderFilter);
+      if (privacyFilter !== null) query = query.eq("privacy_needed", privacyFilter);   // ← new
 
       const { data, error } = await query;
       if (error) throw error;
@@ -160,7 +162,7 @@ export default function RoommateFinderPage() {
     return scored;
   }, [users, search, universityFilter, budgetMin, budgetMax, currentProfile]);
 
-  const isOnline = (lastSeen: string | null) : boolean =>
+  const isOnline = (lastSeen: string | null): boolean =>
     !!(lastSeen && Date.now() - new Date(lastSeen).getTime() < 5 * 60 * 1000);
 
   return (
@@ -184,6 +186,38 @@ export default function RoommateFinderPage() {
           budgetMin={budgetMin} onBudgetMinChange={setBudgetMin}
           budgetMax={budgetMax} onBudgetMaxChange={setBudgetMax}
         />
+
+        {/* Privacy filter button (standalone, not inside RoommateFilters) */}
+        <button
+          onClick={() =>
+            setPrivacyFilter((prev) => (prev === null ? true : prev === true ? false : null))
+          }
+          className={`input-field w-auto text-xs cursor-pointer ${
+            privacyFilter === true ? "bg-primary text-white" : privacyFilter === false ? "bg-red-100 text-red-800" : ""
+          }`}
+          style={{
+            background:
+              privacyFilter === true
+                ? "var(--color-primary)"
+                : privacyFilter === false
+                ? "#FEE2E2"
+                : "var(--color-surface)",
+            color:
+              privacyFilter !== null
+                ? privacyFilter
+                  ? "#fff"
+                  : "#991B1B"
+                : "var(--color-text-secondary)",
+            borderColor:
+              privacyFilter !== null
+                ? privacyFilter
+                  ? "var(--color-primary)"
+                  : "#FECACA"
+                : "var(--color-border)",
+          }}
+        >
+          🔒 {privacyFilter === null ? "Privacy" : privacyFilter ? "Needed" : "Not needed"}
+        </button>
 
         {isLoading ? (
           <div className="flex justify-center py-12"><Loader2 className="animate-spin" /></div>

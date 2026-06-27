@@ -69,6 +69,36 @@ export type Database = {
           },
         ]
       }
+      accommodation_tags: {
+        Row: {
+          accommodation_id: string
+          tag_id: string
+        }
+        Insert: {
+          accommodation_id: string
+          tag_id: string
+        }
+        Update: {
+          accommodation_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accommodation_tags_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "accommodations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accommodation_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accommodations: {
         Row: {
           created_at: string | null
@@ -329,6 +359,36 @@ export type Database = {
           },
         ]
       }
+      post_tags: {
+        Row: {
+          post_id: string
+          tag_id: string
+        }
+        Insert: {
+          post_id: string
+          tag_id: string
+        }
+        Update: {
+          post_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_tags_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           content: string
@@ -381,6 +441,36 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_tags: {
+        Row: {
+          product_id: string
+          tag_id: string
+        }
+        Insert: {
+          product_id: string
+          tag_id: string
+        }
+        Update: {
+          product_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_tags_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
             referencedColumns: ["id"]
           },
         ]
@@ -455,6 +545,7 @@ export type Database = {
           is_verified: boolean
           last_seen: string | null
           looking_for_roommate: boolean | null
+          privacy_needed: boolean | null
           referral_code: string | null
           referred_by: string | null
           response_count: number | null
@@ -490,6 +581,7 @@ export type Database = {
           is_verified?: boolean
           last_seen?: string | null
           looking_for_roommate?: boolean | null
+          privacy_needed?: boolean | null
           referral_code?: string | null
           referred_by?: string | null
           response_count?: number | null
@@ -525,6 +617,7 @@ export type Database = {
           is_verified?: boolean
           last_seen?: string | null
           looking_for_roommate?: boolean | null
+          privacy_needed?: boolean | null
           referral_code?: string | null
           referred_by?: string | null
           response_count?: number | null
@@ -780,6 +873,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tags: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       verification_requests: {
         Row: {

@@ -6,30 +6,37 @@ export type Profile = Tables<"profiles">;
 
 export const accommodationService = {
   async createAccommodation(
-    owner_id: string,
-    title: string,
-    description: string,
-    location: string,
-    monthly_rent: number,
-    image_url?: string
-  ) {
-    const { data, error } = await supabase
-      .from("accommodations")
-      .insert({
-        owner_id,
-        title,
-        description,
-        location,
-        monthly_rent,
-        image_url: image_url ?? null,
-        status: "available",
-      })
-      .select()
-      .single();
+  owner_id: string,
+  title: string,
+  description: string,
+  location: string,
+  monthly_rent: number,
+  image_url?: string
+) {
+  const { data, error } = await supabase
+    .from("accommodations")
+    .insert({
+      owner_id,
+      title,
+      description,
+      location,
+      monthly_rent,
+      image_url: image_url ?? null,
+      status: "available",
+    })
+    .select()
+    .single();
 
-    if (error) throw error;
-    return data;
-  },
+  if (error) throw error;
+
+  // Auto‑set the owner as a landlord
+  await supabase
+    .from("profiles")
+    .update({ is_landlord: true })
+    .eq("id", owner_id);
+
+  return data;
+},
 
   async getAccommodations() {
     const { data, error } = await supabase

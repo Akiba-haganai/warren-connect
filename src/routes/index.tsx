@@ -1,3 +1,5 @@
+// src/routes/index.tsx
+
 import { createBrowserRouter } from "react-router-dom";
 import { lazy, Suspense } from "react";
 
@@ -26,7 +28,7 @@ const MarketplacePage = lazy(() => import("@/features/marketplace/pages/Marketpl
 const ProductDetailPage = lazy(() => import("@/features/marketplace/pages/ProductDetailPage"));
 const AccommodationPage = lazy(() => import("@/features/accommodation/pages/AccommodationPage"));
 const AccommodationDetailPage = lazy(() => import("@/features/accommodation/pages/AccomodationDetailPage"));
-const RoommateFinderPage = lazy(() => import("@/features/accommodation/pages/RoommateFinderPage")); // new
+const RoommateFinderPage = lazy(() => import("@/features/accommodation/pages/RoommateFinderPage"));
 const MessagesPage = lazy(() => import("@/features/messages/pages/MessagesPage"));
 const NotificationsPage = lazy(() => import("@/features/notifications/pages/NotificationsPage"));
 const PostDetailPage = lazy(() => import("@/features/feed/pages/PostDetailPage"));
@@ -42,6 +44,12 @@ const AdminDashboardPage = lazy(() => import("@/features/admin/pages/AdminDashbo
 // Legal pages (unprotected)
 const TermsPage = lazy(() => import("@/features/legal/TermsPage"));
 const PrivacyPage = lazy(() => import("@/features/legal/PrivacyPage"));
+
+// Landing page (public)
+const LandingPage = lazy(() => import("@/features/landing/LandingPage"));
+
+// Tag page
+const TagPage = lazy(() => import("@/features/tags/TagPage"));
 
 // ---------- FALLBACK ----------
 const PageLoader = () => (
@@ -61,7 +69,21 @@ const withBoundary = (Component: React.LazyExoticComponent<React.ComponentType<a
 
 // ---------- ROUTER ----------
 export const router = createBrowserRouter([
+  // =========================
+  // PUBLIC LANDING PAGE
+  // =========================
+  {
+    path: "/",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <LandingPage />
+      </Suspense>
+    ),
+  },
+
+  // =========================
   // AUTH ROUTES
+  // =========================
   {
     element: (
       <GuestRoute>
@@ -75,7 +97,9 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // MAIN APP ROUTES
+  // =========================
+  // MAIN APP ROUTES (protected)
+  // =========================
   {
     element: (
       <ProtectedRoute>
@@ -83,7 +107,7 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { path: "/", element: withBoundary(HomeFeedPage) },
+      { path: "/feed", element: withBoundary(HomeFeedPage) },
       { path: "/user/:id", element: withBoundary(PublicProfilePage) },
       { path: "/profile", element: withBoundary(ProfilePage) },
       { path: "/complete-profile", element: withBoundary(CompleteProfilePage) },
@@ -91,17 +115,20 @@ export const router = createBrowserRouter([
       { path: "/marketplace", element: withBoundary(MarketplacePage) },
       { path: "/accommodation/:id", element: withBoundary(AccommodationDetailPage) },
       { path: "/accommodation", element: withBoundary(AccommodationPage) },
-      { path: "/roommates", element: withBoundary(RoommateFinderPage) },   // new
+      { path: "/roommates", element: withBoundary(RoommateFinderPage) },
       { path: "/messages", element: withBoundary(MessagesPage) },
       { path: "/notifications", element: withBoundary(NotificationsPage) },
       { path: "/verification", element: withBoundary(VerificationRequestPage) },
       { path: "/saved", element: withBoundary(SavedItemsPage) },
       { path: "/shop/:id", element: withBoundary(ShopPage) },
       { path: "/post/:id", element: withBoundary(PostDetailPage) },
+      { path: "/tag/:tagName", element: withBoundary(TagPage) },
     ],
   },
 
-  // PUBLIC LEGAL ROUTES (no guards)
+  // =========================
+  // PUBLIC LEGAL ROUTES
+  // =========================
   {
     path: "/terms",
     element: (
@@ -119,7 +146,9 @@ export const router = createBrowserRouter([
     ),
   },
 
+  // =========================
   // ADMIN ROUTES
+  // =========================
   {
     path: "/admin",
     element: (

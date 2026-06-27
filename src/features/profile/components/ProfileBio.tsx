@@ -6,24 +6,22 @@ import { profileService } from "@/services/profiles/profileService";
 export default function ProfileBio() {
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
-  const refreshProfile = useAuthStore((s) => s.refreshProfile);
 
   const [editing, setEditing] = useState(false);
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setBio(profile?.bio ?? "");
-  }, [profile?.bio]);
-
+  useEffect(() => { setBio(profile?.bio ?? ""); }, [profile?.bio]);
   if (!user || !profile) return null;
 
   const handleSave = async () => {
     setSaving(true);
+    setEditing(false);                        // optimistic close
     try {
       await profileService.updateProfile(user.id, { bio: bio.trim() });
-      await refreshProfile(user.id);
-      setEditing(false);
+    } catch (err) {
+      setBio(profile.bio ?? "");             // rollback
+      setEditing(true);
     } finally {
       setSaving(false);
     }
@@ -43,12 +41,9 @@ export default function ProfileBio() {
         />
         <div className="flex gap-2">
           <button
-            onClick={() => {
-              setEditing(false);
-              setBio(profile.bio ?? "");
-            }}
-            className="btn-ghost text-xs px-3 py-2 rounded-lg"
-            style={{ border: "1px solid var(--color-border)" }}
+            onClick={() => { setEditing(false); setBio(profile.bio ?? ""); }}
+            className="btn-ghost flex items-center gap-1 text-xs px-3 py-2 rounded-lg border"
+            style={{ borderColor: "var(--color-border)" }}
           >
             <X size={13} /> Cancel
           </button>
@@ -66,20 +61,12 @@ export default function ProfileBio() {
   }
 
   return (
-    <button
-      onClick={() => setEditing(true)}
-      className="text-left w-full group"
-    >
-      <p
-        className="text-sm"
-        style={{
-          color: profile.bio ? "var(--color-text)" : "var(--color-text-muted)",
-        }}
-      >
+    <button onClick={() => setEditing(true)} className="text-left w-full group">
+      <p className="text-sm" style={{ color: profile.bio ? "var(--color-text)" : "var(--color-text-muted)" }}>
         {profile.bio || "Add a bio…"}
       </p>
       <span
-        className="inline-flex items-center gap-1 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="inline-flex items-center gap-1 text-xs mt-1 opacity-0 group-hover:opacity-100"
         style={{ color: "var(--color-text-secondary)" }}
       >
         <Edit3 size={11} /> Edit bio

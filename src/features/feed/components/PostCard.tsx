@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Send, Loader2, Flag } from "lucide-react";
+import { Heart, MessageCircle, Send, Loader2, Flag, Minus } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { likeService } from "@/services/posts/likeService";
@@ -8,6 +8,7 @@ import { commentService } from "@/services/posts/commentService";
 import { useAuthStore } from "@/store/auth/authStore";
 import { triggerNotification } from "@/services/notifications/triggerService";
 import { reportService } from "@/services/reports/reportService";
+import { tagService } from "@/services/tags/tagService";                // ✅ new
 import type { FeedPost } from "@/services/posts/postService";
 import type { Tables } from "@/types/database/database.types";
 import CommentItem from "@/features/feed/components/CommentItem";
@@ -22,6 +23,12 @@ export default function PostCard({ post }: { post: FeedPost }) {
   const [liked, setLiked] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
+  const [tags, setTags] = useState<string[]>([]);                     // ✅ new
+
+  // Fetch tags for this post
+  useEffect(() => {
+    tagService.getTagsForPost(post.id).then(setTags);
+  }, [post.id]);
 
   // Fetch comments with profiles
   const { data: comments, isLoading: commentsLoading } = useQuery({
@@ -66,7 +73,7 @@ export default function PostCard({ post }: { post: FeedPost }) {
     },
   });
 
-  // Add comment mutation – now captures the comment text reliably
+  // Add comment mutation
   const commentMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!user) throw new Error("Not logged in");
@@ -81,7 +88,7 @@ export default function PostCard({ post }: { post: FeedPost }) {
           post.user_id,
           post.id,
           profile?.full_name ?? "Someone",
-          content               // ← uses the captured value, not stale state
+          content
         );
       }
     },
@@ -93,7 +100,6 @@ export default function PostCard({ post }: { post: FeedPost }) {
     commentMutation.mutate(newComment.trim());
   };
 
-  // Delete comment
   const handleDeleteComment = async (commentId: string) => {
     if (!user) return;
     try {
@@ -105,7 +111,6 @@ export default function PostCard({ post }: { post: FeedPost }) {
     }
   };
 
-  // Report post
   const handleReport = async () => {
     if (!user) return;
     const reason = prompt("Why are you reporting this post?");
@@ -183,15 +188,44 @@ export default function PostCard({ post }: { post: FeedPost }) {
         </button>
       </div>
 
-      {/* Comments section */}
+      {/* ===== TAGS ===== */}
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {tags.map((tag) => (
+            <Link
+              key={tag}
+              to={`/tag/${tag}`}
+              className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+              style={{
+                background: "var(--color-accent-light)",
+                color: "var(--color-primary)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              #{tag}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* Comments section with grabber bar */}
       {showComments && (
-        <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+        <div className="mt-3 border-t" style={{ borderColor: "var(--color-border)" }}>
+          {/* Drag/grabber bar – tap to close */}
+          <button
+            onClick={() => setShowComments(false)}
+            className="w-full flex justify-center py-2"
+            aria-label="Close comments"
+          >
+            <Minus size={24} style={{ color: "var(--color-border)" }} strokeWidth={3} />
+          </button>
+
           {commentsLoading ? (
-            <div className="flex justify-center py-4">
+            <div className="flex justify-center pb-4">
               <Loader2 size={16} className="animate-spin" style={{ color: "var(--color-text-muted)" }} />
             </div>
           ) : comments && comments.length > 0 ? (
-            <div className="max-h-48 overflow-y-auto mb-2">
+            <div className="max-h-48 overflow-y-auto pb-2">
               {comments.map((comment) => (
                 <CommentItem
                   key={comment.id}
@@ -209,7 +243,7 @@ export default function PostCard({ post }: { post: FeedPost }) {
           )}
 
           {user && (
-            <form onSubmit={handleCommentSubmit} className="flex gap-2 mt-2">
+            <form onSubmit={handleCommentSubmit} className="flex gap-2 pb-2">
               <input
                 className="input-field flex-1 py-1.5 text-xs"
                 placeholder="Write a comment…"

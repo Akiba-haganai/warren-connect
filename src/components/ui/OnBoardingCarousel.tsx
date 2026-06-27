@@ -8,7 +8,7 @@ const slides = [
     description: "Share posts, ask questions, and stay in the loop with your campus community.",
     icon: MessageCircle,
     action: "See the feed",
-    path: "/",
+    path: "/feed",                               // ✅ corrected
     gradient: "from-blue-600 to-cyan-500",
   },
   {
@@ -21,7 +21,7 @@ const slides = [
   },
   {
     title: "Find Your Next Home",
-    description: "Browse accommodation listings, connect with landlords, and find your perfect place.",
+    description: "Browse accommodation listings, contact landlords, and find your perfect place.",
     icon: Building2,
     action: "Browse housing",
     path: "/accommodation",
@@ -35,7 +35,6 @@ export default function OnboardingCarousel() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Show only if never seen before
     const seen = localStorage.getItem("onboarding-seen");
     if (!seen) {
       setShow(true);

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { commentLikeService } from "@/services/posts/commentLikeService";
 import { useAuthStore } from "@/store/auth/authStore";
@@ -22,7 +23,6 @@ export default function CommentItem({ comment, profile, isOwn, onDelete }: Props
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
 
-  // Fetch initial like state
   useEffect(() => {
     if (!user) return;
     commentLikeService.hasUserLiked(comment.id, user.id).then(setLiked);
@@ -44,26 +44,34 @@ export default function CommentItem({ comment, profile, isOwn, onDelete }: Props
 
   return (
     <div className="flex items-start gap-2 py-2">
-      {profile?.avatar_url ? (
-        <img
-          src={profile.avatar_url}
-          alt={displayName}
-          className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-        />
-      ) : (
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-          style={{ background: "var(--color-primary)" }}
-        >
-          {avatarLetter}
-        </div>
-      )}
+      {/* Avatar – clickable */}
+      <Link to={`/user/${comment.user_id}`} className="flex-shrink-0">
+        {profile?.avatar_url ? (
+          <img
+            src={profile.avatar_url}
+            alt={displayName}
+            className="w-7 h-7 rounded-full object-cover"
+          />
+        ) : (
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+            style={{ background: "var(--color-primary)" }}
+          >
+            {avatarLetter}
+          </div>
+        )}
+      </Link>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>
+          {/* Name – clickable */}
+          <Link
+            to={`/user/${comment.user_id}`}
+            className="text-xs font-semibold"
+            style={{ color: "var(--color-text)" }}
+          >
             {displayName}
-          </p>
+          </Link>
           <span className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
             {comment.created_at
               ? new Date(comment.created_at).toLocaleDateString("en-GB", {
@@ -80,7 +88,6 @@ export default function CommentItem({ comment, profile, isOwn, onDelete }: Props
         </p>
 
         <div className="flex items-center gap-3 mt-1">
-          {/* Like button */}
           <button
             onClick={handleToggleLike}
             className="flex items-center gap-1 text-xs"

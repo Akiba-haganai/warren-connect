@@ -7,7 +7,7 @@ import { notificationService } from "@/services/notifications/notificationServic
 import { roommateService } from "@/services/roommates/roommateService";
 
 const tabs = [
-  { label: "Home",      path: "/",              icon: Home },
+  { label: "Home",      path: "/feed",          icon: Home },          // ← changed to /feed
   { label: "Market",    path: "/marketplace",   icon: Store },
   { label: "Housing",   path: "/accommodation", icon: Building2 },
   { label: "Chat",      path: "/messages",      icon: MessageCircle },
@@ -19,14 +19,12 @@ export default function BottomNav() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
 
-  // Notifications count
   const { data: notifications } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => notificationService.getNotifications(user!.id),
     enabled: !!user,
   });
 
-  // Roommate new matches count
   const { data: newMatches } = useQuery({
     queryKey: ["roommate-matches", user?.id],
     queryFn: () => roommateService.getNewMatchesCount(user!.id),
@@ -55,13 +53,13 @@ export default function BottomNav() {
     >
       <div className="flex items-stretch h-16 max-w-lg mx-auto">
         {tabs.map((tab) => {
+          // Active detection works the same: path starts with tab.path
           const active =
             tab.path === "/"
               ? location.pathname === "/"
               : location.pathname.startsWith(tab.path);
           const Icon = tab.icon;
 
-          // Badge logic
           const showNotifBadge = tab.path === "/notifications" && unreadCount > 0;
           const showMatchBadge = tab.path === "/roommates" && matchesCount > 0;
 
