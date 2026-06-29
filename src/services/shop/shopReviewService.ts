@@ -10,6 +10,15 @@ export const shopReviewService = {
     if (error) throw error;
     return data;
   },
+  // services/shop/shopReviewService.ts
+async deleteReview(reviewId: string, userId: string) {
+  const { error } = await supabase
+    .from("shop_reviews")
+    .delete()
+    .eq("id", reviewId)
+    .eq("reviewer_id", userId); // only reviewer can delete
+  if (error) throw error;
+},
 
   async getReviews(shopId: string) {
     const { data, error } = await supabase

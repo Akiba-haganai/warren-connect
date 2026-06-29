@@ -8,6 +8,13 @@ interface Props {
   locations: string[];
   roommateFilter: boolean;
   onRoommateChange: (val: boolean) => void;
+  // ----- NEW -----
+  genderFilter: string;
+  onGenderChange: (val: string) => void;
+  priceMin: string;
+  onPriceMinChange: (val: string) => void;
+  priceMax: string;
+  onPriceMaxChange: (val: string) => void;
 }
 
 export default function AccommodationFilters({
@@ -18,49 +25,94 @@ export default function AccommodationFilters({
   locations,
   roommateFilter,
   onRoommateChange,
+  genderFilter,
+  onGenderChange,
+  priceMin,
+  onPriceMinChange,
+  priceMax,
+  onPriceMaxChange,
 }: Props) {
   return (
-    <div className="flex gap-2 flex-wrap">
-      <div className="relative flex-1 min-w-[140px]">
-        <Search
-          size={15}
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-          style={{ color: "var(--color-text-muted)" }}
+    <>
+      {/* Row 1 – Search, Location, Roommate toggle, Gender */}
+      <div className="flex gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[140px]">
+          <Search
+            size={15}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: "var(--color-text-muted)" }}
+          />
+          <input
+            className="input-field pl-9"
+            placeholder="Search listings..."
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            aria-label="Search accommodation listings"
+          />
+        </div>
+
+        <select
+          aria-label="Filter by location"
+          className="input-field w-auto text-sm"
+          style={{ width: 140 }}
+          value={locationFilter}
+          onChange={(e) => onLocationChange(e.target.value)}
+        >
+          <option value="">All locations</option>
+          {locations.map((loc) => (
+            <option key={loc} value={loc}>
+              {loc}
+            </option>
+          ))}
+        </select>
+
+        <button
+          onClick={() => onRoommateChange(!roommateFilter)}
+          className={`input-field w-auto text-sm cursor-pointer ${
+            roommateFilter ? "text-white" : ""
+          }`}
+          style={{
+            background: roommateFilter ? "var(--color-primary)" : "var(--color-surface)",
+            color: roommateFilter ? "#fff" : "var(--color-text-secondary)",
+            borderColor: roommateFilter ? "var(--color-primary)" : "var(--color-border)",
+          }}
+          aria-pressed={roommateFilter}
+        >
+          🧑‍🤝‍🧑 Roommate
+        </button>
+
+        {/* Gender filter */}
+        <select
+          aria-label="Filter by gender"
+          className="input-field w-auto text-sm"
+          style={{ width: 120 }}
+          value={genderFilter}
+          onChange={(e) => onGenderChange(e.target.value)}
+        >
+          <option value="">Any gender</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="mixed">Mixed</option>
+        </select>
+      </div>
+
+      {/* Row 2 – Price range */}
+      <div className="flex gap-2">
+        <input
+          type="number"
+          placeholder="Min rent (ZMW)"
+          value={priceMin}
+          onChange={(e) => onPriceMinChange(e.target.value)}
+          className="input-field flex-1 text-xs"
         />
         <input
-          className="input-field pl-9"
-          placeholder="Search listings..."
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          aria-label="Search accommodation listings"
+          type="number"
+          placeholder="Max rent (ZMW)"
+          value={priceMax}
+          onChange={(e) => onPriceMaxChange(e.target.value)}
+          className="input-field flex-1 text-xs"
         />
       </div>
-      <select
-        aria-label="Filter by location"
-        className="input-field w-auto text-sm"
-        style={{ width: 140 }}
-        value={locationFilter}
-        onChange={(e) => onLocationChange(e.target.value)}
-      >
-        <option value="">All locations</option>
-        {locations.map((loc) => (
-          <option key={loc} value={loc}>
-            {loc}
-          </option>
-        ))}
-      </select>
-      <button
-        onClick={() => onRoommateChange(!roommateFilter)}
-        className={`input-field w-auto text-sm cursor-pointer ${roommateFilter ? "text-white" : ""}`}
-        style={{
-          background: roommateFilter ? "var(--color-primary)" : "var(--color-surface)",
-          color: roommateFilter ? "#fff" : "var(--color-text-secondary)",
-          borderColor: roommateFilter ? "var(--color-primary)" : "var(--color-border)",
-        }}
-        aria-pressed={roommateFilter}
-      >
-        🧑‍🤝‍🧑 Roommate
-      </button>
-    </div>
+    </>
   );
 }

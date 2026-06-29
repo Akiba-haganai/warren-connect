@@ -5,6 +5,7 @@ import { profileService } from "@/services/profiles/profileService";
 export default function RoommatePreferencesCard() {
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
+  const refreshProfile = useAuthStore((s) => s.refreshProfile);
 
   const [looking, setLooking] = useState(profile?.looking_for_roommate ?? false);
   const [prefs, setPrefs] = useState({
@@ -18,7 +19,6 @@ export default function RoommatePreferencesCard() {
     freeText: profile?.roommate_preferences ?? "",
     privacy: profile?.privacy_needed ?? false,
   });
-  const [saving, setSaving] = useState(false);   // prevent double‑tap
 
   useEffect(() => {
     if (profile) {
@@ -39,33 +39,27 @@ export default function RoommatePreferencesCard() {
 
   if (!user) return null;
 
-  // Optimistic toggle for “Looking for roommate”
+  // Optimistic toggle – no saving guard, just flip and update backend
   const handleToggleLooking = async () => {
-    if (saving) return;
     const newValue = !looking;
-    setLooking(newValue);                       // optimistically update UI
-    setSaving(true);
+    setLooking(newValue);
     try {
       await profileService.updateProfile(user.id, { looking_for_roommate: newValue });
-    } catch (err) {
-      setLooking(!newValue);                    // rollback on error
-    } finally {
-      setSaving(false);
+      refreshProfile(user.id);
+    } catch {
+      setLooking(!newValue); // rollback on error
     }
   };
 
   // Optimistic save for any preference field
   const handleSave = async (field: string, value: any) => {
-    if (saving) return;
-    setSaving(true);
     const previous = { ...prefs };
-    setPrefs((p) => ({ ...p, [field]: value }));   // immediate UI
+    setPrefs((p) => ({ ...p, [field]: value }));
     try {
       await profileService.updateProfile(user.id, { [field]: value });
-    } catch (err) {
-      setPrefs(previous);                           // rollback
-    } finally {
-      setSaving(false);
+      refreshProfile(user.id);
+    } catch {
+      setPrefs(previous); // rollback
     }
   };
 
@@ -77,7 +71,6 @@ export default function RoommatePreferencesCard() {
         </span>
         <button
           onClick={handleToggleLooking}
-          disabled={saving}
           className={`w-12 h-6 rounded-full transition-colors ${looking ? "bg-green-500" : "bg-gray-300"}`}
           style={{ position: "relative" }}
           aria-pressed={looking}
@@ -208,7 +201,6 @@ export default function RoommatePreferencesCard() {
               </div>
               <button
                 onClick={() => handleSave("privacy_needed", !prefs.privacy)}
-                disabled={saving}
                 className={`w-12 h-6 rounded-full transition-colors ${prefs.privacy ? "bg-green-500" : "bg-gray-300"}`}
                 style={{ position: "relative" }}
                 aria-pressed={prefs.privacy}

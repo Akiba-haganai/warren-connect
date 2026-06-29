@@ -3,8 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
 import { shopService } from "@/services/shop/shopService";
 import { shopReviewService } from "@/services/shop/shopReviewService";
-import { Loader2, Plus, UserPlus, Star } from "lucide-react";
+import { productService } from "@/services/products/productService";   // <-- added
+import { supabase } from "@/lib/supabase/client";
+import {
+  Loader2, Plus, Star, UserX, Copy, Check, Users,
+  Pencil, Share2, Store, Trash2, ToggleLeft, ToggleRight
+} from "lucide-react";
 import ProductCard from "@/features/marketplace/components/ProductCard";
+import ShopSettingsModal from "@/features/marketplace/components/ShopSettingsModal";
 import type { Tables } from "@/types/database/database.types";
 
 type Product = Tables<"products">;
@@ -30,42 +36,173 @@ export default function ShopPage() {
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
-    (async () => {
-      try {
-        const data = await shopService.getShop(id);
-        setShop(data as any);
-        const revs = await shopReviewService.getReviews(id);
-        setReviews(revs);
-        const avg = await shopReviewService.getAverageRating(id);
-        setAvgRating(avg);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id]);
+  // Collaborator states
+  const [collaborators, setCollaborators] = useState<any[]>([]);
+  const [isCollaborator, setIsCollaborator] = useState(false);
+  const [collabSearch, setCollabSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [addingCollab, setAddingCollab] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
 
-  const handleAddCollaborator = async () => {
-    const userId = prompt("Enter user ID to add as collaborator:");
-    if (userId && shop) {
-      await shopService.addCollaborator(shop.id, userId);
-      // Refresh shop data
-      const refreshed = await shopService.getShop(shop.id);
-      setShop(refreshed as any);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // ---------- Load all data ----------
+  const loadShop = async () => {
+    if (!id) return;
+    const data = await shopService.getShop(id);
+    setShop(data as any);
+  };
+
+  const loadReviews = async () => {
+    if (!id) return;
+    const revs = await shopReviewService.getReviews(id);
+    setReviews(revs);
+    const avg = await shopReviewService.getAverageRating(id);
+    setAvgRating(avg);
+  };
+
+  const loadCollaborators = async () => {
+    if (!id || !user) return;
+    const collabs = await shopService.getCollaborators(id);
+    setCollaborators(collabs);
+    setIsCollaborator(collabs.some((c) => c.user_id === user.id));
+  };
+
+  const loadInviteLink = async () => {
+    if (!id || !user || !shop || user.id !== shop.owner_id) return;
+    const token = await shopService.generateInviteToken(shop.id, user.id);
+    setInviteLink(`${window.location.origin}/shop/${shop.id}/join?token=${token}`);
+  };
+
+  const refreshAll = async () => {
+    await Promise.all([loadShop(), loadReviews(), loadCollaborators()]);
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    refreshAll().finally(() => setLoading(false));
+  }, [id, user]);
+
+  useEffect(() => {
+    if (shop && user && user.id === shop.owner_id) {
+      loadInviteLink();
+    }
+  }, [shop, user]);
+
+  const isOwner = user?.id === shop?.owner_id;
+  const canManageShop = isOwner || isCollaborator;
+
+  // ---------- Product actions ----------
+  const handleToggleStock = async (product: Product) => {
+    const newStatus = product.in_stock === false;
+    // ✅ use productService, not shopService
+    await productService.toggleStock(product.id, newStatus);
+    setShop((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        products: prev.products.map((p) =>
+          p.id === product.id ? { ...p, in_stock: newStatus } : p
+        ),
+      };
+    });
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm("Delete this product?")) return;
+    await shopService.deleteProduct(productId);
+    setShop((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        products: prev.products.filter((p) => p.id !== productId),
+      };
+    });
+  };
+
+  // ---------- Review actions ----------
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!user) return;
+    try {
+      await shopReviewService.deleteReview(reviewId, user.id);
+      await loadReviews();
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
+  // ---------- Collaborator search ----------
+  const handleSearchUsers = async (query: string) => {
+    setCollabSearch(query);
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url")
+      .ilike("full_name", `%${query}%`)
+      .limit(5);
+    setSearchResults(profiles || []);
+  };
+
+  const handleAddCollaborator = async (userId: string) => {
+    if (!shop) return;
+    setAddingCollab(true);
+    try {
+      await shopService.addCollaborator(shop.id, userId);
+      await loadCollaborators();
+      setCollabSearch("");
+      setSearchResults([]);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setAddingCollab(false);
+    }
+  };
+
+  const handleRemoveCollaborator = async (userId: string) => {
+    if (!shop) return;
+    try {
+      await shopService.removeCollaborator(shop.id, userId);
+      await loadCollaborators();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  // ---------- Invite link ----------
+  const copyInviteLink = () => {
+    if (!inviteLink) return;
+    navigator.clipboard.writeText(inviteLink);
+    setInviteCopied(true);
+    setTimeout(() => setInviteCopied(false), 2000);
+  };
+
+  // ---------- Share shop ----------
+  const handleShare = async () => {
+    const shareData = {
+      title: shop?.name ?? "Shop",
+      text: shop?.description ?? "",
+      url: window.location.href,
+    };
+    if (navigator.share) {
+      await navigator.share(shareData);
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert("Shop link copied to clipboard!");
+    }
+  };
+
+  // ---------- Submit review ----------
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !shop) return;
     setSubmittingReview(true);
     try {
       await shopReviewService.createReview(user.id, shop.id, reviewRating, reviewComment.trim() || undefined);
-      const revs = await shopReviewService.getReviews(shop.id);
-      setReviews(revs);
-      const avg = await shopReviewService.getAverageRating(shop.id);
-      setAvgRating(avg);
+      await loadReviews();
       setReviewComment("");
       setReviewRating(5);
     } catch (err: any) {
@@ -75,118 +212,267 @@ export default function ShopPage() {
     }
   };
 
+  // ---------- UI ----------
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin" /></div>;
   if (!shop) return <div className="text-center py-10">Shop not found.</div>;
 
-  const isOwner = user?.id === shop.owner_id;
-
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
+      {/* Sticky header */}
       <div className="sticky top-0 z-10 px-4 py-3 flex items-center justify-between"
            style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}>
-        <button onClick={() => navigate(-1)} className="p-1">←</button>
-        <h1 className="text-base font-bold">{shop.name}</h1>
-        {isOwner && (
-          <button onClick={() => navigate(`/shop/${shop.id}/add-product`)} className="btn-primary w-auto px-3 py-1 text-xs">
-            <Plus size={14} /> Add Product
+        <button onClick={() => navigate(-1)} className="p-1" aria-label="Back">←</button>
+        <div className="flex items-center gap-2">
+          {shop.logo_url ? (
+            <img src={shop.logo_url} className="w-6 h-6 rounded-full object-cover" alt="" />
+          ) : (
+            <Store size={18} style={{ color: "var(--color-text-muted)" }} />
+          )}
+          <h1 className="text-sm font-bold truncate max-w-[150px]">{shop.name}</h1>
+        </div>
+        <div className="flex items-center gap-1">
+          {isOwner && (
+            <button onClick={() => setShowSettings(true)} className="p-1" aria-label="Edit shop">
+              <Pencil size={16} />
+            </button>
+          )}
+          <button onClick={handleShare} className="p-1" aria-label="Share shop">
+            <Share2 size={16} />
           </button>
-        )}
+        </div>
       </div>
-      <div className="px-4 pt-4">
-        {shop.description && <p className="text-sm mb-4">{shop.description}</p>}
+
+      <div className="px-4 pt-4 pb-8">
+        {/* Description */}
+        {shop.description && <p className="text-sm mb-3">{shop.description}</p>}
 
         {/* Average Rating */}
-        {avgRating > 0 && (
-          <div className="flex items-center gap-2 mb-4">
-            <Star size={16} style={{ color: "var(--color-accent)", fill: "var(--color-accent)" }} />
-            <span className="text-sm font-bold" style={{ color: "var(--color-text)" }}>{avgRating}</span>
-            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>({reviews.length} reviews)</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 mb-4">
+          <Star size={18} style={{ color: "var(--color-accent)", fill: "var(--color-accent)" }} />
+          <span className="text-sm font-bold" style={{ color: "var(--color-text)" }}>{avgRating || "—"}</span>
+          <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>({reviews.length} reviews)</span>
+        </div>
 
-        {isOwner && (
+        {/* Add Product button for owner/collaborator */}
+        {canManageShop && (
           <div className="mb-4">
-            <h3 className="text-sm font-semibold mb-2">Collaborators</h3>
-            <button onClick={handleAddCollaborator} className="btn-ghost text-xs">
-              <UserPlus size={14} /> Add Collaborator
+            <button onClick={() => navigate(`/shop/${shop.id}/add-product`)} className="btn-primary w-full text-sm">
+              <Plus size={14} /> Add Product
             </button>
           </div>
         )}
 
-        <h3 className="section-title">Products ({shop.products?.length || 0})</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {shop.products?.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
-
-        {/* Reviews Section */}
-        <div className="mt-6">
-          <h3 className="section-title">Reviews ({reviews.length})</h3>
-
-          {/* Review Form */}
-          {!isOwner && user && (
-            <form onSubmit={handleSubmitReview} className="card p-4 mb-4 space-y-3">
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setReviewRating(star)}
-                    className="p-0.5"
-                    aria-label={`Rate ${star} stars`}
-                  >
-                    <Star
-                      size={20}
-                      fill={star <= reviewRating ? "var(--color-accent)" : "none"}
-                      style={{ color: star <= reviewRating ? "var(--color-accent)" : "var(--color-text-muted)" }}
-                    />
-                  </button>
-                ))}
-              </div>
-              <textarea
-                className="input-field resize-none text-sm"
-                rows={2}
-                placeholder="Write a review… (optional)"
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-              />
-              <button type="submit" disabled={submittingReview} className="btn-primary">
-                {submittingReview ? <Loader2 size={16} className="animate-spin" /> : "Submit Review"}
+        {/* Collaborator section (owner only) */}
+        {isOwner && (
+          <div className="mb-6 p-4 rounded-2xl" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Users size={16} /> Collaborators
+              </h3>
+              <button onClick={copyInviteLink} className="text-xs flex items-center gap-1 px-2 py-1 rounded-full" style={{ background: "var(--color-bg)", color: "var(--color-text-secondary)" }}>
+                {inviteCopied ? <Check size={12} /> : <Copy size={12} />}
+                {inviteCopied ? "Copied" : "Invite link"}
               </button>
-            </form>
-          )}
+            </div>
 
-          {/* Review List */}
-          {reviews.map((review) => (
-            <div key={review.id} className="card p-4 mb-2">
-              <div className="flex items-center gap-2 mb-1">
-                {review.reviewer?.avatar_url ? (
-                  <img src={review.reviewer.avatar_url} className="w-6 h-6 rounded-full" alt="" />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
-                    {(review.reviewer?.full_name?.[0] ?? "?")}
-                  </div>
-                )}
-                <span className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>
-                  {review.reviewer?.full_name ?? "Unknown"}
-                </span>
-                <div className="flex gap-0.5">
-                  {Array.from({ length: review.rating }).map((_, i) => (
-                    <Star key={i} size={12} fill="var(--color-accent)" style={{ color: "var(--color-accent)" }} />
+            {collaborators.length > 0 && (
+              <ul className="space-y-2 mb-3">
+                {collaborators.map((collab) => (
+                  <li key={collab.user_id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      {collab.profiles?.avatar_url ? (
+                        <img src={collab.profiles.avatar_url} className="w-6 h-6 rounded-full" alt="" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
+                          {(collab.profiles?.full_name?.[0] ?? "?")}
+                        </div>
+                      )}
+                      <span>{collab.profiles?.full_name ?? "Unknown"}</span>
+                      <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>({collab.role})</span>
+                    </div>
+                    <button onClick={() => handleRemoveCollaborator(collab.user_id)} className="text-red-500" aria-label="Remove collaborator">
+                      <UserX size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search user by name..."
+                value={collabSearch}
+                onChange={(e) => handleSearchUsers(e.target.value)}
+                className="input-field text-sm mb-2"
+              />
+              {searchResults.length > 0 && (
+                <div className="absolute z-20 w-full rounded-xl shadow-lg overflow-hidden" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+                  {searchResults.map((profile) => (
+                    <button
+                      key={profile.id}
+                      onClick={() => handleAddCollaborator(profile.id)}
+                      disabled={addingCollab}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {profile.avatar_url ? (
+                        <img src={profile.avatar_url} className="w-6 h-6 rounded-full" alt="" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
+                          {(profile.full_name?.[0] ?? "?")}
+                        </div>
+                      )}
+                      {profile.full_name}
+                    </button>
                   ))}
                 </div>
-              </div>
-              {review.comment && (
-                <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>{review.comment}</p>
               )}
-              <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
-                {new Date(review.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Collaborator badge */}
+        {!isOwner && isCollaborator && (
+          <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <p className="flex items-center gap-2"><Users size={14} /> You are a collaborator</p>
+          </div>
+        )}
+
+        {/* Products */}
+        <h3 className="section-title mb-3">Products ({shop.products?.length || 0})</h3>
+        <div className="grid grid-cols-2 gap-3 mb-8">
+          {shop.products?.map((product) => (
+            <div key={product.id} className="relative group">
+              <ProductCard product={product} />
+              {canManageShop && (
+                <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => { e.preventDefault(); handleToggleStock(product); }}
+                    className="bg-white rounded-full p-1 shadow"
+                    title={product.in_stock !== false ? "Mark out of stock" : "Mark in stock"}
+                  >
+                    {product.in_stock !== false ? <ToggleRight size={14} style={{ color: "var(--color-success)" }} /> : <ToggleLeft size={14} style={{ color: "var(--color-error)" }} />}
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); handleDeleteProduct(product.id); }}
+                    className="bg-white rounded-full p-1 shadow"
+                    title="Delete product"
+                  >
+                    <Trash2 size={14} style={{ color: "var(--color-error)" }} />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
+          {!shop.products?.length && (
+            <div className="col-span-2 text-center py-10">
+              <Store size={32} style={{ color: "var(--color-text-muted)", margin: "0 auto 8px" }} />
+              <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>No products yet.</p>
+              {canManageShop && (
+                <button onClick={() => navigate(`/shop/${shop.id}/add-product`)} className="btn-primary mt-3 text-xs">Add first product</button>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Reviews */}
+        <h3 className="section-title mb-3">Reviews ({reviews.length})</h3>
+
+        {!isOwner && user && (
+          <form onSubmit={handleSubmitReview} className="card p-4 mb-4 space-y-3">
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setReviewRating(star)}
+                  className="p-0.5"
+                  aria-label={`Rate ${star} stars`}
+                >
+                  <Star
+                    size={20}
+                    fill={star <= reviewRating ? "var(--color-accent)" : "none"}
+                    style={{ color: star <= reviewRating ? "var(--color-accent)" : "var(--color-text-muted)" }}
+                  />
+                </button>
+              ))}
+            </div>
+            <textarea
+              className="input-field resize-none text-sm"
+              rows={2}
+              placeholder="Write a review… (optional)"
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+            />
+            <button type="submit" disabled={submittingReview} className="btn-primary">
+              {submittingReview ? <Loader2 size={16} className="animate-spin" /> : "Submit Review"}
+            </button>
+          </form>
+        )}
+
+        {reviews.length === 0 ? (
+          <div className="text-center py-8">
+            <Star size={32} style={{ color: "var(--color-text-muted)", margin: "0 auto 8px" }} />
+            <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
+              No reviews yet. Be the first!
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {reviews.map((review) => (
+              <div key={review.id} className="card p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    {review.reviewer?.avatar_url ? (
+                      <img src={review.reviewer.avatar_url} className="w-6 h-6 rounded-full" alt="" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
+                        {(review.reviewer?.full_name?.[0] ?? "?")}
+                      </div>
+                    )}
+                    <span className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>
+                      {review.reviewer?.full_name ?? "Unknown"}
+                    </span>
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: review.rating }).map((_, i) => (
+                        <Star key={i} size={12} fill="var(--color-accent)" style={{ color: "var(--color-accent)" }} />
+                      ))}
+                    </div>
+                  </div>
+                  {user && review.reviewer_id === user.id && (
+                    <button
+                      onClick={() => handleDeleteReview(review.id)}
+                      className="text-red-500"
+                      aria-label="Delete my review"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+                {review.comment && (
+                  <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>{review.comment}</p>
+                )}
+                <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+                  {new Date(review.created_at).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Settings modal */}
+      {showSettings && (
+        <ShopSettingsModal
+          shop={shop}
+          onClose={() => setShowSettings(false)}
+          onSaved={refreshAll}
+        />
+      )}
     </div>
   );
 }

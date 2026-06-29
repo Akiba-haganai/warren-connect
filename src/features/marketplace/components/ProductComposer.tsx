@@ -5,6 +5,8 @@ import { productService } from "@/services/products/productService";
 import { storageService } from "@/services/storage/storageService";
 import { shopService } from "@/services/shop/shopService";
 import { compressImage } from "@/utils/compressImage";
+import TagInput from "@/components/ui/TagInput";
+import { tagService } from "@/services/tags/tagService";
 
 interface Props {
   onClose: () => void;
@@ -18,15 +20,15 @@ export default function ProductComposer({ onClose, onCreated }: Props) {
   const [price, setPrice] = useState("");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
   const [shops, setShops] = useState<any[]>([]);
   const [selectedShopId, setSelectedShopId] = useState<string>("");
 
   useEffect(() => {
     if (!user) return;
-    shopService.getMyShop(user.id).then((shop) => {
-      if (shop) setShops([shop]);
-    }).catch(() => {});
+    // Fetch ALL shops the user can manage (owned + collaborated)
+    shopService.getShopsForUser(user.id).then(setShops).catch(() => {});
   }, [user]);
 
   const handleImages = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,6 +84,16 @@ export default function ProductComposer({ onClose, onCreated }: Props) {
           imageUrls.slice(1).map((url) =>
             productService.addProductImage(newProduct.id, url)
           )
+        );
+      }
+
+      // Save tags
+      if (tags.length > 0 && newProduct) {
+        const tagRecords = await Promise.all(
+          tags.map((name) => tagService.createTag(name))
+        );
+        await Promise.all(
+          tagRecords.map((tag) => tagService.addTagToProduct(newProduct.id, tag!.id))
         );
       }
 
@@ -188,6 +200,12 @@ export default function ProductComposer({ onClose, onCreated }: Props) {
               </select>
             </div>
           )}
+
+          {/* Tags */}
+          <div>
+            <label className="field-label">Tags</label>
+            <TagInput selectedTags={tags} onChange={setTags} />
+          </div>
 
           {/* Multi‑image */}
           <div>

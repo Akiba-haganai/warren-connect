@@ -1,6 +1,4 @@
-// src/routes/index.tsx
-
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 
 import AuthLayout from "@/layouts/auth/AuthLayout";
@@ -38,8 +36,7 @@ const VerificationRequestPage = lazy(() => import("@/features/verification/pages
 const SavedItemsPage = lazy(() => import("@/features/saved/SavedItemsPage"));
 
 const ShopPage = lazy(() => import("@/features/marketplace/pages/ShopPage"));
-
-const AdminDashboardPage = lazy(() => import("@/features/admin/pages/AdminDashboardPage"));
+const ShopJoinPage = lazy(() => import("@/features/marketplace/pages/ShopJoinPage")); // ⬅️ added
 
 // Legal pages (unprotected)
 const TermsPage = lazy(() => import("@/features/legal/TermsPage"));
@@ -50,6 +47,18 @@ const LandingPage = lazy(() => import("@/features/landing/LandingPage"));
 
 // Tag page
 const TagPage = lazy(() => import("@/features/tags/TagPage"));
+
+// Settings page
+const SettingsPage = lazy(() => import("@/features/settings/SettingPage"));
+
+// ---------- ADMIN PAGES ----------
+const AdminOverviewPage = lazy(() => import("@/features/admin/pages/AdminOverviewPage"));
+const AdminUsersPage = lazy(() => import("@/features/admin/pages/AdminUsersPage"));
+const AdminContentPage = lazy(() => import("@/features/admin/pages/AdminContentPage"));
+const AdminVerificationsPage = lazy(() => import("@/features/admin/pages/AdminVerificationsPage"));
+const AdminReportsPage = lazy(() => import("@/features/admin/pages/AdminReportsPage"));
+const AdminTagsPage = lazy(() => import("@/features/admin/pages/AdminTagsPage"));
+const AdminPasswordResetsPage = lazy(() => import("@/features/admin/pages/AdminPasswordResetsPage"));
 
 // ---------- FALLBACK ----------
 const PageLoader = () => (
@@ -121,8 +130,10 @@ export const router = createBrowserRouter([
       { path: "/verification", element: withBoundary(VerificationRequestPage) },
       { path: "/saved", element: withBoundary(SavedItemsPage) },
       { path: "/shop/:id", element: withBoundary(ShopPage) },
+      { path: "/shop/:id/join", element: withBoundary(ShopJoinPage) }, // ⬅️ added
       { path: "/post/:id", element: withBoundary(PostDetailPage) },
       { path: "/tag/:tagName", element: withBoundary(TagPage) },
+      { path: "/settings", element: withBoundary(SettingsPage) },
     ],
   },
 
@@ -157,7 +168,14 @@ export const router = createBrowserRouter([
       </AdminRoute>
     ),
     children: [
-      { index: true, element: withBoundary(AdminDashboardPage) },
+      { index: true, element: <Navigate to="/admin/overview" replace /> },
+      { path: "overview", element: withBoundary(AdminOverviewPage) },
+      { path: "users", element: withBoundary(AdminUsersPage) },
+      { path: "content", element: withBoundary(AdminContentPage) },
+      { path: "verifications", element: withBoundary(AdminVerificationsPage) },
+      { path: "reports", element: withBoundary(AdminReportsPage) },
+      { path: "tags", element: withBoundary(AdminTagsPage) },
+      { path: "password-resets", element: withBoundary(AdminPasswordResetsPage) },
     ],
   },
 ]);

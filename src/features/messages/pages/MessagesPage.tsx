@@ -5,7 +5,7 @@ import { messageService } from "@/services/messages/messageService";
 import { triggerNotification } from "@/services/notifications/triggerService";
 import { profileService } from "@/services/profiles/profileService";
 import type { Tables } from "@/types/database/database.types";
-import { MessageCircle, Send, Loader2, ArrowLeft } from "lucide-react";
+import { MessageCircle, Send, Loader2, ArrowLeft, Trash2 } from "lucide-react";
 import ConversationItem from "@/features/messages/components/ConversationItem";
 import ChatBubble from "@/features/messages/components/ChatBubble";
 
@@ -131,6 +131,12 @@ export default function MessagesPage() {
     setMessages((prev) => prev.filter((m) => m.id !== msgId));
   };
 
+  const handleDeleteConversation = async (convId: string) => {
+    await messageService.deleteConversation(convId);
+    setConversations((prev) => prev.filter((c) => c.id !== convId));
+    if (active?.id === convId) setActive(null);
+  };
+
   // --- Conversation detail view ---
   if (active) {
     const otherId =
@@ -139,44 +145,66 @@ export default function MessagesPage() {
 
     return (
       <div className="flex flex-col h-full" style={{ background: "var(--color-bg)" }}>
+        {/* Header — refined with subtle shadow */}
         <div
           className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
           style={{
             background: "var(--color-surface)",
             borderBottom: "1px solid var(--color-border)",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
           }}
         >
           <button aria-label="Back" onClick={() => setActive(null)} className="p-1">
             <ArrowLeft size={20} style={{ color: "var(--color-text-secondary)" }} />
           </button>
+
+          {/* Avatar */}
           {otherProfile?.avatar_url ? (
             <img
               src={otherProfile.avatar_url}
-              className="w-9 h-9 rounded-full object-cover"
+              className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm"
               alt=""
             />
           ) : (
             <div
-              className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+              className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-sm"
               style={{ background: "var(--color-primary)" }}
             >
               {(otherProfile?.full_name?.[0] || otherId?.charAt(0))?.toUpperCase() ?? "?"}
             </div>
           )}
-          <span className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>
-            {otherProfile?.full_name || otherId?.slice(0, 8) + "…"}
-          </span>
+
+          {/* Name */}
+          <div className="flex-1 min-w-0">
+            <span className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>
+              {otherProfile?.full_name || otherId?.slice(0, 8) + "…"}
+            </span>
+          </div>
+
+          {/* Delete button */}
+          <button
+            onClick={() => handleDeleteConversation(active.id)}
+            className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+            aria-label="Delete conversation"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
 
+        {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2">
           {msgLoading ? (
             <div className="flex items-center justify-center flex-1">
               <Loader2 size={24} className="animate-spin" style={{ color: "var(--color-text-muted)" }} />
             </div>
           ) : messages.length === 0 ? (
-            <p className="text-center text-sm py-10" style={{ color: "var(--color-text-muted)" }}>
-              No messages yet — say hello!
-            </p>
+            <div className="flex flex-col items-center justify-center flex-1 gap-2">
+              <MessageCircle size={48} style={{ color: "var(--color-border)", opacity: 0.6 }} />
+              <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                No messages yet — say hello!
+              </p>
+            </div>
           ) : (
             messages.map((msg) => (
               <ChatBubble
@@ -190,31 +218,36 @@ export default function MessagesPage() {
           )}
         </div>
 
+        {/* Input area — softer, rounded */}
         <div
-          className="flex gap-2 px-4 py-3 flex-shrink-0"
+          className="flex items-end gap-2 px-4 py-3 flex-shrink-0"
           style={{
             background: "var(--color-surface)",
             borderTop: "1px solid var(--color-border)",
             paddingBottom: "max(12px, env(safe-area-inset-bottom))",
+            boxShadow: "0 -1px 4px rgba(0,0,0,0.04)",
           }}
         >
-          <input
-            className="input-field flex-1 py-2.5 text-sm"
-            placeholder="Message…"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            aria-label="Type a message"
-          />
+          <div className="flex-1 rounded-2xl" style={{ background: "var(--color-bg)", padding: "0.375rem" }}>
+            <input
+              className="w-full bg-transparent px-3 py-2 text-sm outline-none"
+              style={{ color: "var(--color-text)", border: "none" }}
+              placeholder="Message…"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              aria-label="Type a message"
+            />
+          </div>
           <button
             onClick={handleSend}
             disabled={sending || !input.trim()}
-            className="flex items-center justify-center rounded-xl px-3"
+            className="flex items-center justify-center rounded-2xl px-4 py-2.5 transition-all active:scale-95"
             style={{
               background: input.trim() ? "var(--color-primary)" : "var(--color-border)",
               color: input.trim() ? "#fff" : "var(--color-text-muted)",
@@ -222,7 +255,7 @@ export default function MessagesPage() {
             }}
             aria-label="Send message"
           >
-            {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+            {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
           </button>
         </div>
       </div>
@@ -232,19 +265,21 @@ export default function MessagesPage() {
   // --- Conversation list view ---
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
+      {/* Header */}
       <div
-        className="sticky top-0 z-10 px-4 py-3"
+        className="sticky top-0 z-10 px-4 py-4"
         style={{
           background: "var(--color-surface)",
           borderBottom: "1px solid var(--color-border)",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
         }}
       >
-        <h1 className="text-base font-bold" style={{ color: "var(--color-primary)" }}>
+        <h1 className="text-lg font-bold tracking-tight" style={{ color: "var(--color-text)" }}>
           Messages
         </h1>
       </div>
 
-      <div className="px-4 pt-4 pb-8">
+      <div className="px-4 pt-3 pb-8">
         {loading ? (
           <div className="flex flex-col gap-3">
             {[1, 2, 3].map((i) => (
@@ -259,15 +294,18 @@ export default function MessagesPage() {
           </div>
         ) : conversations.length === 0 ? (
           <div
-            className="rounded-2xl py-16 text-center"
+            className="rounded-3xl py-20 text-center"
             style={{
               background: "var(--color-surface)",
               border: "1px dashed var(--color-border)",
             }}
           >
-            <MessageCircle size={32} style={{ color: "var(--color-text-muted)", margin: "0 auto 8px" }} />
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              No conversations yet
+            <MessageCircle size={40} style={{ color: "var(--color-text-muted)", margin: "0 auto 12px", opacity: 0.5 }} />
+            <h3 className="text-base font-bold mb-1" style={{ color: "var(--color-text)" }}>
+              No messages yet
+            </h3>
+            <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
+              Start a conversation by contacting a seller or landlord.
             </p>
           </div>
         ) : (
@@ -285,6 +323,7 @@ export default function MessagesPage() {
                   unreadCount={(conv as any).unread_count ?? 0}
                   otherUserName={otherProfile?.full_name || otherId.slice(0, 8) + "…"}
                   otherUserAvatar={otherProfile?.avatar_url || null}
+                  onDelete={() => handleDeleteConversation(conv.id)}
                 />
               );
             })}

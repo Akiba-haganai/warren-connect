@@ -20,6 +20,10 @@ async function sendPush(userId: string, title: string, message: string, url?: st
 }
 
 export const triggerNotification = {
+  async system(userId: string, title: string, message: string, link?: string) {
+  await notificationService.createNotification(userId, "system", title, message, link);
+  // no push for system notifications
+},
   async like(userId: string, postId: string, likerName: string) {
     await notificationService.createNotification(
       userId,

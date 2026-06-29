@@ -1,0 +1,39 @@
+import { useEffect, useState } from "react";
+import { adminService } from "@/services/admin/adminService";
+import { Loader2 } from "lucide-react";
+
+export default function AdminPasswordResetsPage() {
+  const [resetReqs, setResetReqs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    adminService.getPasswordResetRequests().then(setResetReqs).finally(() => setLoading(false));
+  }, []);
+
+  const handleMarkReset = async (id: string) => {
+    await adminService.markResetHandled(id);
+    setResetReqs((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin" /></div>;
+
+  return (
+    <div className="p-4 space-y-3">
+      <h1 className="text-xl font-bold" style={{ color: "var(--color-text)" }}>Password Reset Requests</h1>
+      {resetReqs.length === 0 ? (
+        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No pending password reset requests.</p>
+      ) : (
+        resetReqs.map((r) => (
+          <div key={r.id} className="card p-4 flex justify-between items-center">
+            <div>
+              <p className="text-sm font-semibold">{r.title}</p>
+              <p className="text-xs">{r.body}</p>
+              <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>{new Date(r.created_at!).toLocaleString()}</p>
+            </div>
+            <button onClick={() => handleMarkReset(r.id)} className="text-xs px-3 py-1 rounded bg-green-100 text-green-800">Handled</button>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { savedService } from "@/services/saved/savedService";
 import { supabase } from "@/lib/supabase/client";
+import toast from "react-hot-toast";
 
 interface Props {
   itemType: "product" | "accommodation";
@@ -19,14 +20,17 @@ export default function SaveButton({ itemType, itemId, size = 18 }: Props) {
     savedService.isSaved(user.id, itemType, itemId).then(setSaved);
   }, [user, itemType, itemId]);
 
-  const toggle = async () => {
+  const toggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();            // ⛔ stop the card link
+    e.preventDefault();             // ⛔ prevent any default link behaviour
+
     if (!user) return;
     try {
       if (saved) {
         await savedService.unsaveItem(user.id, itemType, itemId);
         setSaved(false);
+        toast.success("Removed from saved.");
       } else {
-        // For products, fetch current price and save as metadata
         let metadata;
         if (itemType === "product") {
           const { data: product } = await supabase
@@ -38,14 +42,21 @@ export default function SaveButton({ itemType, itemId, size = 18 }: Props) {
         }
         await savedService.saveItem(user.id, itemType, itemId, metadata);
         setSaved(true);
+        toast.success("Saved!");
       }
     } catch (err) {
       console.error(err);
+      toast.error("Could not save.");
     }
   };
 
   return (
-    <button onClick={toggle} className="p-1" aria-label={saved ? "Unsave" : "Save"}>
+    <button
+      onClick={toggle}
+      className="p-1 rounded-full active:scale-90 transition-transform"
+      aria-label={saved ? "Unsave" : "Save"}
+      style={{ background: "transparent", border: "none", cursor: "pointer" }}
+    >
       <Heart
         size={size}
         fill={saved ? "var(--color-accent)" : "none"}

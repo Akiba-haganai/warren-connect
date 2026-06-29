@@ -103,6 +103,8 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          featured: boolean | null
+          gender_preference: string | null
           id: string
           image_thumb: string | null
           image_url: string | null
@@ -117,6 +119,8 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description?: string | null
+          featured?: boolean | null
+          gender_preference?: string | null
           id?: string
           image_thumb?: string | null
           image_url?: string | null
@@ -131,6 +135,8 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string | null
+          featured?: boolean | null
+          gender_preference?: string | null
           id?: string
           image_thumb?: string | null
           image_url?: string | null
@@ -393,6 +399,7 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          featured: boolean | null
           id: string
           image_url: string | null
           is_hidden: boolean | null
@@ -401,6 +408,7 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string | null
+          featured?: boolean | null
           id?: string
           image_url?: string | null
           is_hidden?: boolean | null
@@ -409,6 +417,7 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string | null
+          featured?: boolean | null
           id?: string
           image_url?: string | null
           is_hidden?: boolean | null
@@ -479,6 +488,7 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          featured: boolean | null
           id: string
           image_thumb: string | null
           image_url: string | null
@@ -492,6 +502,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description?: string | null
+          featured?: boolean | null
           id?: string
           image_thumb?: string | null
           image_url?: string | null
@@ -505,6 +516,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string | null
+          featured?: boolean | null
           id?: string
           image_thumb?: string | null
           image_url?: string | null
@@ -937,6 +949,10 @@ export type Database = {
         Args: { p_request_id: string; p_reviewer_id: string; p_user_id: string }
         Returns: undefined
       }
+      generate_shop_invite_token: {
+        Args: { owner_id: string; shop_id: string }
+        Returns: string
+      }
       get_hot_deals: {
         Args: { limit_count?: number }
         Returns: {
@@ -964,6 +980,7 @@ export type Database = {
           type: string
         }[]
       }
+      verify_shop_invite_token: { Args: { token: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never

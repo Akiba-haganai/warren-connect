@@ -55,6 +55,13 @@ export const messageService = {
     .eq("id", messageId);
   if (error) throw error;
 },
+async deleteConversation(conversationId: string) {
+  const { error } = await supabase
+    .from("conversations")
+    .delete()
+    .eq("id", conversationId);
+  if (error) throw error;
+},
 
   async createConversation(user1_id: string, user2_id: string) {
     const { data, error } = await supabase
