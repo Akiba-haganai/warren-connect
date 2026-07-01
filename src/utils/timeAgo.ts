@@ -1,18 +1,24 @@
-export const timeAgo = (date: string | Date): string => {
-  const now = new Date();
-  const past = new Date(date);
-  const diffSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
+export function timeAgo(date: string | Date | null): string {
+  if (!date) return "";
 
-  if (diffSeconds < 60) {
-    return "just now";
-  } else if (diffSeconds < 3600) {
-    const minutes = Math.floor(diffSeconds / 60);
-    return `${minutes}m ago`;
-  } else if (diffSeconds < 86400) {
-    const hours = Math.floor(diffSeconds / 3600);
-    return `${hours}h ago`;
-  } else {
-    const days = Math.floor(diffSeconds / 86400);
-    return `${days}d ago`;
-  }
-};
+  const now = Date.now();
+  const then = new Date(date).getTime();
+  const diffSec = Math.floor((now - then) / 1000);
+
+  if (diffSec < 10) return "Just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  if (diffSec < 172800) return "Yesterday";
+  return new Date(then).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export function isOnline(lastSeen: string | null): boolean {
+  if (!lastSeen) return false;
+  const diffSec = (Date.now() - new Date(lastSeen).getTime()) / 1000;
+  return diffSec <= 60; // online if heartbeat within last 60 seconds
+}

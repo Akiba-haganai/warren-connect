@@ -212,51 +212,153 @@ export type Database = {
           },
         ]
       }
+      conversation_typing: {
+        Row: {
+          conversation_id: string | null
+          id: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_typing_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_typing_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string | null
           id: string
+          last_message: string | null
+          last_message_sender: string | null
           unread_count: number | null
+          updated_at: string | null
           user1_id: string
           user2_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          last_message?: string | null
+          last_message_sender?: string | null
           unread_count?: number | null
+          updated_at?: string | null
           user1_id: string
           user2_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          last_message?: string | null
+          last_message_sender?: string | null
           unread_count?: number | null
+          updated_at?: string | null
           user1_id?: string
           user2_id?: string
         }
         Relationships: []
       }
+      deletion_requests: {
+        Row: {
+          id: string
+          reason: string | null
+          requested_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          reason?: string | null
+          requested_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          reason?: string | null
+          requested_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deletion_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deletion_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
+          attachment_type: string | null
+          attachment_url: string | null
           content: string
           conversation_id: string
           created_at: string | null
+          deleted_at: string | null
+          edited_at: string | null
           id: string
           read_at: string | null
           sender_id: string
         }
         Insert: {
+          attachment_type?: string | null
+          attachment_url?: string | null
           content: string
           conversation_id: string
           created_at?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
           id?: string
           read_at?: string | null
           sender_id: string
         }
         Update: {
+          attachment_type?: string | null
+          attachment_url?: string | null
           content?: string
           conversation_id?: string
           created_at?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
           id?: string
           read_at?: string | null
           sender_id?: string
@@ -486,6 +588,7 @@ export type Database = {
       }
       products: {
         Row: {
+          condition: string | null
           created_at: string | null
           description: string | null
           featured: boolean | null
@@ -500,6 +603,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          condition?: string | null
           created_at?: string | null
           description?: string | null
           featured?: boolean | null
@@ -514,6 +618,7 @@ export type Database = {
           title: string
         }
         Update: {
+          condition?: string | null
           created_at?: string | null
           description?: string | null
           featured?: boolean | null
@@ -557,6 +662,7 @@ export type Database = {
           is_verified: boolean
           last_seen: string | null
           looking_for_roommate: boolean | null
+          notification_preferences: Json | null
           privacy_needed: boolean | null
           referral_code: string | null
           referred_by: string | null
@@ -593,6 +699,7 @@ export type Database = {
           is_verified?: boolean
           last_seen?: string | null
           looking_for_roommate?: boolean | null
+          notification_preferences?: Json | null
           privacy_needed?: boolean | null
           referral_code?: string | null
           referred_by?: string | null
@@ -629,6 +736,7 @@ export type Database = {
           is_verified?: boolean
           last_seen?: string | null
           looking_for_roommate?: boolean | null
+          notification_preferences?: Json | null
           privacy_needed?: boolean | null
           referral_code?: string | null
           referred_by?: string | null
@@ -730,7 +838,15 @@ export type Database = {
           reviewed_user_id?: string
           reviewer_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       roommate_likes: {
         Row: {
@@ -953,6 +1069,19 @@ export type Database = {
         Args: { owner_id: string; shop_id: string }
         Returns: string
       }
+      get_grouped_notifications: {
+        Args: { user_id: string }
+        Returns: {
+          body: string
+          count: number
+          group_key: string
+          is_read: boolean
+          latest_created_at: string
+          link: string
+          title: string
+          type: string
+        }[]
+      }
       get_hot_deals: {
         Args: { limit_count?: number }
         Returns: {
@@ -968,6 +1097,14 @@ export type Database = {
           likes_count: number
           post_id: string
         }[]
+      }
+      get_unread_count: {
+        Args: { conversation_id: string; user_id: string }
+        Returns: number
+      }
+      increment_response_metrics: {
+        Args: { p_response_time_ms: number; p_user_id: string }
+        Returns: undefined
       }
       search_all: {
         Args: { search_term: string }

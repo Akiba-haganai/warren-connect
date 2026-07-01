@@ -17,7 +17,7 @@ export default function Navbar() {
     queryFn: () => notificationService.getNotifications(user!.id),
     enabled: !!user,
   });
-  const unreadCount = notifications?.filter((n) => !n.is_read).length ?? 0;
+  const unreadCount = notifications?.filter((n: any) => !n.is_read).length ?? 0;
 
   return (
     <>

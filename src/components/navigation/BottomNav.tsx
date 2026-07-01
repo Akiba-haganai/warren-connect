@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/auth/authStore";
 import { notificationService } from "@/services/notifications/notificationService";
 import { roommateService } from "@/services/roommates/roommateService";
 
+
 const tabs = [
   { label: "Home",      path: "/feed",          icon: Home },          // ← changed to /feed
   { label: "Market",    path: "/marketplace",   icon: Store },
@@ -32,7 +33,7 @@ export default function BottomNav() {
     refetchInterval: 30_000,
   });
 
-  const unreadCount = notifications?.filter((n) => !n.is_read).length ?? 0;
+  const unreadCount = notifications?.filter((n: any) => !n.is_read).length ?? 0;
   const matchesCount = newMatches ?? 0;
 
   // Clear matches badge when visiting the roommates page

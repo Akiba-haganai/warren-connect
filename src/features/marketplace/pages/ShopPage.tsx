@@ -3,8 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
 import { shopService } from "@/services/shop/shopService";
 import { shopReviewService } from "@/services/shop/shopReviewService";
-import { productService } from "@/services/products/productService";   // <-- added
+import { productService } from "@/services/products/productService";
 import { supabase } from "@/lib/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Loader2, Plus, Star, UserX, Copy, Check, Users,
   Pencil, Share2, Store, Trash2, ToggleLeft, ToggleRight
@@ -12,6 +13,8 @@ import {
 import ProductCard from "@/features/marketplace/components/ProductCard";
 import ShopSettingsModal from "@/features/marketplace/components/ShopSettingsModal";
 import type { Tables } from "@/types/database/database.types";
+import toast from "react-hot-toast";
+import { useConfirm } from "@/hooks/useConfirm";
 
 type Product = Tables<"products">;
 
@@ -28,6 +31,9 @@ export default function ShopPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const queryClient = useQueryClient();
+  const { confirm, ConfirmDialog } = useConfirm();
+
   const [shop, setShop] = useState<Shop | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [avgRating, setAvgRating] = useState(0);
@@ -36,7 +42,6 @@ export default function ShopPage() {
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Collaborator states
   const [collaborators, setCollaborators] = useState<any[]>([]);
   const [isCollaborator, setIsCollaborator] = useState(false);
   const [collabSearch, setCollabSearch] = useState("");
@@ -44,10 +49,10 @@ export default function ShopPage() {
   const [addingCollab, setAddingCollab] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
-
   const [showSettings, setShowSettings] = useState(false);
 
-  // ---------- Load all data ----------
+  const [togglingProductId, setTogglingProductId] = useState<string | null>(null);
+
   const loadShop = async () => {
     if (!id) return;
     const data = await shopService.getShop(id);
@@ -93,11 +98,11 @@ export default function ShopPage() {
   const isOwner = user?.id === shop?.owner_id;
   const canManageShop = isOwner || isCollaborator;
 
-  // ---------- Product actions ----------
   const handleToggleStock = async (product: Product) => {
-    const newStatus = product.in_stock === false;
-    // ✅ use productService, not shopService
-    await productService.toggleStock(product.id, newStatus);
+    if (togglingProductId) return;
+    const previousStatus = product.in_stock;
+    const newStatus = previousStatus === false;
+    setTogglingProductId(product.id);
     setShop((prev) => {
       if (!prev) return prev;
       return {
@@ -107,32 +112,64 @@ export default function ShopPage() {
         ),
       };
     });
-  };
-
-  const handleDeleteProduct = async (productId: string) => {
-    if (!confirm("Delete this product?")) return;
-    await shopService.deleteProduct(productId);
-    setShop((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        products: prev.products.filter((p) => p.id !== productId),
-      };
-    });
-  };
-
-  // ---------- Review actions ----------
-  const handleDeleteReview = async (reviewId: string) => {
-    if (!user) return;
     try {
-      await shopReviewService.deleteReview(reviewId, user.id);
-      await loadReviews();
-    } catch (err: any) {
-      alert(err.message);
+      await productService.toggleStock(product.id, newStatus);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    } catch (err) {
+      setShop((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          products: prev.products.map((p) =>
+            p.id === product.id ? { ...p, in_stock: previousStatus } : p
+          ),
+        };
+      });
+      toast.error("Could not update stock status.");
+    } finally {
+      setTogglingProductId(null);
     }
   };
 
-  // ---------- Collaborator search ----------
+  const handleDeleteProduct = async (productId: string) => {
+    const ok = await confirm({
+      title: "Delete this product?",
+      message: "This cannot be undone.",
+    });
+    if (!ok) return;
+    try {
+      await shopService.deleteProduct(productId);
+      setShop((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          products: prev.products.filter((p) => p.id !== productId),
+        };
+      });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["all-shops"] });
+      toast.success("Product deleted.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete product.");
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!user) return;
+    const ok = await confirm({
+      title: "Delete your review?",
+      message: "This cannot be undone.",
+    });
+    if (!ok) return;
+    try {
+      await shopService.deleteReview(reviewId, user.id);
+      await loadReviews();
+      toast.success("Review deleted.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete review.");
+    }
+  };
+
   const handleSearchUsers = async (query: string) => {
     setCollabSearch(query);
     if (query.trim().length < 2) {
@@ -155,8 +192,9 @@ export default function ShopPage() {
       await loadCollaborators();
       setCollabSearch("");
       setSearchResults([]);
+      toast.success("Collaborator added.");
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message || "Failed to add collaborator.");
     } finally {
       setAddingCollab(false);
     }
@@ -164,23 +202,28 @@ export default function ShopPage() {
 
   const handleRemoveCollaborator = async (userId: string) => {
     if (!shop) return;
+    const ok = await confirm({
+      title: "Remove collaborator?",
+      message: "They will lose access to manage this shop.",
+    });
+    if (!ok) return;
     try {
       await shopService.removeCollaborator(shop.id, userId);
       await loadCollaborators();
+      toast.success("Collaborator removed.");
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message || "Failed to remove collaborator.");
     }
   };
 
-  // ---------- Invite link ----------
   const copyInviteLink = () => {
     if (!inviteLink) return;
     navigator.clipboard.writeText(inviteLink);
     setInviteCopied(true);
+    toast.success("Invite link copied!");
     setTimeout(() => setInviteCopied(false), 2000);
   };
 
-  // ---------- Share shop ----------
   const handleShare = async () => {
     const shareData = {
       title: shop?.name ?? "Shop",
@@ -191,11 +234,10 @@ export default function ShopPage() {
       await navigator.share(shareData);
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert("Shop link copied to clipboard!");
+      toast.success("Shop link copied!");
     }
   };
 
-  // ---------- Submit review ----------
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !shop) return;
@@ -205,14 +247,14 @@ export default function ShopPage() {
       await loadReviews();
       setReviewComment("");
       setReviewRating(5);
+      toast.success("Review submitted!");
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message || "Failed to submit review.");
     } finally {
       setSubmittingReview(false);
     }
   };
 
-  // ---------- UI ----------
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin" /></div>;
   if (!shop) return <div className="text-center py-10">Shop not found.</div>;
 
@@ -243,7 +285,6 @@ export default function ShopPage() {
       </div>
 
       <div className="px-4 pt-4 pb-8">
-        {/* Description */}
         {shop.description && <p className="text-sm mb-3">{shop.description}</p>}
 
         {/* Average Rating */}
@@ -253,7 +294,6 @@ export default function ShopPage() {
           <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>({reviews.length} reviews)</span>
         </div>
 
-        {/* Add Product button for owner/collaborator */}
         {canManageShop && (
           <div className="mb-4">
             <button onClick={() => navigate(`/shop/${shop.id}/add-product`)} className="btn-primary w-full text-sm">
@@ -331,14 +371,12 @@ export default function ShopPage() {
           </div>
         )}
 
-        {/* Collaborator badge */}
         {!isOwner && isCollaborator && (
           <div className="mb-4 p-3 rounded-xl text-sm" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
             <p className="flex items-center gap-2"><Users size={14} /> You are a collaborator</p>
           </div>
         )}
 
-        {/* Products */}
         <h3 className="section-title mb-3">Products ({shop.products?.length || 0})</h3>
         <div className="grid grid-cols-2 gap-3 mb-8">
           {shop.products?.map((product) => (
@@ -346,13 +384,19 @@ export default function ShopPage() {
               <ProductCard product={product} />
               {canManageShop && (
                 <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={(e) => { e.preventDefault(); handleToggleStock(product); }}
-                    className="bg-white rounded-full p-1 shadow"
-                    title={product.in_stock !== false ? "Mark out of stock" : "Mark in stock"}
-                  >
-                    {product.in_stock !== false ? <ToggleRight size={14} style={{ color: "var(--color-success)" }} /> : <ToggleLeft size={14} style={{ color: "var(--color-error)" }} />}
-                  </button>
+                  {togglingProductId === product.id ? (
+                    <div className="bg-white rounded-full p-1 shadow">
+                      <Loader2 size={14} className="animate-spin" style={{ color: "var(--color-text-muted)" }} />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.preventDefault(); handleToggleStock(product); }}
+                      className="bg-white rounded-full p-1 shadow"
+                      title={product.in_stock !== false ? "Mark out of stock" : "Mark in stock"}
+                    >
+                      {product.in_stock !== false ? <ToggleRight size={14} style={{ color: "var(--color-success)" }} /> : <ToggleLeft size={14} style={{ color: "var(--color-error)" }} />}
+                    </button>
+                  )}
                   <button
                     onClick={(e) => { e.preventDefault(); handleDeleteProduct(product.id); }}
                     className="bg-white rounded-full p-1 shadow"
@@ -375,7 +419,6 @@ export default function ShopPage() {
           )}
         </div>
 
-        {/* Reviews */}
         <h3 className="section-title mb-3">Reviews ({reviews.length})</h3>
 
         {!isOwner && user && (
@@ -465,7 +508,6 @@ export default function ShopPage() {
         )}
       </div>
 
-      {/* Settings modal */}
       {showSettings && (
         <ShopSettingsModal
           shop={shop}
@@ -473,6 +515,7 @@ export default function ShopPage() {
           onSaved={refreshAll}
         />
       )}
+      {ConfirmDialog}
     </div>
   );
 }

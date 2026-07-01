@@ -1,5 +1,8 @@
 import { Search } from "lucide-react";
-
+const COMMON_AMENITIES = [
+  "WiFi", "Water included", "Electricity included", "Furnished",
+  "Parking", "Security", "Study desk", "Private bathroom",
+];
 interface Props {
   search: string;
   onSearchChange: (val: string) => void;
@@ -15,6 +18,8 @@ interface Props {
   onPriceMinChange: (val: string) => void;
   priceMax: string;
   onPriceMaxChange: (val: string) => void;
+  selectedAmenities: string[];
+  onAmenitiesChange: (amenities: string[]) => void;
 }
 
 export default function AccommodationFilters({
@@ -31,9 +36,19 @@ export default function AccommodationFilters({
   onPriceMinChange,
   priceMax,
   onPriceMaxChange,
+  selectedAmenities,
+  onAmenitiesChange,
 }: Props) {
+  const toggleAmenity = (amenity: string) => {
+    if (selectedAmenities.includes(amenity)) {
+      onAmenitiesChange(selectedAmenities.filter((a) => a !== amenity));
+    } else {
+      onAmenitiesChange([...selectedAmenities, amenity]);
+    }
+  };
   return (
     <>
+    
       {/* Row 1 – Search, Location, Roommate toggle, Gender */}
       <div className="flex gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[140px]">
@@ -112,6 +127,40 @@ export default function AccommodationFilters({
           onChange={(e) => onPriceMaxChange(e.target.value)}
           className="input-field flex-1 text-xs"
         />
+      </div>
+
+      {/* Row 3 – Amenities (scrollable chips) */}
+      <div>
+        <p className="text-xs font-semibold mb-2" style={{ color: "var(--color-text-secondary)" }}>
+          Amenities
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {COMMON_AMENITIES.map((amenity) => (
+            <button
+              key={amenity}
+              type="button"
+              onClick={() => toggleAmenity(amenity)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                selectedAmenities.includes(amenity)
+                  ? "bg-primary text-white border-primary"
+                  : "bg-surface text-text-secondary border-border"
+              }`}
+              style={{
+                background: selectedAmenities.includes(amenity)
+                  ? "var(--color-primary)"
+                  : "var(--color-surface)",
+                color: selectedAmenities.includes(amenity)
+                  ? "#fff"
+                  : "var(--color-text-secondary)",
+                borderColor: selectedAmenities.includes(amenity)
+                  ? "var(--color-primary)"
+                  : "var(--color-border)",
+              }}
+            >
+              {amenity}
+            </button>
+          ))}
+        </div>
       </div>
     </>
   );

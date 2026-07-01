@@ -5,6 +5,11 @@ import { accommodationService } from "@/services/accommodation/accommodationServ
 import { storageService } from "@/services/storage/storageService";
 import { compressImage } from "@/utils/compressImage";
 
+const COMMON_AMENITIES = [
+  "WiFi", "Water included", "Electricity included", "Furnished",
+  "Parking", "Security", "Study desk", "Private bathroom",
+];
+
 interface Props {
   onClose: () => void;
   onCreated: () => void;
@@ -18,6 +23,7 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +50,7 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
         );
         image_url = publicUrl;
       }
-      await accommodationService.createAccommodation(
+      const newAcc = await accommodationService.createAccommodation(
         user.id,
         title.trim(),
         description.trim() || "",
@@ -52,6 +58,11 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
         Number(monthly_rent),
         image_url
       );
+
+      if (selectedAmenities.length > 0 && newAcc) {
+        await accommodationService.setAmenities(newAcc.id, selectedAmenities);
+      }
+
       onCreated();
       onClose();
     } finally {
@@ -113,6 +124,43 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
             <label className="field-label" htmlFor="accommodation-description">Description (optional)</label>
             <textarea id="accommodation-description" rows={3} className="input-field resize-none" placeholder="Furnishing, utilities, rules…" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
+
+          {/* Amenities selection */}
+          <div>
+            <label className="field-label">Amenities</label>
+            <div className="flex flex-wrap gap-2">
+              {COMMON_AMENITIES.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() =>
+                    setSelectedAmenities((prev) =>
+                      prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
+                    )
+                  }
+                  className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                    selectedAmenities.includes(a)
+                      ? "bg-primary text-white border-primary"
+                      : "bg-surface text-text-secondary border-border"
+                  }`}
+                  style={{
+                    background: selectedAmenities.includes(a)
+                      ? "var(--color-primary)"
+                      : "var(--color-surface)",
+                    color: selectedAmenities.includes(a)
+                      ? "#fff"
+                      : "var(--color-text-secondary)",
+                    borderColor: selectedAmenities.includes(a)
+                      ? "var(--color-primary)"
+                      : "var(--color-border)",
+                  }}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div>
             <label className="field-label">Photo (optional)</label>
             {imagePreview ? (

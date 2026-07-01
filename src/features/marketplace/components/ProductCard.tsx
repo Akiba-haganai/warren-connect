@@ -1,15 +1,33 @@
 import { Link } from "react-router-dom";
 import type { Tables } from "@/types/database/database.types";
 import SaveButton from "@/components/ui/SaveButton";
+import { Share2, Star } from "lucide-react";
 
 type Product = Tables<"products">;
 
 interface Props {
-  product: Product;
-  onView?: (id: string) => void; // for recently viewed
+  product: Product & { seller_avg_rating?: number; seller_review_count?: number };
+  onView?: (id: string) => void;
 }
 
 export default function ProductCard({ product, onView }: Props) {
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (navigator.share) {
+      navigator.share({
+        title: product.title,
+        text: product.description ?? "",
+        url: `${window.location.origin}/marketplace/${product.id}`,
+      });
+    } else {
+      navigator.clipboard.writeText(`${window.location.origin}/marketplace/${product.id}`);
+      // toast.success("Link copied!");
+    }
+  };
+
+  const showRating = product.seller_avg_rating && product.seller_review_count;
+
   return (
     <Link
       to={`/marketplace/${product.id}`}
@@ -22,6 +40,15 @@ export default function ProductCard({ product, onView }: Props) {
       <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
         <SaveButton itemType="product" itemId={product.id} />
       </div>
+
+      {/* Share button top-left */}
+      <button
+        onClick={handleShare}
+        className="absolute top-2 left-2 z-10 p-1 rounded-full bg-white/70 hover:bg-white shadow"
+        aria-label="Share product"
+      >
+        <Share2 size={14} style={{ color: "var(--color-text-secondary)" }} />
+      </button>
 
       {product.image_url ? (
         <img
@@ -42,6 +69,14 @@ export default function ProductCard({ product, onView }: Props) {
           <span className="text-3xl opacity-30" style={{ color: "white" }}>K</span>
         </div>
       )}
+
+      {/* Condition badge */}
+      {product.condition && product.condition !== "used" && (
+        <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+          {product.condition}
+        </span>
+      )}
+
       <div className="p-4">
         <h3 className="font-semibold text-sm line-clamp-2" style={{ color: "var(--color-text)" }}>
           {product.title}
@@ -51,11 +86,19 @@ export default function ProductCard({ product, onView }: Props) {
             {product.description}
           </p>
         )}
+        {/* Seller rating */}
+        {showRating && (
+          <div className="flex items-center gap-1 mt-1">
+            <Star size={10} fill="var(--color-accent)" style={{ color: "var(--color-accent)" }} />
+            <span className="text-[10px] font-semibold" style={{ color: "var(--color-text-muted)" }}>
+              {product.seller_avg_rating?.toFixed(1)} ({product.seller_review_count})
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between mt-2">
           <p className="text-base font-bold" style={{ color: "var(--color-primary)" }}>
             K{product.price.toLocaleString()}
           </p>
-          {/* Stock badge */}
           {product.in_stock === false ? (
             <span className="badge bg-red-100 text-red-700">Out of stock</span>
           ) : (

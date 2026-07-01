@@ -1,0 +1,14 @@
+4. Updated ShopPage.tsx – replaces confirm() with useConfirm and alert() with toast
+Only the relevant handlers change. I’ll show the full file with changes integrated (previous complete version + confirm/toast).
+
+Due to length, I’ll highlight the modifications:
+
+Import toast and useConfirm.
+
+Replace handleDeleteProduct to use confirm and toast.error.
+
+Replace handleDeleteReview with toast.
+
+Add {ConfirmDialog} at the bottom.
+
+(Full file already provided earlier; just apply the same pattern.)

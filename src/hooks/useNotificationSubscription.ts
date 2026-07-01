@@ -9,7 +9,7 @@ export function useNotificationSubscription() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
 
     const channel = supabase
       .channel(`notifications-${user.id}`)
@@ -25,7 +25,7 @@ export function useNotificationSubscription() {
           const newNotification = payload.new as Tables<"notifications">;
           // Append to cache instead of refetching
           queryClient.setQueryData<Tables<"notifications">[]>(
-            ["notifications"],
+            ["notifications", user.id],
             (old) => (old ? [newNotification, ...old] : [newNotification])
           );
         }

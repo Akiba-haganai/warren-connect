@@ -1,49 +1,48 @@
-import { useEffect, useState } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
-import { productService } from "@/services/products/productService";
+import { useParams, useNavigate } from "react-router-dom";
+import { useProduct } from "@/hooks/useProduct";
+import { useToggleProductStock } from "@/hooks/useToggleProductStock";
+import { useDeleteProduct } from "@/hooks/useDeleteProduct";
 import { messageService } from "@/services/messages/messageService";
 import { useAuthStore } from "@/store/auth/authStore";
 import { triggerNotification } from "@/services/notifications/triggerService";
 import { reportService } from "@/services/reports/reportService";
 import { useRecentlyViewed } from "@/hooks/useRecentlyviewed";
-import type { Tables } from "@/types/database/database.types";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { productService } from "@/services/products/productService";
 import {
-  ArrowLeft, MessageCircle, Share2, Loader2, ShieldCheck, Flag, ShoppingBag
+  ArrowLeft, MessageCircle, Share2, Loader2, ShieldCheck, Flag, ShoppingBag, ChevronLeft, ChevronRight
 } from "lucide-react";
-
-type Product = Tables<"products">;
-type Profile = Tables<"profiles">;
-
-type ProductWithSeller = Product & {
-  seller?: Pick<Profile, "id" | "full_name" | "avatar_url" | "is_verified">;
-};
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
-  const [product, setProduct] = useState<ProductWithSeller | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: product, isLoading } = useProduct(id);
+  const toggleStock = useToggleProductStock();
+  const deleteProduct = useDeleteProduct();
   const [contacting, setContacting] = useState(false);
   const { addToRecent } = useRecentlyViewed();
   const [images, setImages] = useState<{ id: string; image_url: string }[]>([]);
   const [selectedImage, setSelectedImage] = useState(0);
 
   useEffect(() => {
-    if (!id) return;
-    productService.getProductWithSeller(id).then((data) => {
-      setProduct(data);
-      setLoading(false);
+    if (product) {
       addToRecent({
-        id: data.id,
+        id: product.id,
         type: "product",
-        title: data.title,
-        imageUrl: data.image_url,
+        title: product.title,
+        imageUrl: product.image_url,
       });
-      productService.getProductImages(data.id).then(setImages);
-    }).catch(() => setLoading(false));
-  }, [id, addToRecent]);
+      productService.getProductImages(product.id).then((imgs) => {
+        const allImages = product.image_url
+          ? [{ id: "primary", image_url: product.image_url }, ...imgs]
+          : imgs;
+        setImages(allImages);
+      });
+    }
+  }, [product, addToRecent]);
 
   const handleContactSeller = async () => {
     if (!user || !product) return;
@@ -81,14 +80,34 @@ export default function ProductDetailPage() {
     }
   };
 
-  const handleToggleStock = async () => {
+  const handleToggleStock = () => {
     if (!product) return;
-    const newStatus = product.in_stock === false;
-    await productService.toggleStock(product.id, newStatus);
-    setProduct({ ...product, in_stock: newStatus });
+    toggleStock.mutate({
+      productId: product.id,
+      newStatus: !(product.in_stock ?? false),
+    });
   };
 
-  if (loading) return <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>;
+  const handleDelete = async () => {
+    if (!product) return;
+    if (confirm("Delete this product?")) {
+      deleteProduct.mutate(product.id, {
+        onSuccess: () => navigate(-1),
+      });
+    }
+  };
+
+  const nextImage = () => {
+    if (images.length === 0) return;
+    setSelectedImage((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    if (images.length === 0) return;
+    setSelectedImage((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  if (isLoading) return <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>;
   if (!product) return <div className="text-center py-10 text-sm">Product not found.</div>;
 
   const isOwner = user?.id === product.seller_id;
@@ -114,43 +133,58 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* Gallery */}
+      {/* Image Gallery – Amazon style */}
       {images.length > 0 ? (
-        <div>
+        <div className="relative bg-black">
           <img
             src={images[selectedImage]?.image_url}
             alt={product.title}
-            className="w-full h-64 object-cover"
+            className="w-full h-72 object-contain"
             loading="lazy"
           />
           {images.length > 1 && (
-            <div className="flex gap-2 px-4 mt-2 overflow-x-auto pb-1">
-              {images.map((img, i) => (
-                <button
-                  key={img.id}
-                  onClick={() => setSelectedImage(i)}
-                  className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 ${
-                    i === selectedImage ? "border-primary" : "border-transparent"
-                  }`}
-                  style={{ borderColor: i === selectedImage ? "var(--color-primary)" : "transparent" }}
-                >
-                  <img src={img.image_url} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
+            <>
+              <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center">
+                <ChevronLeft size={20} />
+              </button>
+              <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center">
+                <ChevronRight size={20} />
+              </button>
+              <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                {selectedImage + 1} / {images.length}
+              </div>
+            </>
           )}
         </div>
       ) : product.image_url ? (
-        <img src={product.image_url} alt={product.title} className="w-full h-64 object-cover" />
+        <img src={product.image_url} alt={product.title} className="w-full h-72 object-cover" />
       ) : (
-        <div className="w-full h-64 flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))" }}>
+        <div className="w-full h-72 flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))" }}>
           <ShoppingBag size={48} color="rgba(255,255,255,0.3)" />
+        </div>
+      )}
+
+      {/* Thumbnails row */}
+      {images.length > 1 && (
+        <div className="flex gap-2 px-4 mt-2 overflow-x-auto hide-scrollbar pb-1">
+          {images.map((img, i) => (
+            <button
+              key={img.id}
+              onClick={() => setSelectedImage(i)}
+              className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 ${
+                i === selectedImage ? "border-primary" : "border-transparent"
+              }`}
+              style={{ borderColor: i === selectedImage ? "var(--color-primary)" : "transparent" }}
+            >
+              <img src={img.image_url} alt="" className="w-full h-full object-cover" />
+            </button>
+          ))}
         </div>
       )}
 
       <div className="px-4 pt-4 pb-8 space-y-4">
         <h2 className="text-xl font-bold" style={{ color: "var(--color-text)" }}>{product.title}</h2>
-        <p className="text-2xl font-extrabold" style={{ color: "var(--color-primary)" }}>K{product.price.toLocaleString()}</p>
+        <p className="text-2xl font-extrabold" style={{ color: "var(--color-primary)" }}>K{(product.price ?? 0).toLocaleString()}</p>
 
         {/* Stock toggle for owner */}
         {isOwner && (
@@ -158,11 +192,18 @@ export default function ProductDetailPage() {
             <span className="text-sm font-medium" style={{ color: "var(--color-text-secondary)" }}>Status:</span>
             <button
               onClick={handleToggleStock}
+              disabled={toggleStock.isPending}
               className={`px-3 py-1 rounded-full text-xs font-bold ${
                 product.in_stock !== false ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-              }`}
+              } disabled:opacity-50`}
             >
-              {product.in_stock !== false ? "In Stock" : "Out of Stock"}
+              {toggleStock.isPending && toggleStock.variables?.productId === product.id ? (
+                <Loader2 size={12} className="animate-spin inline" />
+              ) : product.in_stock !== false ? (
+                "In Stock"
+              ) : (
+                "Out of Stock"
+              )}
             </button>
           </div>
         )}
@@ -201,7 +242,7 @@ export default function ProductDetailPage() {
           </div>
         )}
         {isOwner && (
-          <button onClick={async () => { if (confirm("Delete?")) { await productService.deleteProduct(product.id); navigate(-1); } }}
+          <button onClick={handleDelete}
                   className="w-full py-2 rounded-lg text-sm font-semibold bg-red-100 text-red-600"
                   aria-label="Delete listing">
             Delete Listing

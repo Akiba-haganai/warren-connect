@@ -8,6 +8,7 @@ import { triggerHaptic } from "@/utils/haptic";
 import { Users, Loader2 } from "lucide-react";
 import RoommateFilters from "@/features/accommodation/components/RoommateFilters";
 import RoommateCard from "@/features/accommodation/components/RoommateCard";
+import { messageService } from "@/services/messages/messageService";
 
 const PAGE_SIZE = 20;
 
@@ -110,29 +111,61 @@ export default function RoommateFinderPage() {
   }, [users, currentUserId]);
 
   const handleLikeToggle = async (userId: string) => {
-    if (!currentUserId || !currentProfile) return;
-    triggerHaptic();
-    const currentlyLiked = likedUsers.has(userId);
-    if (currentlyLiked) {
-      await roommateService.unlikeUser(currentUserId, userId);
-      setLikedUsers((prev) => {
-        const next = new Set(prev);
-        next.delete(userId);
-        return next;
-      });
-    } else {
-      await roommateService.likeUser(currentUserId, userId);
-      setLikedUsers((prev) => new Set(prev).add(userId));
-      triggerNotification.like(userId, currentUserId, currentProfile.full_name ?? "Someone");
-    }
-    const mutual = await roommateService.checkMutual(currentUserId, userId);
-    setMutualUsers((prev) => {
+  if (!currentUserId || !currentProfile) return;
+  triggerHaptic();
+  const currentlyLiked = likedUsers.has(userId);
+  if (currentlyLiked) {
+    await roommateService.unlikeUser(currentUserId, userId);
+    setLikedUsers((prev) => {
       const next = new Set(prev);
-      if (mutual) next.add(userId);
-      else next.delete(userId);
+      next.delete(userId);
       return next;
     });
-  };
+  } else {
+    await roommateService.likeUser(currentUserId, userId);
+    setLikedUsers((prev) => new Set(prev).add(userId));
+    triggerNotification.like(userId, currentUserId, currentProfile.full_name ?? "Someone");
+
+    // Check for mutual match
+    const mutual = await roommateService.checkMutual(currentUserId, userId);
+    if (mutual) {
+      // Create a conversation between the two users if not exists
+      const existingConvos = await messageService.getConversations(currentUserId);
+      const existingConv = existingConvos.find(
+        (c) =>
+          (c.user1_id === currentUserId && c.user2_id === userId) ||
+          (c.user2_id === currentUserId && c.user1_id === userId)
+      );
+      let convId = existingConv?.id;
+      if (!convId) {
+        const newConv = await messageService.createConversation(currentUserId, userId);
+        convId = newConv.id;
+      }
+      // Send special notification to both users
+      await triggerNotification.system(
+        currentUserId,
+        "Mutual Match!",
+        `You and ${currentProfile.full_name || "someone"} matched! Start chatting now.`,
+        `/messages?conversation=${convId}`
+      );
+      await triggerNotification.system(
+        userId,
+        "Mutual Match!",
+        `You and ${currentProfile.full_name || "someone"} matched! Start chatting now.`,
+        `/messages?conversation=${convId}`
+      );
+    }
+  }
+
+  // Refresh mutual status
+  const mutual = await roommateService.checkMutual(currentUserId, userId);
+  setMutualUsers((prev) => {
+    const next = new Set(prev);
+    if (mutual) next.add(userId);
+    else next.delete(userId);
+    return next;
+  });
+};
 
   const allUniversities = useMemo(
     () => [...new Set((users ?? []).map((u) => u.university).filter(Boolean))].sort() as string[],

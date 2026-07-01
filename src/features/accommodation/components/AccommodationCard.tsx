@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MapPin, Building2 } from "lucide-react";
+import { MapPin, Building2, Zap } from "lucide-react";
 import type { Tables } from "@/types/database/database.types";
 import SaveButton from "@/components/ui/SaveButton";
 
@@ -7,10 +7,19 @@ type Accommodation = Tables<"accommodations">;
 
 interface Props {
   listing: Accommodation;
-  onView?: (id: string) => void; // for recently viewed
+  onView?: (id: string) => void;
+  landlord?: {
+    total_response_time_ms?: number | null;
+    response_count?: number | null;
+  };
 }
 
-export default function AccommodationCard({ listing, onView }: Props) {
+export default function AccommodationCard({ listing, onView, landlord }: Props) {
+  const avgResponseMs = landlord && landlord.response_count && landlord.total_response_time_ms
+    ? landlord.total_response_time_ms / landlord.response_count
+    : null;
+  const isFastResponder = avgResponseMs !== null && avgResponseMs < 60000;
+
   return (
     <Link
       to={`/accommodation/${listing.id}`}
@@ -19,58 +28,39 @@ export default function AccommodationCard({ listing, onView }: Props) {
       onClick={() => onView?.(listing.id)}
       aria-label={`View accommodation: ${listing.title}`}
     >
-      {/* Save button top-right */}
       <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
         <SaveButton itemType="accommodation" itemId={listing.id} />
       </div>
 
       {listing.image_url ? (
-        <img
-          src={listing.image_url}
-          alt={listing.title}
-          className="w-full object-cover"
-          style={{ height: 180 }}
-          loading="lazy"
-        />
+        <img src={listing.image_url} alt={listing.title} className="w-full object-cover" style={{ height: 180 }} loading="lazy" />
       ) : (
-        <div
-          className="flex items-center justify-center"
-          style={{
-            height: 160,
-            background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))",
-          }}
-        >
+        <div className="flex items-center justify-center" style={{ height: 160, background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))" }}>
           <Building2 size={36} color="rgba(255,255,255,0.3)" />
         </div>
       )}
+
+      {isFastResponder && (
+        <div className="absolute top-10 left-2 z-10 flex items-center gap-1 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+          <Zap size={10} /> Fast responder
+        </div>
+      )}
+
       <div className="p-4">
-        <h3 className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>
-          {listing.title}
-        </h3>
+        <h3 className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>{listing.title}</h3>
         <div className="flex items-center gap-1.5 mt-1">
           <MapPin size={12} style={{ color: "var(--color-text-muted)" }} />
-          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-            {listing.location}
-          </p>
+          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{listing.location}</p>
         </div>
         {listing.description && (
-          <p className="text-xs mt-2 line-clamp-2" style={{ color: "var(--color-text-secondary)" }}>
-            {listing.description}
-          </p>
+          <p className="text-xs mt-2 line-clamp-2" style={{ color: "var(--color-text-secondary)" }}>{listing.description}</p>
         )}
         <div className="mt-3 flex items-center justify-between">
           <span className="text-base font-bold" style={{ color: "var(--color-primary)" }}>
-            K{listing.monthly_rent.toLocaleString()}
-            <span className="text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>
-              /mo
-            </span>
+            K{listing.monthly_rent.toLocaleString()}<span className="text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>/mo</span>
           </span>
-          {listing.looking_for_roommate && (
-  <span className="badge badge-amber ml-1">🧑‍🤝‍🧑 Roommate</span>
-)}
-          <span className={`badge ${listing.status === "available" ? "badge-amber" : "badge-green"}`}>
-            {listing.status || "available"}
-          </span>
+          {listing.looking_for_roommate && <span className="badge badge-amber ml-1">🧑‍🤝‍🧑 Roommate</span>}
+          <span className={`badge ${listing.status === "available" ? "badge-amber" : "badge-green"}`}>{listing.status || "available"}</span>
         </div>
       </div>
     </Link>

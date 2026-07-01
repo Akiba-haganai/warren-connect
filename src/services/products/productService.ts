@@ -9,11 +9,12 @@ export const productService = {
     title: string,
     description: string,
     price: number,
-    image_url?: string
+    image_url?: string,
+    condition?: string
   ) {
     const { data, error } = await supabase
       .from("products")
-      .insert({ seller_id, title, description, price, image_url: image_url ?? null })
+      .insert({ seller_id, title, description, price, image_url: image_url ?? null, condition: condition ?? null })
       .select()
       .single();
     if (error) throw error;
@@ -59,7 +60,6 @@ export const productService = {
     return data || [];
   },
 
-  /** Fetch product with seller profile */
   async getProductWithSeller(id: string) {
     const { data: product, error } = await supabase
       .from("products")
@@ -89,28 +89,29 @@ export const productService = {
     const { error } = await supabase.from("products").delete().eq("id", id);
     if (error) throw error;
   },
+
   async addProductImage(productId: string, imageUrl: string) {
-  const { error } = await supabase
-    .from("product_images")
-    .insert({ product_id: productId, image_url: imageUrl });
-  if (error) throw error;
-},
+    const { error } = await supabase
+      .from("product_images")
+      .insert({ product_id: productId, image_url: imageUrl });
+    if (error) throw error;
+  },
 
-async getProductImages(productId: string) {
-  const { data, error } = await supabase
-    .from("product_images")
-    .select("*")
-    .eq("product_id", productId)
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return data || [];
-},
+  async getProductImages(productId: string) {
+    const { data, error } = await supabase
+      .from("product_images")
+      .select("*")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
 
-async deleteProductImage(imageId: string) {
-  const { error } = await supabase
-    .from("product_images")
-    .delete()
-    .eq("id", imageId);
-  if (error) throw error;
-},
+  async deleteProductImage(imageId: string) {
+    const { error } = await supabase
+      .from("product_images")
+      .delete()
+      .eq("id", imageId);
+    if (error) throw error;
+  },
 };

@@ -6,6 +6,7 @@ import { compressImage } from "@/utils/compressImage";
 import { X, Upload, Loader2, CheckCircle, ImagePlus } from "lucide-react";
 import Papa from "papaparse";
 import { triggerHaptic } from "@/utils/haptic";
+import toast from "react-hot-toast";
 
 interface Props {
   onClose: () => void;
@@ -16,6 +17,7 @@ interface CsvRow {
   title: string;
   description?: string;
   price: number;
+  condition?: string; // optional – new/used/refurbished
 }
 
 export default function BulkUpload({ onClose, onCreated }: Props) {
@@ -92,13 +94,16 @@ export default function BulkUpload({ onClose, onCreated }: Props) {
           product.title.trim(),
           product.description?.trim() || "",
           product.price,
-          image_url
+          image_url,
+          product.condition?.trim() || undefined // pass condition if present
         );
       }
       setDone(true);
       onCreated();
+      toast.success(`${products.length} product(s) created.`);
     } catch (err: any) {
       setErrors([err.message]);
+      toast.error(err.message || "Upload failed");
     } finally {
       setUploading(false);
     }
@@ -144,7 +149,7 @@ export default function BulkUpload({ onClose, onCreated }: Props) {
             <div className="text-center py-10">
               <Upload size={32} style={{ color: "var(--color-text-muted)", margin: "0 auto 8px" }} />
               <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)" }}>
-                Upload a CSV file with columns: <strong>title</strong>, <strong>description</strong>, <strong>price</strong>
+                Upload a CSV file with columns: <strong>title</strong>, <strong>description</strong>, <strong>price</strong>, <strong>condition</strong> (optional)
               </p>
               <label className="btn-primary cursor-pointer inline-flex items-center gap-2 w-auto px-6">
                 <Upload size={16} /> Select CSV
@@ -164,7 +169,7 @@ export default function BulkUpload({ onClose, onCreated }: Props) {
               <div className="max-h-40 overflow-y-auto space-y-2">
                 {products.slice(0, 10).map((p, i) => (
                   <div key={i} className="text-xs flex justify-between items-center" style={{ color: "var(--color-text-secondary)" }}>
-                    <span className="truncate">{i + 1}. {p.title} – K{p.price}</span>
+                    <span className="truncate">{i + 1}. {p.title} – K{p.price}{p.condition ? ` (${p.condition})` : ""}</span>
                     {imagePreviews[i] ? (
                       <div className="flex items-center gap-1">
                         <img alt="image" src={imagePreviews[i]} className="w-6 h-6 rounded object-cover" />

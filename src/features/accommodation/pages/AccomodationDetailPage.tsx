@@ -9,7 +9,8 @@ import { useRecentlyViewed } from "@/hooks/useRecentlyviewed";
 import type { Tables } from "@/types/database/database.types";
 import {
   ArrowLeft, MapPin, MessageCircle, Share2, Loader2,
-  ShieldCheck, Building2, Flag, Calendar
+  ShieldCheck, Building2, Flag, Calendar,
+  Wifi, Droplet, Zap, Sofa, Car, Shield, BookOpen, Bath
 } from "lucide-react";
 
 type Accommodation = Tables<"accommodations">;
@@ -23,6 +24,17 @@ const COMMON_AMENITIES = [
   "WiFi", "Water included", "Electricity included", "Furnished",
   "Parking", "Security", "Study desk", "Private bathroom",
 ];
+
+const AMENITY_ICONS: Record<string, React.ReactNode> = {
+  WiFi: <Wifi size={14} />,
+  "Water included": <Droplet size={14} />,
+  "Electricity included": <Zap size={14} />,
+  Furnished: <Sofa size={14} />,
+  Parking: <Car size={14} />,
+  Security: <Shield size={14} />,
+  "Study desk": <BookOpen size={14} />,
+  "Private bathroom": <Bath size={14} />,
+};
 
 export default function AccommodationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -92,12 +104,10 @@ export default function AccommodationDetailPage() {
   const handleRequestBooking = async () => {
     if (!user || !accommodation) return;
     try {
-      // Notify the landlord
       triggerNotification.accommodationInterest(
         accommodation.owner_id, accommodation.id,
         accommodation.title, profile?.full_name ?? "Someone"
       );
-      // Start a conversation with a pre‑filled message
       const existingConvos = await messageService.getConversations(user.id);
       const existing = existingConvos.find(
         (c) =>
@@ -293,7 +303,10 @@ export default function AccommodationDetailPage() {
           ) : amenities.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {amenities.map((a) => (
-                <span key={a} className="badge badge-amber">{a}</span>
+                <span key={a} className="badge badge-amber flex items-center gap-1">
+                  {AMENITY_ICONS[a] || null}
+                  {a}
+                </span>
               ))}
             </div>
           ) : (

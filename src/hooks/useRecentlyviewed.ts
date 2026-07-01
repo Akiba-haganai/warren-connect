@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface RecentItem {
   id: string;
@@ -20,16 +20,22 @@ export function useRecentlyViewed() {
         setItems(parsed);
       } catch {}
     }
-  }, []);
+  }, []); // ✅ runs only once
 
-  const addToRecent = (item: Omit<RecentItem, "timestamp">) => {
-    setItems((prev) => {
-      const filtered = prev.filter((i) => !(i.id === item.id && i.type === item.type));
-      const updated = [{ ...item, timestamp: Date.now() }, ...filtered].slice(0, 5);
-      localStorage.setItem("recentlyViewed", JSON.stringify(updated));
-      return updated;
-    });
-  };
+  // Stabilize the callback so it never changes
+  const addToRecent = useCallback(
+    (item: Omit<RecentItem, "timestamp">) => {
+      setItems((prev) => {
+        const filtered = prev.filter(
+          (i) => !(i.id === item.id && i.type === item.type)
+        );
+        const updated = [{ ...item, timestamp: Date.now() }, ...filtered].slice(0, 5);
+        localStorage.setItem("recentlyViewed", JSON.stringify(updated));
+        return updated;
+      });
+    },
+    [] // ✅ no dependencies → stable reference forever
+  );
 
   return { recentItems: items, addToRecent };
 }

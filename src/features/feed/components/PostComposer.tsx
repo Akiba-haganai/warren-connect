@@ -105,7 +105,6 @@ export default function PostComposer({ onClose, onCreated }: Props) {
           <TagInput
             selectedTags={tags}
             onChange={setTags}
-            placeholder="Add tags (e.g., textbooks, electronics)"
           />
         </div>
 

@@ -6,46 +6,45 @@ export type Profile = Tables<"profiles">;
 
 export const accommodationService = {
   async createAccommodation(
-  owner_id: string,
-  title: string,
-  description: string,
-  location: string,
-  monthly_rent: number,
-  image_url?: string
-) {
-  const { data, error } = await supabase
-    .from("accommodations")
-    .insert({
-      owner_id,
-      title,
-      description,
-      location,
-      monthly_rent,
-      image_url: image_url ?? null,
-      status: "available",
-    })
-    .select()
-    .single();
+    owner_id: string,
+    title: string,
+    description: string,
+    location: string,
+    monthly_rent: number,
+    image_url?: string
+  ) {
+    const { data, error } = await supabase
+      .from("accommodations")
+      .insert({
+        owner_id,
+        title,
+        description,
+        location,
+        monthly_rent,
+        image_url: image_url ?? null,
+        status: "available",
+      })
+      .select()
+      .single();
 
-  if (error) throw error;
+    if (error) throw error;
 
-  // Auto‑set the owner as a landlord
-  await supabase
-    .from("profiles")
-    .update({ is_landlord: true })
-    .eq("id", owner_id);
+    // Auto‑set the owner as a landlord
+    await supabase
+      .from("profiles")
+      .update({ is_landlord: true })
+      .eq("id", owner_id);
 
-  return data;
-},
+    return data;
+  },
 
   async getAccommodations() {
     const { data, error } = await supabase
       .from("accommodations")
       .select("*")
       .order("created_at", { ascending: false });
-
     if (error) throw error;
-    return data;
+    return data || [];
   },
 
   async getAccommodationById(id: string) {
@@ -54,7 +53,6 @@ export const accommodationService = {
       .select("*")
       .eq("id", id)
       .single();
-
     if (error) throw error;
     return data;
   },
@@ -69,7 +67,6 @@ export const accommodationService = {
     return data || [];
   },
 
-  /** Fetch single accommodation with landlord profile */
   async getAccommodationWithLandlord(id: string) {
     const { data: acc, error } = await supabase
       .from("accommodations")
@@ -88,7 +85,6 @@ export const accommodationService = {
     return { ...acc, landlord: landlord ?? undefined };
   },
 
-  // Upload additional image for an accommodation
   async addImage(accommodationId: string, imageUrl: string) {
     const { error } = await supabase
       .from("accommodation_images")
@@ -96,7 +92,6 @@ export const accommodationService = {
     if (error) throw error;
   },
 
-  // Get all images for an accommodation
   async getImages(accommodationId: string) {
     const { data, error } = await supabase
       .from("accommodation_images")
@@ -107,7 +102,6 @@ export const accommodationService = {
     return data || [];
   },
 
-  // Delete an image
   async deleteImage(imageId: string) {
     const { error } = await supabase
       .from("accommodation_images")
@@ -116,7 +110,6 @@ export const accommodationService = {
     if (error) throw error;
   },
 
-  // Set amenities (overwrite entire list)
   async setAmenities(accommodationId: string, amenities: string[]) {
     await supabase.from("accommodation_amenities").delete().eq("accommodation_id", accommodationId);
     if (amenities.length > 0) {
@@ -126,7 +119,6 @@ export const accommodationService = {
     }
   },
 
-  // Get amenities for an accommodation
   async getAmenities(accommodationId: string) {
     const { data, error } = await supabase
       .from("accommodation_amenities")
@@ -136,22 +128,17 @@ export const accommodationService = {
     return (data || []).map((r) => r.amenity);
   },
 
-  /** Get all accommodations for a specific landlord */
   async getMyAccommodations(ownerId: string): Promise<Accommodation[]> {
     const { data, error } = await supabase
       .from("accommodations")
       .select("*")
       .eq("owner_id", ownerId)
       .order("created_at", { ascending: false });
-
     if (error) throw error;
     return data || [];
   },
 
-  async updateAccommodationStatus(
-    id: string,
-    status: "available" | "rented" | "hidden"
-  ) {
+  async updateAccommodationStatus(id: string, status: "available" | "rented" | "hidden") {
     const { error } = await supabase
       .from("accommodations")
       .update({ status })
@@ -160,20 +147,39 @@ export const accommodationService = {
   },
 
   async deleteAccommodation(id: string) {
-    const { error } = await supabase
-      .from("accommodations")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("accommodations").delete().eq("id", id);
     if (error) throw error;
   },
-  async getAccommodationsPaginated(limit: number, offset: number) {
-  const { data, error } = await supabase
-    .from("accommodations")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
-  if (error) throw error;
-  return data || [];
-},
 
+  async getAccommodationsPaginated(limit: number, offset: number) {
+    const { data, error } = await supabase
+      .from("accommodations")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getLandlordStats(ownerId: string) {
+    const { data: accommodations, error } = await supabase
+      .from("accommodations")
+      .select("id, title, monthly_rent, status")
+      .eq("owner_id", ownerId);
+
+    if (error) throw error;
+    const list = accommodations || [];
+
+    // Count enquiries from notifications
+    const { count } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("type", "accommodation_interest")
+      .in("link", list.map((a) => `/accommodation/${a.id}`));
+
+    return {
+      accommodations: list,
+      totalEnquiries: count || 0,
+    };
+  },
 };

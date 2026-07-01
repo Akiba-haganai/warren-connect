@@ -11,11 +11,16 @@ export const savedService = {
     return data || [];
   },
 
-  async saveItem(userId: string, itemType: "product" | "accommodation", itemId: string, metadata?: Record<string, any>) {
+  async saveItem(userId: string, itemType: string, itemId: string, metadata?: any) {
     const { error } = await supabase
       .from("saved_items")
-      .insert({ user_id: userId, item_type: itemType, item_id: itemId, metadata: metadata || {} });
-    if (error && error.code !== "23505") throw error;
+      .insert({
+        user_id: userId,
+        item_type: itemType,
+        item_id: itemId,
+        metadata: metadata ?? null,
+      });
+    if (error && error.code !== "23505") throw error; // ignore duplicates
   },
 
   async unsaveItem(userId: string, itemType: string, itemId: string) {
@@ -38,5 +43,26 @@ export const savedService = {
       .maybeSingle();
     if (error) return false;
     return !!data;
+  },
+
+  // Get full product/accommodation details for saved items
+  async getProductsByIds(ids: string[]) {
+    if (!ids.length) return [];
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .in("id", ids);
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getAccommodationsByIds(ids: string[]) {
+    if (!ids.length) return [];
+    const { data, error } = await supabase
+      .from("accommodations")
+      .select("*")
+      .in("id", ids);
+    if (error) throw error;
+    return data || [];
   },
 };
