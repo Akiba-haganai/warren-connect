@@ -6,7 +6,6 @@ import { Toaster } from "react-hot-toast";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import UpdateToast from "@/components/ui/UpdateToast";
 
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -18,7 +17,13 @@ const queryClient = new QueryClient({
 
 export default function App() {
   return (
-    <ErrorBoundary>
+    <ErrorBoundary
+      onError={(error) => {
+        if (import.meta.env.PROD) {
+          console.error("Unhandled error:", error);
+        }
+      }}
+    >
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <RouterProvider router={router} />

@@ -4,6 +4,7 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  onError?: (error: Error) => void;              // ✅ added
 }
 
 interface State {
@@ -23,7 +24,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("ErrorBoundary caught:", error, errorInfo);
-    // Optional: send to error tracking service (e.g., Sentry)
+    this.props.onError?.(error);                  // ✅ call the new prop
   }
 
   handleRetry = () => {
