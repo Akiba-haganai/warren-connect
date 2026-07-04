@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { MapPin, Building2, Zap } from "lucide-react";
+import { MapPin, Building2, Zap, Users } from "lucide-react";
+
 import type { Tables } from "@/types/database/database.types";
 import SaveButton from "@/components/ui/SaveButton";
 
@@ -52,9 +53,24 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
           <MapPin size={12} style={{ color: "var(--color-text-muted)" }} />
           <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{listing.location}</p>
         </div>
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          {listing.capacity ? (
+            <span className="text-xs flex items-center gap-1" style={{ color: "var(--color-text-secondary)" }}>
+              <Users size={12} /> {listing.capacity}
+            </span>
+          ) : null}
+
+          {listing.listing_type && listing.listing_type !== "property" ? (
+            <span className="badge text-[10px] capitalize bg-purple-100 text-purple-700">
+              {listing.listing_type}
+            </span>
+          ) : null}
+        </div>
+
         {listing.description && (
           <p className="text-xs mt-2 line-clamp-2" style={{ color: "var(--color-text-secondary)" }}>{listing.description}</p>
         )}
+
         <div className="mt-3 flex items-center justify-between">
           <span className="text-base font-bold" style={{ color: "var(--color-primary)" }}>
             K{listing.monthly_rent.toLocaleString()}<span className="text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>/mo</span>
@@ -62,6 +78,7 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
           {listing.looking_for_roommate && <span className="badge badge-amber ml-1">🧑‍🤝‍🧑 Roommate</span>}
           <span className={`badge ${listing.status === "available" ? "badge-amber" : "badge-green"}`}>{listing.status || "available"}</span>
         </div>
+
       </div>
     </Link>
   );

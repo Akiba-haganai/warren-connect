@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { accommodationService } from "@/services/accommodation/accommodationService";
-import { shopService } from "@/services/shop/shopService";
 import { useAuthStore } from "@/store/auth/authStore";
 import type { Tables } from "@/types/database/database.types";
-import CreateShopModal from "@/features/marketplace/components/CreateShopModal"; // Adjust path if needed
+import CreateShopModal from "@/features/marketplace/components/CreateShopModal";
+import { shopService } from "@/services/shop/shopService";
 
 type Accommodation = Tables<"accommodations">;
 
@@ -12,6 +12,8 @@ export default function MyListings() {
   const user = useAuthStore((s) => s.user);
   const [listings, setListings] = useState<Accommodation[]>([]);
   const [myShop, setMyShop] = useState<any>(null);
+  const [shopCount, setShopCount] = useState<number>(0);
+  // const [loadingShopCount, setLoadingShopCount] = useState(false);
   const [showCreateShop, setShowCreateShop] = useState(false);
 
   useEffect(() => {
@@ -21,9 +23,16 @@ export default function MyListings() {
       .then(setListings)
       .catch(console.error);
 
-    shopService.getMyShop(user.id).then((shop) => {
-      setMyShop(shop);
-    }).catch(() => {});
+
+    shopService
+      .getShopsForUser(user.id)
+      .then((shops) => {
+        setShopCount(shops.length);
+        setMyShop(shops[0] ?? null);
+      })
+      .catch(() => {});
+  
+  
   }, [user]);
 
   if (!listings.length && !myShop) return null; // hide if nothing to show
@@ -62,13 +71,23 @@ export default function MyListings() {
       {/* Shop section */}
       <div className="mt-4">
         {myShop ? (
-          <Link
-            to={`/shop/${myShop.id}`}
-            className="btn-primary flex items-center justify-center gap-2"
-            style={{ textDecoration: "none" }}
-          >
-            📦 My Shop
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              to={`/shop/${myShop.id}`}
+              className="btn-primary flex-1 items-center justify-center gap-2"
+              style={{ textDecoration: "none" }}
+            >
+              📦 My Shops
+            </Link>
+            {shopCount < 2 && (
+              <button
+                onClick={() => setShowCreateShop(true)}
+                className="btn-ghost flex items-center justify-center gap-2"
+              >
+                🛍️ Create another
+              </button>
+            )}
+          </div>
         ) : (
           <button
             onClick={() => setShowCreateShop(true)}

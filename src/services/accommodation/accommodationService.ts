@@ -11,8 +11,25 @@ export const accommodationService = {
     description: string,
     location: string,
     monthly_rent: number,
-    image_url?: string
+    image_url?: string,
+    listing_type: string = "property",
+    parent_id?: string,
+    capacity?: number
   ) {
+    // ---- FREE TIER LIMIT (only for parent properties) ----
+    if (listing_type === "property") {
+      const { count, error: countError } = await supabase
+        .from("accommodations")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_id", owner_id)
+        .eq("listing_type", "property");
+
+      if (countError) throw countError;
+      if (count !== null && count >= 2) {
+        throw new Error("You can only create up to 2 properties on the free plan.");
+      }
+    }
+
     const { data, error } = await supabase
       .from("accommodations")
       .insert({
@@ -23,6 +40,9 @@ export const accommodationService = {
         monthly_rent,
         image_url: image_url ?? null,
         status: "available",
+        listing_type,
+        parent_id: parent_id ?? null,
+        capacity: capacity ?? null,
       })
       .select()
       .single();
@@ -182,4 +202,41 @@ export const accommodationService = {
       totalEnquiries: count || 0,
     };
   },
+
+  // ---- Rooms & parent-child ----
+  async getRooms(propertyId: string) {
+    const { data, error } = await supabase
+      .from("accommodations")
+      .select("*")
+      .eq("parent_id", propertyId)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+
+  // ---- Collaborators ----
+  async addCollaborator(accommodationId: string, userId: string, role: string = "member") {
+    const { error } = await supabase
+      .from("accommodation_collaborators")
+      .insert({ accommodation_id: accommodationId, user_id: userId, role });
+    if (error) throw error;
+  },
+
+  async removeCollaborator(accommodationId: string, userId: string) {
+    const { error } = await supabase
+      .from("accommodation_collaborators")
+      .delete()
+      .match({ accommodation_id: accommodationId, user_id: userId });
+    if (error) throw error;
+  },
+
+  async getCollaborators(accommodationId: string) {
+    const { data, error } = await supabase
+      .from("accommodation_collaborators")
+      .select("user_id, role, profiles(id, full_name, avatar_url)")
+      .eq("accommodation_id", accommodationId);
+    if (error) throw error;
+    return data || [];
+  },
 };
+

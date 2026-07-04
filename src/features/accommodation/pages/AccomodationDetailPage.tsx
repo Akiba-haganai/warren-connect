@@ -8,9 +8,23 @@ import { reportService } from "@/services/reports/reportService";
 import { useRecentlyViewed } from "@/hooks/useRecentlyviewed";
 import type { Tables } from "@/types/database/database.types";
 import {
-  ArrowLeft, MapPin, MessageCircle, Share2, Loader2,
-  ShieldCheck, Building2, Flag, Calendar,
-  Wifi, Droplet, Zap, Sofa, Car, Shield, BookOpen, Bath
+  ArrowLeft,
+  MapPin,
+  MessageCircle,
+  Share2,
+  Loader2,
+  ShieldCheck,
+  Building2,
+  Flag,
+  Calendar,
+  Wifi,
+  Droplet,
+  Zap,
+  Sofa,
+  Car,
+  Shield,
+  BookOpen,
+  Bath,
 } from "lucide-react";
 
 type Accommodation = Tables<"accommodations">;
@@ -51,6 +65,16 @@ export default function AccommodationDetailPage() {
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const { addToRecent } = useRecentlyViewed();
 
+  // ---- Rooms (if property) ----
+  const [rooms, setRooms] = useState<Accommodation[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+
+  // ---- Co‑landlords ----
+  const [collaborators, setCollaborators] = useState<any[]>([]);
+  const [isCollaborator, setIsCollaborator] = useState(false);
+  const [collabSearch, setCollabSearch] = useState("");
+  const [addingCollaboratorLoading, setAddingCollaboratorLoading] = useState(false);
+
   useEffect(() => {
     if (!id) return;
     (async () => {
@@ -68,12 +92,33 @@ export default function AccommodationDetailPage() {
           title: data.title,
           imageUrl: data.image_url,
         });
+
+        // If property, load its rooms
+        if (data.listing_type === "property") {
+          setLoadingRooms(true);
+          accommodationService
+            .getRooms(data.id)
+            .then((r) => setRooms(r))
+            .finally(() => setLoadingRooms(false));
+        }
       } finally {
         setLoading(false);
       }
     })();
   }, [id, addToRecent]);
 
+  // Load collaborators and check if current user is one
+  useEffect(() => {
+    if (!accommodation || !user) return;
+    accommodationService.getCollaborators(accommodation.id).then((cols) => {
+      setCollaborators(cols);
+      setIsCollaborator(cols.some((c: any) => c.user_id === user.id));
+    });
+  }, [accommodation, user]);
+
+  const isOwner = user?.id === accommodation?.owner_id;
+
+  // ---- Handlers ----
   const handleContactLandlord = async () => {
     if (!user || !accommodation) return;
     setContacting(true);
@@ -167,6 +212,28 @@ export default function AccommodationDetailPage() {
     );
   };
 
+  // Co‑landlord actions
+  const handleAddCollaborator = async (userId: string) => {
+    if (!accommodation) return;
+    setAddingCollaboratorLoading(true);
+    try {
+      await accommodationService.addCollaborator(accommodation.id, userId);
+      const cols = await accommodationService.getCollaborators(accommodation.id);
+      setCollaborators(cols);
+      setIsCollaborator(user ? cols.some((c: any) => c.user_id === user.id) : false);
+      setCollabSearch("");
+    } finally {
+      setAddingCollaboratorLoading(false);
+    }
+  };
+
+  const handleRemoveCollaborator = async (userId: string) => {
+    if (!accommodation) return;
+    await accommodationService.removeCollaborator(accommodation.id, userId);
+    const cols = await accommodationService.getCollaborators(accommodation.id);
+    setCollaborators(cols);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -184,7 +251,6 @@ export default function AccommodationDetailPage() {
     );
   }
 
-  const isOwner = user?.id === accommodation.owner_id;
   const displayImages = images.length > 0
     ? images
     : (accommodation.image_url ? [{ id: "main", image_url: accommodation.image_url }] : []);
@@ -202,11 +268,11 @@ export default function AccommodationDetailPage() {
         <h1 className="text-sm font-bold" style={{ color: "var(--color-primary)" }}>Detail</h1>
         <div className="flex items-center gap-2">
           {!isOwner && (
-            <button onClick={handleReport} className="p-1" aria-label="Report listing">
+            <button onClick={handleReport} className="p-1" aria-label="Report listing" title="Report">
               <Flag size={18} style={{ color: "var(--color-text-muted)" }} />
             </button>
           )}
-          <button onClick={handleShare} className="p-1" aria-label="Share listing">
+          <button onClick={handleShare} className="p-1" aria-label="Share listing" title="Share">
             <Share2 size={18} style={{ color: "var(--color-text-secondary)" }} />
           </button>
         </div>
@@ -256,6 +322,12 @@ export default function AccommodationDetailPage() {
           <p className="flex items-center gap-1 text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
             <MapPin size={14} /> {accommodation.location}
           </p>
+          {/* Collaborator badge */}
+          {isCollaborator && (
+            <span className="inline-flex items-center gap-1 text-xs mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+              You are a co‑landlord
+            </span>
+          )}
         </div>
 
         {/* Rent & status */}
@@ -268,6 +340,106 @@ export default function AccommodationDetailPage() {
             {accommodation.status || "available"}
           </span>
         </div>
+
+        {/* Rooms grid & Co-landlords (only for properties) */}
+        {accommodation.listing_type === "property" && (
+          <div className="mt-2 space-y-4">
+            {/* Rooms */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold" style={{ color: "var(--color-text-secondary)" }}>Rooms ({rooms.length})</h3>
+                {isOwner && (
+                  <button
+                    onClick={() => navigate(`/accommodation?parentId=${accommodation.id}`)}
+                    className="btn-primary w-auto px-3 py-1 text-xs"
+                    title="Add room"
+                  >
+                    Add Room
+                  </button>
+                )}
+              </div>
+              {loadingRooms ? (
+                <div className="flex items-center gap-2 text-xs text-muted">Loading rooms…</div>
+              ) : rooms.length === 0 ? (
+                <p className="text-xs text-muted">No rooms yet.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {rooms.map((room) => (
+                    <Link
+                      key={room.id}
+                      to={`/accommodation/${room.id}`}
+                      className="card p-3 flex flex-col gap-1"
+                      style={{ textDecoration: "none", color: "inherit" }}
+                    >
+                      <p className="text-sm font-semibold">{room.title}</p>
+                      <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                        K{room.monthly_rent}/mo
+                      </p>
+                      <p className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
+                        {room.capacity ? `${room.capacity} tenants` : "Shared"}
+                      </p>
+                      <span className={`badge text-[10px] ${room.status === "available" ? "badge-amber" : "badge-green"}`}>
+                        {room.status || "available"}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Co-landlords (owner only) */}
+            {isOwner && (
+              <div>
+                <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--color-text-secondary)" }}>Co‑landlords</h3>
+
+                {collaborators.length > 0 ? (
+                  <ul className="space-y-2 mb-3">
+                    {collaborators.map((c) => (
+                      <li key={c.user_id} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <span>{c.profiles?.full_name ?? "Unknown"}</span>
+                          <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>({c.role})</span>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveCollaborator(c.user_id)}
+                          className="text-red-500"
+                          title="Remove co-landlord"
+                          aria-label="Remove co-landlord"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-muted mb-3">No co‑landlords yet.</p>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold" style={{ color: "var(--color-text-secondary)" }}>
+                    Add co‑landlord
+                  </label>
+                  <input
+                    className="input-field text-sm"
+                    placeholder="Enter user id (or type for suggestions)"
+                    value={collabSearch}
+                    onChange={(e) => setCollabSearch(e.target.value)}
+                    aria-label="Co-landlord search"
+                  />
+                  <button
+                    type="button"
+                    className="btn-primary w-auto px-4 py-2 text-xs"
+                    onClick={() => handleAddCollaborator(collabSearch)}
+                    disabled={!collabSearch.trim() || addingCollaboratorLoading}
+                    title="Add co-landlord"
+                  >
+                    {addingCollaboratorLoading ? "Adding…" : "Add"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Amenities */}
         <div>

@@ -25,6 +25,7 @@ export default function AccommodationPage() {
   const [priceMax, setPriceMax] = useState("");
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [showMyAccommodations, setShowMyAccommodations] = useState(false);
+  const [listingTypeFilter, setListingTypeFilter] = useState<"all" | "property" | "room" | "bedspace">("all");
   const [landlordStats, setLandlordStats] = useState<any>(null);
   const [landlordProfiles, setLandlordProfiles] = useState<Record<string, any>>({});
 
@@ -91,11 +92,12 @@ export default function AccommodationPage() {
       const matchGender = !genderFilter || item.gender_preference === genderFilter;
       const matchPriceMin = !priceMin || item.monthly_rent >= Number(priceMin);
       const matchPriceMax = !priceMax || item.monthly_rent <= Number(priceMax);
+      const matchListingType = listingTypeFilter === "all" || item.listing_type === listingTypeFilter;
       const matchAmenities = selectedAmenities.length === 0 ||
         (allAmenities[item.id] && selectedAmenities.every((a) => allAmenities[item.id].includes(a)));
-      return matchSearch && matchLocation && matchRoommate && matchGender && matchPriceMin && matchPriceMax && matchAmenities;
+      return matchSearch && matchLocation && matchRoommate && matchGender && matchListingType && matchPriceMin && matchPriceMax && matchAmenities;
     });
-  }, [allListings, search, locationFilter, roommateFilter, genderFilter, priceMin, priceMax, selectedAmenities, allAmenities]);
+  }, [allListings, search, locationFilter, roommateFilter, genderFilter, priceMin, priceMax, listingTypeFilter, selectedAmenities, allAmenities]);
 
   const noListings = status !== "pending" && filtered.length === 0;
 
@@ -133,6 +135,32 @@ export default function AccommodationPage() {
           priceMax={priceMax} onPriceMaxChange={setPriceMax}
           selectedAmenities={selectedAmenities} onAmenitiesChange={setSelectedAmenities}
         />
+
+        {/* Listing type chips */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mb-1">
+          {(["all", "property", "room", "bedspace"] as const).map((type) => {
+            const label = type === "all" ? "All" : type.charAt(0).toUpperCase() + type.slice(1);
+            const active = listingTypeFilter === type;
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setListingTypeFilter(type)}
+                className={`text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap ${
+                  active ? "bg-primary text-white" : "bg-gray-100 text-gray-600"
+                }`}
+                style={{
+                  background: active ? "var(--color-primary)" : "var(--color-bg)",
+                  color: active ? "#fff" : "var(--color-text-secondary)",
+                  border: active ? "1px solid var(--color-primary)" : "1px solid var(--color-border)",
+                }}
+
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
 
         {status === "pending" ? (
           <>{[1,2,3].map(i => <div key={i} className="card overflow-hidden"><div className="skeleton" style={{height:180}}/><div className="p-4 flex flex-col gap-2"><div className="skeleton rounded" style={{height:14,width:"70%"}}/><div className="skeleton rounded" style={{height:12,width:"45%"}}/></div></div>)}</>

@@ -40,6 +40,42 @@ export type Database = {
           },
         ]
       }
+      accommodation_collaborators: {
+        Row: {
+          accommodation_id: string | null
+          id: string
+          role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accommodation_id?: string | null
+          id?: string
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accommodation_id?: string | null
+          id?: string
+          role?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accommodation_collaborators_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "accommodations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accommodation_collaborators_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accommodation_images: {
         Row: {
           accommodation_id: string
@@ -101,6 +137,7 @@ export type Database = {
       }
       accommodations: {
         Row: {
+          capacity: number | null
           created_at: string | null
           description: string | null
           featured: boolean | null
@@ -109,14 +146,17 @@ export type Database = {
           image_thumb: string | null
           image_url: string | null
           is_hidden: boolean | null
+          listing_type: string | null
           location: string
           looking_for_roommate: boolean | null
           monthly_rent: number
           owner_id: string
+          parent_id: string | null
           status: string | null
           title: string
         }
         Insert: {
+          capacity?: number | null
           created_at?: string | null
           description?: string | null
           featured?: boolean | null
@@ -125,14 +165,17 @@ export type Database = {
           image_thumb?: string | null
           image_url?: string | null
           is_hidden?: boolean | null
+          listing_type?: string | null
           location: string
           looking_for_roommate?: boolean | null
           monthly_rent: number
           owner_id: string
+          parent_id?: string | null
           status?: string | null
           title: string
         }
         Update: {
+          capacity?: number | null
           created_at?: string | null
           description?: string | null
           featured?: boolean | null
@@ -141,14 +184,24 @@ export type Database = {
           image_thumb?: string | null
           image_url?: string | null
           is_hidden?: boolean | null
+          listing_type?: string | null
           location?: string
           looking_for_roommate?: boolean | null
           monthly_rent?: number
           owner_id?: string
+          parent_id?: string | null
           status?: string | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accommodations_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "accommodations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       blocked_users: {
         Row: {
@@ -958,6 +1011,13 @@ export type Database = {
           shop_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "shop_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shop_reviews_shop_id_fkey"
             columns: ["shop_id"]

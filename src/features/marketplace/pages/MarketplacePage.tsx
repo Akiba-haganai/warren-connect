@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useInView } from "react-intersection-observer";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { tagService } from "@/services/tags/tagService";
 import { useProducts } from "@/hooks/useProducts";
@@ -24,6 +24,7 @@ type SortMode = "newest" | "oldest" | "price_asc" | "price_desc";
 
 export default function MarketplacePage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -32,12 +33,27 @@ export default function MarketplacePage() {
   const [selectedTag, setSelectedTag] = useState("");
   const [showMyProducts, setShowMyProducts] = useState(false);
   const [showCreateShop, setShowCreateShop] = useState(false);
+  const [shopCount, setShopCount] = useState<number>(0);
   const [viewMode, setViewMode] = useState<"products" | "shops">("products");
   const [sortMode, setSortMode] = useState<SortMode>("newest");
   const [conditionFilter, setConditionFilter] = useState<string>("all");
   const { recentItems } = useRecentlyViewed();
   const { ConfirmDialog } = useConfirm();
 
+  // ---- Shop pre-selection from URL ----
+  const shopIdFromUrl = searchParams.get("shopId");
+  const [composerShopId, setComposerShopId] = useState<string>("");
+  useEffect(() => {
+    if (shopIdFromUrl) {
+      setComposerShopId(shopIdFromUrl);
+      setShowComposer(true);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("shopId");
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [shopIdFromUrl]);
+
+  // ---- Refresh ----
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -118,11 +134,22 @@ export default function MarketplacePage() {
     queryClient.invalidateQueries({ queryKey: ["products"] });
   };
 
+  useEffect(() => {
+    if (!user) return;
+    shopService.getShopsForUser(user.id)
+      .then((shops) => setShopCount(shops.length))
+      .catch(() => setShopCount(0));
+  }, [user]);
+
   const handleShopClick = async () => {
     if (!user) return;
-    const shop = await shopService.getMyShop(user.id);
-    if (shop) navigate(`/shop/${shop.id}`);
-    else setShowCreateShop(true);
+    const shops = await shopService.getShopsForUser(user.id);
+    if (shops.length === 0) {
+      setShowCreateShop(true);
+    } else {
+      // Always navigate to the first shop
+      navigate(`/shop/${shops[0].id}`);
+    }
   };
 
   return (
@@ -133,16 +160,21 @@ export default function MarketplacePage() {
         </div>
       )}
 
-      <div className="sticky top-0 z-10 px-4 py-3 flex items-center justify-between"
-        style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}>
+      <div
+        className="sticky top-0 z-10 px-4 py-3 flex items-center justify-between"
+        style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}
+      >
         <h1 className="text-base font-bold" style={{ color: "var(--color-primary)" }}>Marketplace</h1>
         <div className="flex items-center gap-2">
           <button onClick={handleRefresh} disabled={refreshing} className="p-1">
             <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} style={{ color: "var(--color-text-muted)" }} />
           </button>
           <button onClick={() => setShowBulkUpload(true)} className="btn-ghost text-xs">📦 Bulk</button>
-          <button onClick={() => setShowComposer(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--color-primary)", color: "#fff" }}>
+          <button
+            onClick={() => setShowComposer(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--color-primary)", color: "#fff" }}
+          >
             <Plus size={15} /> Sell
           </button>
         </div>
@@ -150,18 +182,29 @@ export default function MarketplacePage() {
 
       <div className="px-4 pt-4 pb-8">
         <div className="flex items-center gap-2 mb-3">
-          <button onClick={() => setViewMode("products")} className={`text-xs px-3 py-1 rounded-full font-medium ${viewMode === "products" ? "bg-primary text-white" : "bg-gray-100 text-gray-600"}`}
-            style={viewMode === "products" ? { background: "var(--color-primary)", color: "#fff" } : { background: "var(--color-bg)", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}>
+          <button
+            onClick={() => setViewMode("products")}
+            className={`text-xs px-3 py-1 rounded-full font-medium ${viewMode === "products" ? "bg-primary text-white" : "bg-gray-100 text-gray-600"}`}
+            style={viewMode === "products" ? { background: "var(--color-primary)", color: "#fff" } : { background: "var(--color-bg)", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}
+          >
             Products
           </button>
-          <button onClick={() => setViewMode("shops")} className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${viewMode === "shops" ? "bg-primary text-white" : "bg-gray-100 text-gray-600"}`}
-            style={viewMode === "shops" ? { background: "var(--color-primary)", color: "#fff" } : { background: "var(--color-bg)", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}>
+          <button
+            onClick={() => setViewMode("shops")}
+            className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${viewMode === "shops" ? "bg-primary text-white" : "bg-gray-100 text-gray-600"}`}
+            style={viewMode === "shops" ? { background: "var(--color-primary)", color: "#fff" } : { background: "var(--color-bg)", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}
+          >
             <Store size={12} /> Shops
           </button>
           {viewMode === "products" && (
             <>
               <button onClick={() => setShowMyProducts(!showMyProducts)} className="btn-ghost text-xs">{showMyProducts ? "Hide" : "My Products"}</button>
-              <button onClick={handleShopClick} className="btn-ghost text-xs flex items-center gap-1"><Store size={14} /> My Shop</button>
+              <button onClick={handleShopClick} className="btn-ghost text-xs flex items-center gap-1">
+                <Store size={14} /> {shopCount > 0 ? "My Shop" : "Create Shop"}
+              </button>
+              {shopCount > 0 && shopCount < 2 && (
+                <button onClick={() => setShowCreateShop(true)} className="btn-ghost text-xs">+ New Shop</button>
+              )}
             </>
           )}
         </div>
@@ -200,7 +243,12 @@ export default function MarketplacePage() {
                 <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--color-text-muted)" }} />
                 <input className="input-field pl-9" placeholder="Search listings…" value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
-              <select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)} className="input-field w-auto text-xs" style={{ width: 100 }}>
+              <select
+                value={sortMode}
+                onChange={(e) => setSortMode(e.target.value as SortMode)}
+                className="input-field w-auto text-xs"
+                style={{ width: 100 }}
+              >
                 <option value="newest">Newest</option>
                 <option value="oldest">Oldest</option>
                 <option value="price_asc">Price ↑</option>
@@ -210,13 +258,11 @@ export default function MarketplacePage() {
 
             <div className="flex gap-2 overflow-x-auto pb-2 mb-2">
               {["all", "new", "used", "refurbished"].map((cond) => (
-                <button key={cond} onClick={() => setConditionFilter(cond)}
+                <button
+                  key={cond}
+                  onClick={() => setConditionFilter(cond)}
                   className={`text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap ${conditionFilter === cond ? "bg-primary text-white" : "bg-gray-100 text-gray-600"}`}
-                  style={{
-                    background: conditionFilter === cond ? "var(--color-primary)" : "var(--color-bg)",
-                    color: conditionFilter === cond ? "#fff" : "var(--color-text-secondary)",
-                    border: conditionFilter !== cond ? "1px solid var(--color-border)" : "none",
-                  }}
+                  style={{ background: conditionFilter === cond ? "var(--color-primary)" : "var(--color-bg)", color: conditionFilter === cond ? "#fff" : "var(--color-text-secondary)", border: conditionFilter !== cond ? "1px solid var(--color-border)" : "none" }}
                 >
                   {cond === "all" ? "All" : cond.charAt(0).toUpperCase() + cond.slice(1)}
                 </button>
@@ -226,15 +272,9 @@ export default function MarketplacePage() {
             {allTags && allTags.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-3 mb-1 hide-scrollbar relative">
                 <div className="flex gap-2">
-                  <button onClick={() => setSelectedTag("")} className="text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap"
-                    style={{ background: !selectedTag ? "var(--color-primary)" : "var(--color-bg)", color: !selectedTag ? "#fff" : "var(--color-text-secondary)" }}>
-                    All
-                  </button>
+                  <button onClick={() => setSelectedTag("")} className="text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap" style={{ background: !selectedTag ? "var(--color-primary)" : "var(--color-bg)", color: !selectedTag ? "#fff" : "var(--color-text-secondary)" }}>All</button>
                   {allTags.map((tag) => (
-                    <button key={tag.id} onClick={() => setSelectedTag(tag.name)} className="text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap"
-                      style={{ background: selectedTag === tag.name ? "var(--color-primary)" : "var(--color-bg)", color: selectedTag === tag.name ? "#fff" : "var(--color-text-secondary)" }}>
-                      {tag.name}
-                    </button>
+                    <button key={tag.id} onClick={() => setSelectedTag(tag.name)} className="text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap" style={{ background: selectedTag === tag.name ? "var(--color-primary)" : "var(--color-bg)", color: selectedTag === tag.name ? "#fff" : "var(--color-text-secondary)" }}>{tag.name}</button>
                   ))}
                 </div>
                 <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8" style={{ background: "linear-gradient(to left, var(--color-bg), transparent)" }} />
@@ -285,10 +325,20 @@ export default function MarketplacePage() {
         {viewMode === "shops" && <ShopList />}
       </div>
 
-      {showComposer && <ProductComposer onClose={() => setShowComposer(false)} onCreated={handleProductCreated} />}
+      {showComposer && (
+        <ProductComposer
+          onClose={() => { setShowComposer(false); setComposerShopId(""); }}
+          onCreated={handleProductCreated}
+          initialShopId={composerShopId}
+        />
+      )}
       {showBulkUpload && <BulkUpload onClose={() => setShowBulkUpload(false)} onCreated={handleProductCreated} />}
-      {showCreateShop && <CreateShopModal onClose={() => setShowCreateShop(false)} onCreated={(shopId) => { setShowCreateShop(false); navigate(`/shop/${shopId}`); }} />}
-
+      {showCreateShop && (
+        <CreateShopModal
+          onClose={() => setShowCreateShop(false)}
+          onCreated={(shopId) => { setShowCreateShop(false); navigate(`/shop/${shopId}`); }}
+        />
+      )}
       {ConfirmDialog}
     </div>
   );

@@ -11,9 +11,10 @@ import { tagService } from "@/services/tags/tagService";
 interface Props {
   onClose: () => void;
   onCreated: () => void;
+  initialShopId?: string;
 }
 
-export default function ProductComposer({ onClose, onCreated }: Props) {
+export default function ProductComposer({ onClose, onCreated, initialShopId }: Props) {
   const user = useAuthStore((s) => s.user);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -24,7 +25,7 @@ export default function ProductComposer({ onClose, onCreated }: Props) {
   const [condition, setCondition] = useState("");
   const [posting, setPosting] = useState(false);
   const [shops, setShops] = useState<any[]>([]);
-  const [selectedShopId, setSelectedShopId] = useState<string>("");
+  const [selectedShopId, setSelectedShopId] = useState<string>(initialShopId ?? "");
 
   useEffect(() => {
     if (!user) return;
