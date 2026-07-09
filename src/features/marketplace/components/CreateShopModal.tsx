@@ -31,9 +31,9 @@ export default function CreateShopModal({ onClose, onCreated }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end" style={{ background: "rgba(0,0,0,0.4)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end">
       <div
-        className="w-full rounded-t-3xl flex flex-col"
+        className="w-full rounded-t-3xl flex flex-col page-fade-in"
         style={{
           background: "var(--color-surface)",
           maxHeight: "90dvh",

@@ -111,8 +111,8 @@ export default function BulkUpload({ onClose, onCreated }: Props) {
 
   if (done) {
     return (
-      <div className="fixed inset-0 z-50 flex items-end" style={{ background: "rgba(0,0,0,0.4)" }} onClick={onClose}>
-        <div className="w-full rounded-t-3xl p-6" style={{ background: "var(--color-surface)", paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }} onClick={(e) => e.stopPropagation()}>
+      <div className="fixed inset-0 z-[100] flex items-end">
+        <div className="w-full rounded-t-3xl p-6 page-fade-in" style={{ background: "var(--color-surface)", paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }} onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-col items-center gap-4">
             <CheckCircle size={48} style={{ color: "var(--color-success)" }} />
             <h2 className="text-lg font-bold">Upload complete!</h2>
@@ -127,13 +127,13 @@ export default function BulkUpload({ onClose, onCreated }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end" style={{ background: "rgba(0,0,0,0.4)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end">
       <div
-        className="w-full rounded-t-3xl overflow-y-auto"
+        className="w-full rounded-t-3xl overflow-y-auto page-fade-in"
         style={{
           background: "var(--color-surface)",
           maxHeight: "90dvh",
-          paddingBottom: "calc(80px + env(safe-area-inset-bottom))",
+          paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
         }}
         onClick={(e) => e.stopPropagation()}
       >

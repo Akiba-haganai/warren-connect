@@ -18,12 +18,24 @@ export default function PrivacyPage() {
         We do not sell your data. Profile information is visible to other users as described in the app.
       </p>
 
-      <h2 className="text-lg font-semibold mt-6 mb-2">4. Security</h2>
+      <h2 className="text-lg font-semibold mt-6 mb-2">4. Verification Documents</h2>
+      <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--color-text-secondary)" }}>
+        When you upload a student ID for verification, the image is stored securely
+        in a private storage bucket. Only designated administrators can view it,
+        and only for the purpose of verifying your identity. Signed URLs are used
+        to grant temporary access; the images are never publicly accessible.
+      </p>
+      <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--color-text-secondary)" }}>
+        You may request deletion of your verification data at any time by contacting
+        an administrator or using the "Request Account Deletion" option in Settings.
+      </p>
+
+      <h2 className="text-lg font-semibold mt-6 mb-2">5. Security</h2>
       <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--color-text-secondary)" }}>
         We take reasonable measures to protect your data, but no transmission is 100% secure.
       </p>
 
-      <h2 className="text-lg font-semibold mt-6 mb-2">5. Contact</h2>
+      <h2 className="text-lg font-semibold mt-6 mb-2">6. Contact</h2>
       <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
         For privacy questions, email us at privacy@warrenconnect.app
       </p>

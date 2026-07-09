@@ -81,7 +81,7 @@ export default function InstallBanner() {
   return (
     <>
       {/* Floating Banner */}
-      <div className="fixed bottom-24 left-4 right-4 z-50">
+      <div className="fixed bottom-24 left-4 right-4 z-[55]">
         <div className="relative overflow-hidden rounded-3xl border border-blue-100 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 p-4 pr-10 shadow-2xl backdrop-blur-md">
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-500" />
 
@@ -105,7 +105,7 @@ export default function InstallBanner() {
 
             <button
               onClick={handleInstall}
-              className="flex items-center gap-1.5 rounded-2xl bg-blue-600 dark:bg-blue-500 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-blue-600/20 hover:scale-[1.02] active:scale-95 transition-all duration-200 shrink-0"
+              className="flex items-center gap-1.5 rounded-2xl bg-blue-600 dark:bg-blue-500 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.99] transition-all duration-200 shrink-0"
             >
               <Download size={13} />
               Install

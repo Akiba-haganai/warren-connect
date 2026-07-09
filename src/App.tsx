@@ -33,6 +33,8 @@ export default function App() {
               style: {
                 background: "var(--color-surface)",
                 color: "var(--color-text)",
+                borderRadius: "var(--radius-lg)",
+                boxShadow: "var(--shadow-float)",
               },
             }}
           />

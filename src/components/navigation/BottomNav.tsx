@@ -1,14 +1,14 @@
 import { useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { Home, Store, Building2, MessageCircle, Users } from "lucide-react";
+import { motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth/authStore";
 import { notificationService } from "@/services/notifications/notificationService";
 import { roommateService } from "@/services/roommates/roommateService";
 
-
 const tabs = [
-  { label: "Home",      path: "/feed",          icon: Home },          // ← changed to /feed
+  { label: "Home",      path: "/feed",          icon: Home },
   { label: "Market",    path: "/marketplace",   icon: Store },
   { label: "Housing",   path: "/accommodation", icon: Building2 },
   { label: "Chat",      path: "/messages",      icon: MessageCircle },
@@ -36,7 +36,6 @@ export default function BottomNav() {
   const unreadCount = notifications?.filter((n: any) => !n.is_read).length ?? 0;
   const matchesCount = newMatches ?? 0;
 
-  // Clear matches badge when visiting the roommates page
   useEffect(() => {
     if (location.pathname === "/roommates") {
       queryClient.invalidateQueries({ queryKey: ["roommate-matches", user?.id] });
@@ -45,16 +44,16 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50"
+      className="fixed bottom-0 left-0 right-0 glass-surface"
       style={{
-        background: "var(--color-surface)",
+        zIndex: 50,
         borderTop: "1px solid var(--color-border)",
         paddingBottom: "env(safe-area-inset-bottom)",
+        boxShadow: "0 -4px 20px rgba(15,23,42,0.06)",
       }}
     >
-      <div className="flex items-stretch h-16 max-w-lg mx-auto">
+      <div className="flex items-stretch h-16 max-w-lg mx-auto relative">
         {tabs.map((tab) => {
-          // Active detection works the same: path starts with tab.path
           const active =
             tab.path === "/"
               ? location.pathname === "/"
@@ -75,19 +74,19 @@ export default function BottomNav() {
               }}
             >
               {active && (
-                <span
+                <motion.span
+                  layoutId="bottom-nav-pill"
                   className="absolute inset-x-2 inset-y-1.5 rounded-xl"
                   style={{ background: "var(--color-accent-light)" }}
+                  transition={{ type: "spring", stiffness: 420, damping: 32 }}
                 />
               )}
 
-              <div className="relative z-10">
+              <div className={`relative z-10 ${active ? "nav-bounce" : ""}`}>
                 <Icon
                   size={20}
                   strokeWidth={active ? 2.5 : 1.8}
-                  style={{
-                    color: active ? "var(--color-primary)" : "var(--color-text-muted)",
-                  }}
+                  style={{ color: active ? "var(--color-primary)" : "var(--color-text-muted)" }}
                 />
                 {showNotifBadge && (
                   <span className="absolute -top-1.5 -right-3 min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">

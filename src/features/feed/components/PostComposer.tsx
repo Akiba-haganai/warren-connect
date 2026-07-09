@@ -6,6 +6,7 @@ import { storageService } from "@/services/storage/storageService";
 import { compressImage } from "@/utils/compressImage";
 import TagInput from "@/components/ui/TagInput";
 import { tagService } from "@/services/tags/tagService";
+import { sendPushNotification } from "@/lib/notifications";
 
 interface Props {
   onClose: () => void;
@@ -14,6 +15,7 @@ interface Props {
 
 export default function PostComposer({ onClose, onCreated }: Props) {
   const user = useAuthStore((s) => s.user);
+  const profile = useAuthStore((s) => s.profile);
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -57,6 +59,11 @@ export default function PostComposer({ onClose, onCreated }: Props) {
         );
       }
 
+      if (newPost) {
+        const username = profile?.username || profile?.full_name || user?.email?.split('@')[0] || 'Someone';
+        sendPushNotification(newPost.user_id, "New Post", `${username} posted: ${newPost.content.slice(0, 60)}`, `/post/${newPost.id}`);
+      }
+
       onCreated();
       onClose();
     } finally {
@@ -66,7 +73,7 @@ export default function PostComposer({ onClose, onCreated }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end"
+      className="fixed inset-0 z-[100] flex items-end"
       style={{ background: "rgba(0,0,0,0.4)" }}
       onClick={onClose}
       role="dialog"
@@ -74,10 +81,10 @@ export default function PostComposer({ onClose, onCreated }: Props) {
       aria-label="Create post"
     >
       <div
-        className="w-full rounded-t-3xl p-5"
+        className="w-full rounded-t-3xl p-5 page-fade-in"
         style={{
           background: "var(--color-surface)",
-          paddingBottom: "calc(80px + env(safe-area-inset-bottom))",
+          paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
         }}
         onClick={(e) => e.stopPropagation()}
       >

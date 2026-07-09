@@ -1,60 +1,67 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
-import { MessageCircle, ShoppingBag, Building2, ArrowRight, X } from "lucide-react";
+import { MessageCircle, BookOpen, MapPin, ArrowRight, X, ChevronRight } from "lucide-react";
 
 const slides = [
   {
-    title: "Connect with Classmates",
-    description: "Share posts, ask questions, and stay in the loop with your campus community.",
+    title: "Stay in the loop",
+    description: "Follow posts, announcements, and discussions from your campus.",
     icon: MessageCircle,
-    action: "See the feed",
-    path: "/feed",
+    action: "Open feed",
+    path: "/",
     gradient: "from-blue-600 to-cyan-500",
+    bg: "from-blue-600/10 to-cyan-500/10",
   },
   {
-    title: "Buy, Sell & Trade",
-    description: "List your items, discover great deals, and even open your own shop.",
-    icon: ShoppingBag,
-    action: "Explore marketplace",
-    path: "/marketplace",
-    gradient: "from-orange-500 to-amber-500",
+    title: "Study better together",
+    description: "Find notes, past papers, and join study groups for your courses.",
+    icon: BookOpen,
+    action: "Go to Study",
+    path: "/study",
+    gradient: "from-purple-600 to-pink-500",
+    bg: "from-purple-600/10 to-pink-500/10",
   },
   {
-    title: "Find Your Next Home",
-    description: "Browse accommodation listings, contact landlords, and find your perfect place.",
-    icon: Building2,
-    action: "Browse housing",
-    path: "/accommodation",
-    gradient: "from-emerald-500 to-green-500",
+    title: "Never get lost",
+    description: "Use the campus map to locate offices, lecture halls, and more.",
+    icon: MapPin,
+    action: "Open map",
+    path: "/campus-map",
+    gradient: "from-emerald-600 to-green-500",
+    bg: "from-emerald-600/10 to-green-500/10",
   },
 ];
 
 export default function OnboardingCarousel() {
   const [show, setShow] = useState(false);
-  const [step] = useState(0);
-
+  const [step, setStep] = useState(0);
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
-    // Show only if user is logged in AND hasn't seen it before
-    const seen = localStorage.getItem("onboarding-seen");
+    const seen = localStorage.getItem("onboarding-seen-v2");  // v2 to reset for returning users
     if (!seen && user) {
-      // Delay so the page renders first
       const timer = setTimeout(() => setShow(true), 500);
       return () => clearTimeout(timer);
     }
   }, [user]);
 
-  const handleFinish = () => {
-    localStorage.setItem("onboarding-seen", "1");
+  const handleDismiss = () => {
+    localStorage.setItem("onboarding-seen-v2", "1");
     setShow(false);
   };
 
+  const handleNext = () => {
+    if (step < slides.length - 1) {
+      setStep(step + 1);
+    } else {
+      handleDismiss();
+    }
+  };
+
   const handleNavigate = (path: string) => {
-    localStorage.setItem("onboarding-seen", "1");
-    setShow(false);
+    handleDismiss();
     navigate(path);
   };
 
@@ -64,41 +71,62 @@ export default function OnboardingCarousel() {
   const Icon = slide.icon;
 
   return (
-    <div
-      className="fixed inset-0 z-[300] flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
-    >
-      <div className="w-[85vw] max-w-sm rounded-3xl p-6 text-center relative overflow-hidden" style={{ background: "var(--color-surface)" }}>
-        <div className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r ${slide.gradient}`} />
-        <button
-          onClick={handleFinish}
-          className="absolute top-4 right-4 p-1 rounded-full"
-          style={{ color: "var(--color-text-muted)" }}
-          aria-label="Skip onboarding"
-        >
-          <X size={18} />
-        </button>
-        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mt-4 bg-gradient-to-tr ${slide.gradient}`}>
-          <Icon size={32} className="text-white" />
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-md">
+      <div className="w-[85vw] max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        {/* Gradient top bar */}
+        <div className={`h-1.5 bg-gradient-to-r ${slide.gradient}`} />
+
+        <div className="px-6 pb-6 pt-5 text-center relative">
+          <button
+            onClick={handleDismiss}
+            className="absolute top-3 right-3 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            aria-label="Skip"
+          >
+            <X size={18} />
+          </button>
+
+          {/* Icon */}
+          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${slide.gradient} mx-auto flex items-center justify-center`}>
+            <Icon size={30} className="text-white" />
+          </div>
+
+          <h2 className="text-xl font-black text-slate-900 dark:text-white mt-4">{slide.title}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">{slide.description}</p>
+
+          {/* Dots */}
+          <div className="flex justify-center gap-2 mt-5">
+            {slides.map((_, i) => (
+              <div
+                key={i}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  i === step ? "w-6 bg-blue-600" : "w-2 bg-slate-200 dark:bg-slate-700"
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Action buttons */}
+          <button
+            onClick={() => handleNavigate(slide.path)}
+            className={`w-full mt-5 py-3 bg-gradient-to-r ${slide.gradient} text-white font-semibold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform`}
+          >
+            {slide.action}
+            <ArrowRight size={16} />
+          </button>
+
+          <button
+            onClick={handleNext}
+            className="mt-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-cyan-400 transition flex items-center justify-center gap-1 mx-auto"
+          >
+            {step < slides.length - 1 ? (
+              <>
+                Next tip <ChevronRight size={16} />
+              </>
+            ) : (
+              "Got it!"
+            )}
+          </button>
         </div>
-        <h2 className="text-lg font-bold mt-5" style={{ color: "var(--color-text)" }}>{slide.title}</h2>
-        <p className="text-sm mt-2 leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>{slide.description}</p>
-        <div className="flex items-center justify-center gap-2 mt-6">
-          {slides.map((_, i) => (
-            <div
-              key={i}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${i === step ? "w-6" : ""}`}
-              style={{ background: i === step ? "var(--color-primary)" : "var(--color-border)" }}
-            />
-          ))}
-        </div>
-        <button onClick={() => handleNavigate(slide.path)} className="btn-primary mt-5 flex items-center justify-center gap-2">
-          {slide.action}
-          <ArrowRight size={16} />
-        </button>
-        <button onClick={handleFinish} className="text-xs font-medium mt-4 block mx-auto" style={{ color: "var(--color-text-muted)" }}>
-          {step < slides.length - 1 ? "Next tip" : "Got it!"}
-        </button>
       </div>
     </div>
   );

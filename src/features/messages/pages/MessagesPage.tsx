@@ -7,6 +7,7 @@ import { useConversations } from "@/hooks/useConversations";
 import { useMessages } from "@/hooks/useMessages";
 import { useSendMessage } from "@/hooks/useSendMessage";
 import { triggerNotification } from "@/services/notifications/triggerService";
+import { sendPushNotification } from "@/lib/notifications";
 import { timeAgo, isOnline } from "@/utils/timeAgo";
 import {
   MessageCircle, Send, Loader2, ArrowLeft, Trash2,
@@ -154,6 +155,7 @@ export default function MessagesPage() {
         onSuccess: () => {
           setInput("");
           triggerNotification.message(otherUserId, profile?.full_name ?? "Someone", input.trim());
+          sendPushNotification(otherUserId, "New Message", input.trim().slice(0, 100), `/messages?conversation=${activeId}`);
         },
       }
     );
@@ -229,7 +231,7 @@ export default function MessagesPage() {
 
   if (activeId && activeConversation) {
     return (
-      <div className="flex flex-col h-full" style={{ background: "var(--color-bg)" }}>
+      <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "var(--color-bg)" }}>
         {/* Header */}
         <div
           className="flex items-center gap-3 px-4 py-3 flex-shrink-0"

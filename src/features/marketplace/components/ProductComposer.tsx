@@ -108,8 +108,8 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end" style={{ background: "rgba(0,0,0,0.4)" }} onClick={onClose} role="dialog" aria-modal="true" aria-label="Create product listing">
-      <div className="w-full rounded-t-3xl overflow-y-auto" style={{ background: "var(--color-surface)", maxHeight: "90dvh", paddingBottom: "calc(80px + env(safe-area-inset-bottom))" }} onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-end">
+      <div className="w-full rounded-t-3xl overflow-y-auto page-fade-in" style={{ background: "var(--color-surface)", maxHeight: "90dvh", paddingBottom: "calc(24px + env(safe-area-inset-bottom))" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-5 pb-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
           <h2 className="text-base font-bold" style={{ color: "var(--color-text)" }}>New listing</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "var(--color-bg)", color: "var(--color-text-secondary)" }} aria-label="Close composer">

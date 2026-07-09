@@ -5,7 +5,7 @@ import { Bell, Search, UserCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { notificationService } from "@/services/notifications/notificationService";
 import ThemeToggle from "@/components/ui/ThemeToggle";
-import SearchOverlay from "@/components/ui/SearchOverlay";
+import SearchOverlay from "@/components/search/SearchOverlay";
 
 export default function Navbar() {
   const { profile } = useAuthStore();
@@ -22,9 +22,10 @@ export default function Navbar() {
   return (
     <>
       <header
-        className="sticky top-0 z-40"
+        className="sticky top-0 z-40 glass-surface"
         style={{
           background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))",
+          boxShadow: "0 2px 12px rgba(15,23,42,0.08)",
           paddingTop: "env(safe-area-inset-top)",
         }}
       >
@@ -45,7 +46,7 @@ export default function Navbar() {
           {/* Search button – opens overlay */}
           <button
             onClick={() => setShowSearch(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 text-white/80 text-sm hover:bg-white/20 transition"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 text-white/90 text-sm hover:bg-white/25 active:scale-95 transition-all"
             aria-label="Open search"
           >
             <Search size={14} />

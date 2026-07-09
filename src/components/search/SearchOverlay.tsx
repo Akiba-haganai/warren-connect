@@ -6,7 +6,7 @@ import {
   Clock, ArrowRight
 } from "lucide-react";
 
-const typeIcons: Record<string, React.FC<{ size?: number }>> = {
+const typeIcons: Record<string, React.FC<{ size?: number; className?: string }>> = {
   user: User,
   post: FileText,
   product: ShoppingBag,
@@ -26,7 +26,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   const parts = text.split(regex);
   return parts.map((part, i) =>
     regex.test(part) ? (
-      <mark key={i} style={{ background: "var(--color-accent-light)", color: "var(--color-primary)", borderRadius: 2, padding: "0 2px" }}>
+      <mark key={i} className="bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded px-0.5">
         {part}
       </mark>
     ) : (
@@ -101,22 +101,18 @@ export default function SearchOverlay({ onClose }: Props) {
   const hasResults = results.length > 0;
 
   return (
-    <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "var(--color-bg)" }}>
-      <div
-        className="flex items-center gap-3 px-4 py-3"
-        style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}
-      >
-        <Search size={18} style={{ color: "var(--color-text-muted)" }} />
+    <div className="fixed inset-0 z-[200] flex flex-col bg-white dark:bg-slate-950">
+      <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <Search size={18} className="text-slate-400 dark:text-slate-500" />
         <input
           ref={inputRef}
-          className="flex-1 text-sm bg-transparent outline-none"
-          style={{ color: "var(--color-text)" }}
+          className="flex-1 text-sm bg-transparent outline-none text-slate-900 dark:text-white"
           placeholder="Search people, posts, products..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <button onClick={onClose} className="p-1" aria-label="Close search">
-          <X size={20} style={{ color: "var(--color-text-secondary)" }} />
+          <X size={20} className="text-slate-600 dark:text-slate-400" />
         </button>
       </div>
 
@@ -124,7 +120,7 @@ export default function SearchOverlay({ onClose }: Props) {
         {!query.trim() && recent.length > 0 && (
           <div className="px-4 pt-4">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold flex items-center gap-1" style={{ color: "var(--color-text-secondary)" }}>
+              <h3 className="text-xs font-semibold flex items-center gap-1 text-slate-600 dark:text-slate-400">
                 <Clock size={14} /> Recent Searches
               </h3>
               <button
@@ -142,7 +138,7 @@ export default function SearchOverlay({ onClose }: Props) {
                 <button
                   key={term}
                   onClick={() => handleRecentClick(term)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                 >
                   {term}
                   <button
@@ -150,7 +146,7 @@ export default function SearchOverlay({ onClose }: Props) {
                       e.stopPropagation();
                       removeRecent(term);
                     }}
-                    className="ml-1 p-0.5 rounded-full hover:bg-red-100"
+                    className="ml-1 p-0.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"
                   >
                     <X size={10} />
                   </button>
@@ -162,14 +158,14 @@ export default function SearchOverlay({ onClose }: Props) {
 
         {loading && (
           <div className="flex justify-center py-10">
-            <Loader2 className="animate-spin" style={{ color: "var(--color-text-muted)" }} />
+            <Loader2 className="animate-spin text-slate-400 dark:text-slate-500" />
           </div>
         )}
 
         {!loading && query.trim() && !hasResults && (
           <div className="text-center py-16">
-            <Search size={40} style={{ color: "var(--color-text-muted)", margin: "0 auto 12px" }} />
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+            <Search size={40} className="text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+            <p className="text-sm text-slate-400 dark:text-slate-500">
               No results for "{query}"
             </p>
           </div>
@@ -180,14 +176,9 @@ export default function SearchOverlay({ onClose }: Props) {
             <div className="px-4 pt-3 flex gap-2 overflow-x-auto hide-scrollbar">
               <button
                 onClick={() => setActiveTab("all")}
-                className={`text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap ${
-                  activeTab === "all" ? "bg-primary text-white" : "bg-gray-100 text-gray-600"
+                className={`text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition-colors ${
+                  activeTab === "all" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
                 }`}
-                style={{
-                  background: activeTab === "all" ? "var(--color-primary)" : "var(--color-bg)",
-                  color: activeTab === "all" ? "#fff" : "var(--color-text-secondary)",
-                  border: activeTab !== "all" ? "1px solid var(--color-border)" : "none",
-                }}
               >
                 All
               </button>
@@ -196,14 +187,9 @@ export default function SearchOverlay({ onClose }: Props) {
                   <button
                     key={type}
                     onClick={() => setActiveTab(type)}
-                    className={`text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap ${
-                      activeTab === type ? "bg-primary text-white" : "bg-gray-100 text-gray-600"
+                    className={`text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition-colors ${
+                      activeTab === type ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
                     }`}
-                    style={{
-                      background: activeTab === type ? "var(--color-primary)" : "var(--color-bg)",
-                      color: activeTab === type ? "#fff" : "var(--color-text-secondary)",
-                      border: activeTab !== type ? "1px solid var(--color-border)" : "none",
-                    }}
                   >
                     {typeLabels[type]} ({grouped[type]?.length})
                   </button>
@@ -218,7 +204,7 @@ export default function SearchOverlay({ onClose }: Props) {
                   <button
                     key={`${item.type}-${item.id}`}
                     onClick={() => handleSelect(item.link, item.title)}
-                    className="card flex items-center gap-3 px-4 py-3 text-left w-full"
+                    className="card flex items-center gap-3 px-4 py-3 text-left w-full hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
                   >
                     {item.image_url ? (
                       <img
@@ -227,27 +213,24 @@ export default function SearchOverlay({ onClose }: Props) {
                         className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: "var(--color-bg)", color: "var(--color-text-muted)" }}
-                      >
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500">
                         <Icon size={18} />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate" style={{ color: "var(--color-text)" }}>
+                      <p className="text-sm font-semibold truncate text-slate-900 dark:text-white">
                         {highlightMatch(item.title, query)}
                       </p>
                       {item.subtitle && (
-                        <p className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
+                        <p className="text-xs truncate text-slate-400 dark:text-slate-500">
                           {highlightMatch(item.subtitle, query)}
                         </p>
                       )}
-                      <p className="text-[10px] mt-0.5 capitalize" style={{ color: "var(--color-text-muted)" }}>
+                      <p className="text-[10px] mt-0.5 capitalize text-slate-400 dark:text-slate-500">
                         {item.type}
                       </p>
                     </div>
-                    <ArrowRight size={14} style={{ color: "var(--color-text-muted)" }} />
+                    <ArrowRight size={14} className="text-slate-400 dark:text-slate-500" />
                   </button>
                 );
               })}

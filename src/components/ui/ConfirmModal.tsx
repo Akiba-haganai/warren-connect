@@ -30,8 +30,7 @@ export default function ConfirmModal({
           <button
             aria-label="Close"
             onClick={onCancel}
-            className="absolute inset-0"
-            style={{ background: "rgba(0,0,0,0.35)" }}
+            className="absolute inset-0 bg-black/35"
           />
 
           {/* Modal */}
@@ -40,24 +39,22 @@ export default function ConfirmModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 8 }}
             transition={{ duration: 0.18 }}
-            className="relative w-[calc(100%-2rem)] max-w-md rounded-2xl"
-            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+            className="relative w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl"
           >
             <div className="px-4 py-3 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="text-base font-bold" style={{ color: "var(--color-text)" }}>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
                   {title}
                 </h2>
-                <p className="text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
+                <p className="text-sm mt-1 text-slate-600 dark:text-slate-400">
                   {message}
                 </p>
               </div>
 
               <button
                 onClick={onCancel}
-                className="p-1 rounded-full"
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 aria-label="Close"
-                style={{ color: "var(--color-text-muted)" }}
               >
                 <X size={16} />
               </button>
@@ -66,15 +63,13 @@ export default function ConfirmModal({
             <div className="px-4 py-3 flex items-center gap-2">
               <button
                 onClick={onCancel}
-                className="btn-ghost flex-1 py-2 rounded-xl text-sm font-semibold"
-                style={{ color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}
+                className="btn-ghost flex-1 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
               <button
                 onClick={onConfirm}
-                className="flex-1 py-2 rounded-xl text-sm font-semibold"
-                style={{ background: "var(--color-primary)", color: "var(--color-surface)" }}
+                className="flex-1 py-2 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm"
               >
                 Confirm
               </button>

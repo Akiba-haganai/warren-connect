@@ -135,6 +135,11 @@ export default function RegisterPage() {
             "Create account"
           )}
         </button>
+
+        <p className="text-xs text-slate-400 text-center mt-3">
+          Your privacy is important. Uploaded IDs are only visible to university
+          administrators for verification purposes.
+        </p>
       </form>
 
       {/* Bottom link */}

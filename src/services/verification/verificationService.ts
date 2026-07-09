@@ -47,13 +47,30 @@ export const verificationService = {
 
   /** Approve a verification request (admin) */
   async approveRequest(requestId: string, reviewerId: string, userId: string) {
-    const { error } = await supabase.rpc("approve_verification", {
+    const { error: rpcError } = await supabase.rpc("approve_verification", {
       p_request_id: requestId,
       p_reviewer_id: reviewerId,
       p_user_id: userId,
     });
 
-    if (error) throw error;
+    if (rpcError) {
+      // Fallback: If RPC fails, update the table manually
+      const { error: reqError } = await supabase
+        .from("verification_requests")
+        .update({
+          status: "approved",
+          reviewed_by: reviewerId,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", requestId);
+      if (reqError) throw reqError;
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ is_verified: true })
+        .eq("id", userId);
+      if (profileError) throw profileError;
+    }
   },
 
   /** Reject a verification request (admin) */

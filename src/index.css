@@ -4,6 +4,12 @@
 /* ===== DESIGN TOKENS (Light) ===== */
 :root {
   --color-primary: #1E40AF;
+  /* z-index scale (elevation) */
+  --z-bottom-nav: 50;
+  --z-banner: 55;
+  --z-sheet: 100;
+  --z-search: 200;
+  --z-onboarding: 300;
   --color-primary-light: #3B82F6;           
   --color-accent: #F97316;
   --color-accent-light: #FFF7ED;
@@ -34,6 +40,46 @@
   --shadow-lg: 0 12px 30px rgba(15,23,42,0.08);
 
   --transition: 0.2s ease;
+}
+
+:root {
+  /* refined elevation + motion */
+  --shadow-float: 0 8px 24px rgba(15,23,42,0.10), 0 2px 6px rgba(15,23,42,0.06);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --nav-blur: saturate(180%) blur(20px);
+}
+
+/* Nicer card interaction (kept additive — doesn't remove .card) */
+.card {
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+.card:active {
+  transform: scale(0.99);
+}
+
+/* Buttons: subtle gradient + lift */
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+}
+.btn-primary:hover {
+  box-shadow: var(--shadow-float);
+  transform: translateY(-1px);
+}
+
+/* Page enter animation, opt-in via className="page-fade-in" */
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.page-fade-in {
+  animation: page-fade-in 0.25s var(--ease-spring) both;
+}
+
+/* Glass surfaces for nav/header */
+.glass-surface {
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  backdrop-filter: var(--nav-blur);
+  -webkit-backdrop-filter: var(--nav-blur);
 }
 
 /* ===== DARK MODE (via .dark class) ===== */

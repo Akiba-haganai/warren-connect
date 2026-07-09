@@ -107,7 +107,7 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end"
+      className="fixed inset-0 z-[100] flex items-end"
       style={{ background: "rgba(0,0,0,0.4)" }}
       onClick={onClose}
       role="dialog"
@@ -115,11 +115,11 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
       aria-label="Create accommodation listing"
     >
       <div
-        className="w-full rounded-t-3xl overflow-y-auto"
+        className="w-full rounded-t-3xl overflow-y-auto page-fade-in"
         style={{
           background: "var(--color-surface)",
           maxHeight: "90dvh",
-          paddingBottom: "calc(80px + env(safe-area-inset-bottom))",
+          paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
         }}
         onClick={(e) => e.stopPropagation()}
       >

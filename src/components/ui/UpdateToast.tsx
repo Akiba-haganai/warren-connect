@@ -23,7 +23,7 @@ export default function UpdateToast() {
   if (!show) return null;
 
   return (
-    <div className="fixed bottom-24 left-4 right-4 z-50 card p-4 flex items-center gap-3">
+    <div className="fixed bottom-24 left-4 right-4 z-[55] card p-4 flex items-center gap-3">
       <RefreshCw size={20} style={{ color: "var(--color-primary)" }} />
       <p className="text-sm flex-1" style={{ color: "var(--color-text)" }}>
         New version available

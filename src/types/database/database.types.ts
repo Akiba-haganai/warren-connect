@@ -265,6 +265,33 @@ export type Database = {
           },
         ]
       }
+      contact_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          resolved: boolean | null
+          sender_email: string | null
+          sender_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          resolved?: boolean | null
+          sender_email?: string | null
+          sender_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          resolved?: boolean | null
+          sender_email?: string | null
+          sender_name?: string
+        }
+        Relationships: []
+      }
       conversation_typing: {
         Row: {
           conversation_id: string | null
@@ -456,6 +483,30 @@ export type Database = {
           title?: string
           type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      password_reset_requests: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          reason: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          reason?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          reason?: string | null
+          status?: string | null
         }
         Relationships: []
       }
@@ -1125,6 +1176,7 @@ export type Database = {
         Args: { p_request_id: string; p_reviewer_id: string; p_user_id: string }
         Returns: undefined
       }
+      delete_user_data: { Args: { p_user_id: string }; Returns: undefined }
       generate_shop_invite_token: {
         Args: { owner_id: string; shop_id: string }
         Returns: string

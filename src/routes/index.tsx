@@ -59,6 +59,7 @@ const AdminVerificationsPage = lazy(() => import("@/features/admin/pages/AdminVe
 const AdminReportsPage = lazy(() => import("@/features/admin/pages/AdminReportsPage"));
 const AdminTagsPage = lazy(() => import("@/features/admin/pages/AdminTagsPage"));
 const AdminPasswordResetsPage = lazy(() => import("@/features/admin/pages/AdminPasswordResetsPage"));
+const AdminDeletionRequestsPage = lazy(() => import("@/features/admin/pages/AdminDeletionRequestsPage"));
 
 // ---------- FALLBACK ----------
 const PageLoader = () => (
@@ -176,6 +177,7 @@ export const router = createBrowserRouter([
       { path: "reports", element: withBoundary(AdminReportsPage) },
       { path: "tags", element: withBoundary(AdminTagsPage) },
       { path: "password-resets", element: withBoundary(AdminPasswordResetsPage) },
+      { path: "deletion-requests", element: withBoundary(AdminDeletionRequestsPage) },
     ],
   },
 ]);
