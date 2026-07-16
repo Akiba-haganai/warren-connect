@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import type { Tables } from "@/types/database/database.types";
 import SaveButton from "@/components/ui/SaveButton";
 import { Share2, Star } from "lucide-react";
+import { VerificationBadge } from "@/features/verification/components/VerificationBadge";
+
 
 type Product = Tables<"products">;
 
@@ -82,12 +84,25 @@ export default function ProductCard({ product, onView }: Props) {
           {product.title}
         </h3>
         {product.description && (
-          <p className="text-xs mt-1 line-clamp-2" style={{ color: "var(--color-text-secondary)" }}>
+          <p
+            className="text-xs mt-1 line-clamp-2"
+            style={{ color: "var(--color-text-secondary)" }}
+          >
             {product.description}
           </p>
         )}
-        {/* Seller rating */}
-        {showRating && (
+
+
+      {/* Seller verification tier (if available) */}
+      {("seller" in (product as any)) && (product as any).seller?.verification_tier && (
+        <div className="mt-2">
+          <VerificationBadge tier={(product as any).seller.verification_tier} />
+        </div>
+      )}
+
+      {/* Seller rating */}
+      {showRating && (
+
           <div className="flex items-center gap-1 mt-1">
             <Star size={10} fill="var(--color-accent)" style={{ color: "var(--color-accent)" }} />
             <span className="text-[10px] font-semibold" style={{ color: "var(--color-text-muted)" }}>

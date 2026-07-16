@@ -63,12 +63,14 @@ export const verificationService = {
           reviewed_at: new Date().toISOString(),
         })
         .eq("id", requestId);
+
       if (reqError) throw reqError;
 
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ is_verified: true })
         .eq("id", userId);
+
       if (profileError) throw profileError;
     }
   },
@@ -86,4 +88,44 @@ export const verificationService = {
 
     if (error) throw error;
   },
+
+  // -------- Roadmap additions (Verified Seller Tiers) --------
+
+  async requestPhoneOtp(phone: string) {
+    const { error } = await supabase.functions.invoke("send-otp", { body: { phone } });
+    if (error) throw error;
+  },
+
+  async confirmPhoneOtp(userId: string, phone: string, code: string) {
+    const { data, error } = await supabase.functions.invoke("verify-otp", {
+      body: { phone, code },
+    });
+
+    if (error || !data?.valid) throw new Error("Invalid code");
+
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({
+        verification_tier: "phone",
+        phone_verified_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+
+    if (updateError) throw updateError;
+  },
+
+  async submitIdVerification(userId: string, documentUrl: string, tier: "id" | "business" = "id") {
+    // Additive approach: insert into the existing verification_requests table.
+    // If your table columns differ, adjust mapping here.
+    const payload: Record<string, any> = {
+      user_id: userId,
+      requested_tier: tier,
+      document_url: documentUrl,
+      status: "pending",
+    };
+
+    const { error } = await supabase.from("verification_requests").insert(payload);
+    if (error) throw error;
+  },
 };
+

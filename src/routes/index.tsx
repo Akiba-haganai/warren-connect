@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import { lazy, Suspense } from "react";
 
 import AuthLayout from "@/layouts/auth/AuthLayout";
@@ -16,6 +16,8 @@ import { Loader2 } from "lucide-react";
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 const ForgotPasswordPage = lazy(() => import("@/features/auth/pages/ForgotPasswordPage"));
+
+const AdminLegacyRedirect = lazy(() => import("@/features/admin/pages/AdminLegacyRedirect"));
 
 const ProfilePage = lazy(() => import("@/features/profile/pages/ProfilePage"));
 const CompleteProfilePage = lazy(() => import("@/features/profile/pages/CompleteProfilePage"));
@@ -36,7 +38,7 @@ const VerificationRequestPage = lazy(() => import("@/features/verification/pages
 const SavedItemsPage = lazy(() => import("@/features/saved/SavedItemsPage"));
 
 const ShopPage = lazy(() => import("@/features/marketplace/pages/ShopPage"));
-const ShopJoinPage = lazy(() => import("@/features/marketplace/pages/ShopJoinPage")); // ⬅️ added
+const ShopJoinPage = lazy(() => import("@/features/marketplace/pages/ShopJoinPage"));
 
 // Legal pages (unprotected)
 const TermsPage = lazy(() => import("@/features/legal/TermsPage"));
@@ -51,15 +53,8 @@ const TagPage = lazy(() => import("@/features/tags/TagPage"));
 // Settings page
 const SettingsPage = lazy(() => import("@/features/settings/SettingPage"));
 
-// ---------- ADMIN PAGES ----------
-const AdminOverviewPage = lazy(() => import("@/features/admin/pages/AdminOverviewPage"));
-const AdminUsersPage = lazy(() => import("@/features/admin/pages/AdminUsersPage"));
-const AdminContentPage = lazy(() => import("@/features/admin/pages/AdminContentPage"));
-const AdminVerificationsPage = lazy(() => import("@/features/admin/pages/AdminVerificationsPage"));
-const AdminReportsPage = lazy(() => import("@/features/admin/pages/AdminReportsPage"));
-const AdminTagsPage = lazy(() => import("@/features/admin/pages/AdminTagsPage"));
-const AdminPasswordResetsPage = lazy(() => import("@/features/admin/pages/AdminPasswordResetsPage"));
-const AdminDeletionRequestsPage = lazy(() => import("@/features/admin/pages/AdminDeletionRequestsPage"));
+// Admin – consolidated dashboard (all sub-panels via ?tab= query param)
+const AdminDashboardPage = lazy(() => import("@/features/admin/pages/AdminDashboardPage"));
 
 // ---------- FALLBACK ----------
 const PageLoader = () => (
@@ -131,7 +126,7 @@ export const router = createBrowserRouter([
       { path: "/verification", element: withBoundary(VerificationRequestPage) },
       { path: "/saved", element: withBoundary(SavedItemsPage) },
       { path: "/shop/:id", element: withBoundary(ShopPage) },
-      { path: "/shop/:id/join", element: withBoundary(ShopJoinPage) }, // ⬅️ added
+      { path: "/shop/:id/join", element: withBoundary(ShopJoinPage) },
       { path: "/post/:id", element: withBoundary(PostDetailPage) },
       { path: "/tag/:tagName", element: withBoundary(TagPage) },
       { path: "/settings", element: withBoundary(SettingsPage) },
@@ -159,7 +154,7 @@ export const router = createBrowserRouter([
   },
 
   // =========================
-  // ADMIN ROUTES
+  // ADMIN ROUTES (single entry point, uses ?tab=)
   // =========================
   {
     path: "/admin",
@@ -169,15 +164,15 @@ export const router = createBrowserRouter([
       </AdminRoute>
     ),
     children: [
-      { index: true, element: <Navigate to="/admin/overview" replace /> },
-      { path: "overview", element: withBoundary(AdminOverviewPage) },
-      { path: "users", element: withBoundary(AdminUsersPage) },
-      { path: "content", element: withBoundary(AdminContentPage) },
-      { path: "verifications", element: withBoundary(AdminVerificationsPage) },
-      { path: "reports", element: withBoundary(AdminReportsPage) },
-      { path: "tags", element: withBoundary(AdminTagsPage) },
-      { path: "password-resets", element: withBoundary(AdminPasswordResetsPage) },
-      { path: "deletion-requests", element: withBoundary(AdminDeletionRequestsPage) },
+      {
+        index: true,
+        element: withBoundary(AdminDashboardPage),
+      },
+      // Catch-all to support old paths like /admin/users etc. – they still work via tab param
+      {
+        path: "*",
+        element: withBoundary(AdminLegacyRedirect),
+      },
     ],
   },
 ]);

@@ -20,8 +20,9 @@ type Accommodation = Tables<"accommodations">;
 
 export default function PublicProfilePage() {
   const completion = useProfileCompletion();
-const [recentReviews, setRecentReviews] = useState<any[]>([]);
-const [deletionStatus, setDeletionStatus] = useState<string | null>(null);
+  const [recentReviews, setRecentReviews] = useState<any[]>([]);
+  const [deletionStatus, setDeletionStatus] = useState<string | null>(null);
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
@@ -135,6 +136,12 @@ const [deletionStatus, setDeletionStatus] = useState<string | null>(null);
   const isOwnProfile = currentUser?.id === profile.id;
   const online = isOnline(profile.last_seen);
 
+  const responseMinutesAvg =
+    profile.response_count && profile.response_count > 0 && profile.total_response_time_ms != null
+      ? Math.round(profile.total_response_time_ms / profile.response_count / 60000)
+      : null;
+
+
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
       <div
@@ -165,79 +172,9 @@ const [deletionStatus, setDeletionStatus] = useState<string | null>(null);
               </button>
             </>
           )}
-                  {/* Profile Completion (own profile only) */}
-        {isOwnProfile && completion > 0 && completion < 100 && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium" style={{ color: "var(--color-text-secondary)" }}>Profile Completion</span>
-              <span className="text-xs font-bold" style={{ color: "var(--color-primary)" }}>{completion}%</span>
-            </div>
-            <div className="w-full h-1.5 rounded-full bg-gray-200">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${completion}%`, background: "var(--color-primary)" }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Deletion Request Status */}
-        {isOwnProfile && deletionStatus && (
-          <div className="mt-4 p-3 rounded-xl bg-yellow-50 border border-yellow-100 flex items-center gap-2">
-            <AlertTriangle size={14} style={{ color: "var(--color-warning)" }} />
-            <span className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
-              Deletion request: {deletionStatus}
-            </span>
-          </div>
-        )}
-
-        {/* Response Time */}
-        {profile.response_count && profile.response_count > 0 && (
-          <div className="flex items-center gap-2 mt-3 text-sm" style={{ color: "var(--color-text-secondary)" }}>
-            <Clock size={14} />
-            <span>Responds in ~{Math.round((profile.total_response_time_ms ?? 0) / (profile.response_count * 1000))} min</span>
-          </div>
-        )}
-
-        {/* Average Rating & Recent Reviews */}
-        <div className="mt-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Star size={14} style={{ color: "var(--color-accent)", fill: "var(--color-accent)" }} />
-            <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-              {profile.avg_rating ? `${profile.avg_rating} · ${profile.review_count || 0} reviews` : "No reviews yet"}
-            </span>
-          </div>
-          {recentReviews.length > 0 && (
-            <div className="space-y-2">
-              {recentReviews.map((rev) => (
-                <div key={rev.id} className="card p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    {rev.reviewer?.avatar_url ? (
-                      <img src={rev.reviewer.avatar_url} className="w-5 h-5 rounded-full" alt="" />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-white text-[10px] font-bold">
-                        {(rev.reviewer?.full_name?.[0] ?? "?")}
-                      </div>
-                    )}
-                    <span className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>
-                      {rev.reviewer?.full_name ?? "User"}
-                    </span>
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: rev.rating }).map((_, i) => (
-                        <Star key={i} size={10} fill="var(--color-accent)" style={{ color: "var(--color-accent)" }} />
-                      ))}
-                    </div>
-                  </div>
-                  {rev.comment && (
-                    <p className="text-xs" style={{ color: "var(--color-text-secondary)" }}>{rev.comment}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
         </div>
       </div>
+
 
       <div className="px-4 pt-4">
         <div className="flex items-center gap-4">
@@ -298,7 +235,84 @@ const [deletionStatus, setDeletionStatus] = useState<string | null>(null);
             </div>
           )}
         </div>
+
+        {/* Profile Completion (own profile only) */}
+        {isOwnProfile && completion > 0 && completion < 100 && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium" style={{ color: "var(--color-text-secondary)" }}>Profile Completion</span>
+              <span className="text-xs font-bold" style={{ color: "var(--color-primary)" }}>{completion}%</span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-gray-200">
+              <div className="h-full rounded-full transition-all" style={{ width: `${completion}%`, background: "var(--color-primary)" }} />
+            </div>
+          </div>
+        )}
+
+        {/* Response time + reviews (not in header) */}
+        {responseMinutesAvg != null && (
+          <div className="flex items-center gap-2 mt-3 text-xs" style={{ color: "var(--color-text-secondary)" }}>
+            <Clock size={14} />
+            <span>Responds in ~{responseMinutesAvg} min</span>
+          </div>
+        )}
+
+        {(profile.avg_rating || recentReviews.length > 0) && (
+          <div className="mt-3">
+            {(profile.avg_rating || 0) > 0 && (
+              <div className="flex items-center gap-2 mb-2">
+                <Star size={14} style={{ color: "var(--color-accent)", fill: "var(--color-accent)" }} />
+                <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                  {profile.avg_rating ? `${profile.avg_rating} · ${profile.review_count || 0} review${(profile.review_count || 0) === 1 ? "" : "s"}` : "No reviews yet"}
+                </span>
+              </div>
+            )}
+
+            {recentReviews.length > 0 && (
+              <div className="space-y-2">
+                {recentReviews.map((rev) => (
+                  <div key={rev.id} className="card p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      {rev.reviewer?.avatar_url ? (
+                        <img src={rev.reviewer.avatar_url} className="w-5 h-5 rounded-full" alt="" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-white text-[10px] font-bold">
+                          {(rev.reviewer?.full_name?.[0] ?? "?")}
+                        </div>
+                      )}
+                      <span className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>
+                        {rev.reviewer?.full_name ?? "User"}
+                      </span>
+                      <div className="flex gap-0.5">
+                        {Array.from({ length: rev.rating }).map((_, i) => (
+                          <Star key={i} size={10} fill="var(--color-accent)" style={{ color: "var(--color-accent)" }} />
+                        ))}
+                      </div>
+                    </div>
+                    {rev.comment && (
+                      <p className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
+                        {rev.comment}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Deletion Request Status */}
+        {isOwnProfile && deletionStatus && (
+          <div className="mt-4 p-3 rounded-xl bg-yellow-50 border border-yellow-100 flex items-center gap-2">
+            <AlertTriangle size={14} style={{ color: "var(--color-warning)" }} />
+            <span className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
+              Deletion request: {deletionStatus}
+            </span>
+          </div>
+        )}
+
       </div>
+
 
       {listings.length > 0 && (
         <div className="px-4 mt-6">

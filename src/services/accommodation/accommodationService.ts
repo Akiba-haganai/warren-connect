@@ -171,21 +171,40 @@ export const accommodationService = {
     if (error) throw error;
   },
 
-  async getAccommodationsPaginated(limit: number, offset: number) {
-    const { data, error } = await supabase
-      .from("accommodations")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
-    if (error) throw error;
-    return data || [];
-  },
+  async getAccommodationsPaginated(limit: number, offset: number, filters?: {
+  search?: string;
+  location?: string;
+  roommate?: boolean;
+  gender?: string;
+  priceMin?: number;
+  priceMax?: number;
+  listingType?: string;
+}) {
+  let query = supabase
+    .from("accommodations")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (filters?.search) query = query.ilike("title", `%${filters.search}%`);
+  if (filters?.location) query = query.eq("location", filters.location);
+  if (filters?.roommate) query = query.eq("looking_for_roommate", true);
+  if (filters?.gender) query = query.eq("gender_preference", filters.gender);
+  if (filters?.priceMin !== undefined) query = query.gte("monthly_rent", filters.priceMin);
+  if (filters?.priceMax !== undefined) query = query.lte("monthly_rent", filters.priceMax);
+  if (filters?.listingType && filters.listingType !== "all") query = query.eq("listing_type", filters.listingType);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+},
 
   async getLandlordStats(ownerId: string) {
     const { data: accommodations, error } = await supabase
       .from("accommodations")
-      .select("id, title, monthly_rent, status")
+      .select("id, title, monthly_rent, status, listing_type")
       .eq("owner_id", ownerId);
+
 
     if (error) throw error;
     const list = accommodations || [];

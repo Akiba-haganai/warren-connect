@@ -1,31 +1,23 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { accommodationService } from "@/services/accommodation/accommodationService";
 import { messageService } from "@/services/messages/messageService";
 import { useAuthStore } from "@/store/auth/authStore";
 import { triggerNotification } from "@/services/notifications/triggerService";
 import { reportService } from "@/services/reports/reportService";
+import { listingInterestService } from "@/services/accommodation/listingInterestService";
 import { useRecentlyViewed } from "@/hooks/useRecentlyviewed";
+
+import { supabase } from "@/lib/supabase/client";
 import type { Tables } from "@/types/database/database.types";
 import {
-  ArrowLeft,
-  MapPin,
-  MessageCircle,
-  Share2,
-  Loader2,
-  ShieldCheck,
-  Building2,
-  Flag,
-  Calendar,
-  Wifi,
-  Droplet,
-  Zap,
-  Sofa,
-  Car,
-  Shield,
-  BookOpen,
-  Bath,
+  ArrowLeft, MapPin, MessageCircle, Share2, Loader2,
+  ShieldCheck, Building2, Flag, Calendar, ChevronDown, Plus, Trash2, Search,
+  Wifi, Droplet, Zap, Sofa, Car, Shield, BookOpen, Bath
 } from "lucide-react";
+import toast from "react-hot-toast";
+import { useConfirm } from "@/hooks/useConfirm";
+import InterestQueue from "@/features/accommodation/components/InterestQueue";
 
 type Accommodation = Tables<"accommodations">;
 type Profile = Tables<"profiles">;
@@ -55,6 +47,9 @@ export default function AccommodationDetailPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
+  const { confirm, ConfirmDialog } = useConfirm();
+  const { addToRecent } = useRecentlyViewed();
+
   const [accommodation, setAccommodation] = useState<AccommodationWithLandlord | null>(null);
   const [loading, setLoading] = useState(true);
   const [contacting, setContacting] = useState(false);
@@ -63,62 +58,67 @@ export default function AccommodationDetailPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [editingAmenities, setEditingAmenities] = useState(false);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
-  const { addToRecent } = useRecentlyViewed();
 
-  // ---- Rooms (if property) ----
   const [rooms, setRooms] = useState<Accommodation[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
 
-  // ---- Co‑landlords ----
   const [collaborators, setCollaborators] = useState<any[]>([]);
   const [isCollaborator, setIsCollaborator] = useState(false);
   const [collabSearch, setCollabSearch] = useState("");
+  const [collabResults, setCollabResults] = useState<any[]>([]);
   const [addingCollaboratorLoading, setAddingCollaboratorLoading] = useState(false);
 
-  useEffect(() => {
+  const [myAccommodations, setMyAccommodations] = useState<Accommodation[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const loadAccommodation = async () => {
     if (!id) return;
-    (async () => {
-      try {
-        const data = await accommodationService.getAccommodationWithLandlord(id);
-        setAccommodation(data);
-        const imgs = await accommodationService.getImages(id);
-        setImages(imgs);
-        const ams = await accommodationService.getAmenities(id);
-        setAmenities(ams);
-        setSelectedAmenities(ams);
-        addToRecent({
-          id: data.id,
-          type: "accommodation",
-          title: data.title,
-          imageUrl: data.image_url,
-        });
+    const data = await accommodationService.getAccommodationWithLandlord(id);
+    setAccommodation(data);
+    const imgs = await accommodationService.getImages(id);
+    setImages(imgs);
+    const ams = await accommodationService.getAmenities(id);
+    setAmenities(ams);
+    setSelectedAmenities(ams);
+    addToRecent({ id: data.id, type: "accommodation", title: data.title, imageUrl: data.image_url });
 
-        // If property, load its rooms
-        if (data.listing_type === "property") {
-          setLoadingRooms(true);
-          accommodationService
-            .getRooms(data.id)
-            .then((r) => setRooms(r))
-            .finally(() => setLoadingRooms(false));
-        }
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id, addToRecent]);
+    if (data.listing_type === "property") {
+      setLoadingRooms(true);
+      accommodationService.getRooms(data.id).then((r) => setRooms(r)).finally(() => setLoadingRooms(false));
+    }
+  };
 
-  // Load collaborators and check if current user is one
+  const loadCollaborators = async () => {
+    if (!id || !user) return;
+    const collabs = await accommodationService.getCollaborators(id);
+    setCollaborators(collabs);
+    setIsCollaborator(collabs.some((c: any) => c.user_id === user.id));
+  };
+
+  const loadMyAccommodations = async () => {
+    if (!user) return;
+    const accs = await accommodationService.getMyAccommodations(user.id);
+    setMyAccommodations(accs);
+  };
+
   useEffect(() => {
-    if (!accommodation || !user) return;
-    accommodationService.getCollaborators(accommodation.id).then((cols) => {
-      setCollaborators(cols);
-      setIsCollaborator(cols.some((c: any) => c.user_id === user.id));
-    });
-  }, [accommodation, user]);
+    setLoading(true);
+    Promise.all([loadAccommodation(), loadCollaborators(), loadMyAccommodations()]).finally(() => setLoading(false));
+  }, [id, user]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const isOwner = user?.id === accommodation?.owner_id;
 
-  // ---- Handlers ----
   const handleContactLandlord = async () => {
     if (!user || !accommodation) return;
     setContacting(true);
@@ -186,18 +186,37 @@ export default function AccommodationDetailPage() {
     } catch {}
   };
 
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+
   const handleReport = async () => {
     if (!user) return;
-    const reason = prompt("Why are you reporting this listing?");
-    if (reason) {
-      try {
-        await reportService.submitReport(user.id, "accommodation", accommodation!.id, reason);
-        alert("Report submitted.");
-      } catch (err) {
-        console.error(err);
-      }
+    const ok = await confirm({
+      title: "Report this listing?",
+      message: "Do you want to report this content to the administrators?",
+    });
+    if (!ok) return;
+    setShowReportModal(true);
+  };
+
+  const submitReport = async () => {
+    if (!user || !accommodation) return;
+    if (!reportReason.trim()) return;
+    try {
+      await reportService.submitReport(
+        user.id,
+        "accommodation",
+        accommodation.id,
+        reportReason.trim()
+      );
+      toast.success("Report submitted. Thank you.");
+      setShowReportModal(false);
+      setReportReason("");
+    } catch (err) {
+      toast.error("Failed to submit report.");
     }
   };
+
 
   const handleSaveAmenities = async () => {
     if (!accommodation) return;
@@ -212,7 +231,17 @@ export default function AccommodationDetailPage() {
     );
   };
 
-  // Co‑landlord actions
+  const handleCollabSearch = async (val: string) => {
+    setCollabSearch(val);
+    if (val.trim().length < 2) { setCollabResults([]); return; }
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url")
+      .ilike("full_name", `%${val}%`)
+      .limit(5);
+    setCollabResults(data || []);
+  };
+
   const handleAddCollaborator = async (userId: string) => {
     if (!accommodation) return;
     setAddingCollaboratorLoading(true);
@@ -222,6 +251,10 @@ export default function AccommodationDetailPage() {
       setCollaborators(cols);
       setIsCollaborator(user ? cols.some((c: any) => c.user_id === user.id) : false);
       setCollabSearch("");
+      setCollabResults([]);
+      toast.success("Co‑landlord added.");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to add co‑landlord.");
     } finally {
       setAddingCollaboratorLoading(false);
     }
@@ -229,9 +262,16 @@ export default function AccommodationDetailPage() {
 
   const handleRemoveCollaborator = async (userId: string) => {
     if (!accommodation) return;
-    await accommodationService.removeCollaborator(accommodation.id, userId);
-    const cols = await accommodationService.getCollaborators(accommodation.id);
-    setCollaborators(cols);
+    const ok = await confirm({ title: "Remove co‑landlord?", message: "They will lose access." });
+    if (!ok) return;
+    try {
+      await accommodationService.removeCollaborator(accommodation.id, userId);
+      const cols = await accommodationService.getCollaborators(accommodation.id);
+      setCollaborators(cols);
+      toast.success("Co‑landlord removed.");
+    } catch (e: any) {
+      toast.error(e.message || "Could not remove.");
+    }
   };
 
   if (loading) {
@@ -265,7 +305,32 @@ export default function AccommodationDetailPage() {
         <button onClick={() => navigate(-1)} className="p-1" aria-label="Go back">
           <ArrowLeft size={20} style={{ color: "var(--color-text-secondary)" }} />
         </button>
-        <h1 className="text-sm font-bold" style={{ color: "var(--color-primary)" }}>Detail</h1>
+        <div className="relative flex items-center gap-2" ref={dropdownRef}>
+          <h1 className="text-sm font-bold truncate max-w-[150px]" style={{ color: "var(--color-primary)" }}>
+            {accommodation.title}
+          </h1>
+          {isOwner && myAccommodations.length > 1 && (
+            <button onClick={() => setShowDropdown(!showDropdown)} className="p-1" aria-label="Switch property">
+              <ChevronDown size={16} />
+            </button>
+          )}
+          {showDropdown && myAccommodations.length > 1 && (
+            <div className="absolute top-full left-0 mt-2 w-56 rounded-xl shadow-lg overflow-hidden z-20"
+                 style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+              {myAccommodations.map((acc) => (
+                <button
+                  key={acc.id}
+                  onClick={() => { navigate(`/accommodation/${acc.id}`); setShowDropdown(false); }}
+                  className={`w-full flex items-center gap-2 px-4 py-3 text-sm hover:bg-gray-50 ${acc.id === accommodation.id ? "bg-primary/10 font-semibold" : ""}`}
+                  style={{ color: "var(--color-text)" }}
+                >
+                  <Building2 size={14} />
+                  <span className="truncate">{acc.title}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {!isOwner && (
             <button onClick={handleReport} className="p-1" aria-label="Report listing" title="Report">
@@ -322,7 +387,6 @@ export default function AccommodationDetailPage() {
           <p className="flex items-center gap-1 text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
             <MapPin size={14} /> {accommodation.location}
           </p>
-          {/* Collaborator badge */}
           {isCollaborator && (
             <span className="inline-flex items-center gap-1 text-xs mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary">
               You are a co‑landlord
@@ -341,10 +405,17 @@ export default function AccommodationDetailPage() {
           </span>
         </div>
 
-        {/* Rooms grid & Co-landlords (only for properties) */}
+        {/* Interest Queue */}
+        <InterestQueue
+          accommodationId={accommodation.id}
+          isOwner={isOwner}
+          isCollaborator={isCollaborator}
+          listingFull={accommodation.status !== "available"}
+        />
+
+        {/* Rooms grid (only for properties) */}
         {accommodation.listing_type === "property" && (
           <div className="mt-2 space-y-4">
-            {/* Rooms */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold" style={{ color: "var(--color-text-secondary)" }}>Rooms ({rooms.length})</h3>
@@ -354,7 +425,7 @@ export default function AccommodationDetailPage() {
                     className="btn-primary w-auto px-3 py-1 text-xs"
                     title="Add room"
                   >
-                    Add Room
+                    <Plus size={14} /> Add Room
                   </button>
                 )}
               </div>
@@ -387,7 +458,7 @@ export default function AccommodationDetailPage() {
               )}
             </div>
 
-            {/* Co-landlords (owner only) */}
+            {/* Co‑landlords (owner only) */}
             {isOwner && (
               <div>
                 <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--color-text-secondary)" }}>Co‑landlords</h3>
@@ -406,7 +477,7 @@ export default function AccommodationDetailPage() {
                           title="Remove co-landlord"
                           aria-label="Remove co-landlord"
                         >
-                          ✕
+                          <Trash2 size={14} />
                         </button>
                       </li>
                     ))}
@@ -415,26 +486,48 @@ export default function AccommodationDetailPage() {
                   <p className="text-xs text-muted mb-3">No co‑landlords yet.</p>
                 )}
 
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                   <label className="text-xs font-semibold" style={{ color: "var(--color-text-secondary)" }}>
                     Add co‑landlord
                   </label>
-                  <input
-                    className="input-field text-sm"
-                    placeholder="Enter user id (or type for suggestions)"
-                    value={collabSearch}
-                    onChange={(e) => setCollabSearch(e.target.value)}
-                    aria-label="Co-landlord search"
-                  />
-                  <button
-                    type="button"
-                    className="btn-primary w-auto px-4 py-2 text-xs"
-                    onClick={() => handleAddCollaborator(collabSearch)}
-                    disabled={!collabSearch.trim() || addingCollaboratorLoading}
-                    title="Add co-landlord"
-                  >
-                    {addingCollaboratorLoading ? "Adding…" : "Add"}
-                  </button>
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                    <input
+                      className="input-field pl-9 text-sm"
+                      placeholder="Search by name..."
+                      value={collabSearch}
+                      onChange={(e) => handleCollabSearch(e.target.value)}
+                      aria-label="Co-landlord search"
+                    />
+                  </div>
+                  {collabResults.length > 0 && (
+                    <div className="absolute z-20 w-full rounded-xl shadow-lg overflow-hidden" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+                      {collabResults.map((profile) => (
+                        <button
+  key={profile.id}
+  onClick={() => handleAddCollaborator(profile.id)}
+  disabled={addingCollaboratorLoading}
+  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+  style={{ color: "var(--color-text)" }}
+>
+  {addingCollaboratorLoading ? (
+    <Loader2 size={14} className="animate-spin" />
+  ) : (
+    <>
+      {profile.avatar_url ? (
+        <img src={profile.avatar_url} className="w-6 h-6 rounded-full" alt="" />
+      ) : (
+        <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+          {(profile.full_name?.[0] ?? "?")}
+        </div>
+      )}
+      {profile.full_name}
+    </>
+  )}
+</button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -533,14 +626,32 @@ export default function AccommodationDetailPage() {
         {isOwner && (
           <div className="mt-4 space-y-2">
             <button
-              onClick={() => accommodationService.updateAccommodationStatus(accommodation.id, "rented").then(() => navigate(-1))}
+              onClick={async () => {
+                const ok = await confirm({ title: "Mark as rented?", message: "This will close the interest queue." });
+                if (!ok) return;
+                try {
+                  await accommodationService.updateAccommodationStatus(accommodation.id, "rented");
+                  await listingInterestService.closeQueue(accommodation.id);
+
+                  toast.success("Marked as rented.");
+                  navigate(-1);
+                } catch (e: any) { toast.error(e.message); }
+              }}
               className="w-full py-2 rounded-lg text-sm font-semibold"
               style={{ background: "var(--color-accent)", color: "var(--color-primary)" }}
             >
               Mark as Rented
             </button>
             <button
-              onClick={async () => { if (confirm("Delete?")) { await accommodationService.deleteAccommodation(accommodation.id); navigate(-1); } }}
+              onClick={async () => {
+                const ok = await confirm({ title: "Delete listing?", message: "This cannot be undone." });
+                if (!ok) return;
+                try {
+                  await accommodationService.deleteAccommodation(accommodation.id);
+                  toast.success("Listing deleted.");
+                  navigate(-1);
+                } catch (e: any) { toast.error(e.message); }
+              }}
               className="w-full py-2 rounded-lg text-sm font-semibold"
               style={{ background: "#FEE2E2", color: "var(--color-danger)" }}
             >
@@ -549,6 +660,47 @@ export default function AccommodationDetailPage() {
           </div>
         )}
       </div>
+      {/* Report Modal */}
+      {showReportModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.4)" }}
+          onClick={() => setShowReportModal(false)}
+        >
+          <div
+            className="w-[90vw] max-w-md rounded-3xl p-6"
+            style={{ background: "var(--color-surface)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold mb-4">Report this listing</h2>
+            <textarea
+              rows={3}
+              className="input-field mb-4"
+              placeholder="Please describe the issue..."
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="btn-ghost flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReport}
+                disabled={!reportReason.trim()}
+                className="btn-primary flex-1"
+              >
+                Submit Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {ConfirmDialog}
     </div>
   );
 }
+

@@ -8,11 +8,13 @@ export default function ShopJoinPage() {
   const { id: shopId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const user = useAuthStore((s) => s.user);
+  const { user, loading: authLoading } = useAuthStore();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
+    if (authLoading) return;
+
     const token = searchParams.get("token");
     if (!token || !shopId || !user) {
       setStatus("error");
@@ -34,7 +36,7 @@ export default function ShopJoinPage() {
         setErrorMsg(err.message);
       }
     })();
-  }, [searchParams, shopId, user, navigate]);
+  }, [authLoading, searchParams, shopId, user, navigate]);
 
   return (
     <div

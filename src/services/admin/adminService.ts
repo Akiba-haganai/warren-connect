@@ -2,17 +2,17 @@ import { supabase } from "@/lib/supabase/client";
 
 export const adminService = {
   async updateContentFeatured(type: string, id: string, featured: boolean) {
-  const table = type === "post" ? "posts" : type === "product" ? "products" : "accommodations";
-  const { error } = await supabase.from(table).update({ featured }).eq("id", id);
-  if (error) throw error;
-},
-  // ---- Reports ----
+    const table = type === "post" ? "posts" : type === "product" ? "products" : "accommodations";
+    const { data, error } = await supabase.from(table).update({ featured }).eq("id", id).select();
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Update blocked — RLS or permissions.");
+  },
+
   async getReports() {
     const { data, error } = await supabase
       .from("reports")
       .select("*")
       .order("created_at", { ascending: false });
-
     if (error) throw error;
     if (!data) return [];
 
@@ -21,24 +21,16 @@ export const adminService = {
       .from("profiles")
       .select("id, full_name, avatar_url")
       .in("id", reporterIds);
-
     const reporterMap = new Map(reporters?.map((p) => [p.id, p]) || []);
-
-    return data.map((report) => ({
-      ...report,
-      reporter: reporterMap.get(report.reporter_id) || null,
-    }));
+    return data.map((report) => ({ ...report, reporter: reporterMap.get(report.reporter_id) || null }));
   },
 
   async updateReportStatus(reportId: string, status: "reviewed" | "resolved") {
-    const { error } = await supabase
-      .from("reports")
-      .update({ status })
-      .eq("id", reportId);
+    const { data, error } = await supabase.from("reports").update({ status }).eq("id", reportId).select();
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Report update blocked — RLS or permissions.");
   },
 
-  // ---- Users ----
   async getUsers() {
     const { data, error } = await supabase
       .from("profiles")
@@ -49,39 +41,33 @@ export const adminService = {
   },
 
   async toggleBanUser(userId: string, banned: boolean) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .update({ is_banned: banned })
-      .eq("id", userId);
+      .eq("id", userId)
+      .select();
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Ban update blocked — check RLS.");
   },
 
-  // ---- Content hiding ----
   async hidePost(postId: string, hide: boolean) {
-    const { error } = await supabase
-      .from("posts")
-      .update({ is_hidden: hide })
-      .eq("id", postId);
+    const { data, error } = await supabase.from("posts").update({ is_hidden: hide }).eq("id", postId).select();
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Hide post blocked — RLS or permissions.");
   },
 
   async hideProduct(productId: string, hide: boolean) {
-    const { error } = await supabase
-      .from("products")
-      .update({ is_hidden: hide })
-      .eq("id", productId);
+    const { data, error } = await supabase.from("products").update({ is_hidden: hide }).eq("id", productId).select();
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Hide product blocked — RLS or permissions.");
   },
 
   async hideAccommodation(accommodationId: string, hide: boolean) {
-    const { error } = await supabase
-      .from("accommodations")
-      .update({ is_hidden: hide })
-      .eq("id", accommodationId);
+    const { data, error } = await supabase.from("accommodations").update({ is_hidden: hide }).eq("id", accommodationId).select();
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Hide accommodation blocked — RLS or permissions.");
   },
 
-  // ---- Bulk content fetching for moderation ----
   async getReportedPosts() {
     const { data, error } = await supabase
       .from("reports")
@@ -113,21 +99,23 @@ export const adminService = {
   },
 
   async deletePost(postId: string) {
-    const { error } = await supabase.from("posts").delete().eq("id", postId);
+    const { data, error } = await supabase.from("posts").delete().eq("id", postId).select();
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Delete post blocked — RLS or permissions.");
   },
 
   async deleteProduct(productId: string) {
-    const { error } = await supabase.from("products").delete().eq("id", productId);
+    const { data, error } = await supabase.from("products").delete().eq("id", productId).select();
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Delete product blocked — RLS or permissions.");
   },
 
   async deleteAccommodation(accommodationId: string) {
-    const { error } = await supabase.from("accommodations").delete().eq("id", accommodationId);
+    const { data, error } = await supabase.from("accommodations").delete().eq("id", accommodationId).select();
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Delete accommodation blocked — RLS or permissions.");
   },
 
-  // ---- Stats ----
   async getStats(): Promise<{
     totalUsers: number; totalProducts: number; totalAccommodations: number;
     pendingReports: number; pendingVerifications: number;
@@ -183,14 +171,15 @@ export const adminService = {
   },
 
   async updateUserRole(userId: string, field: string, value: boolean) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .update({ [field]: value } as any)
-      .eq("id", userId);
+      .eq("id", userId)
+      .select();
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Role update blocked — check RLS.");
   },
 
-  // Tags
   async createTag(name: string) {
     const { data, error } = await supabase
       .from("tags")
@@ -210,8 +199,9 @@ export const adminService = {
   },
 
   async deleteTag(tagId: string) {
-    const { error } = await supabase.from("tags").delete().eq("id", tagId);
+    const { data, error } = await supabase.from("tags").delete().eq("id", tagId).select();
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Delete tag blocked — RLS or permissions.");
   },
 
   async getAllTags() {
@@ -223,7 +213,6 @@ export const adminService = {
     return data || [];
   },
 
-  // Password reset requests
   async getPasswordResetRequests() {
     const { data, error } = await supabase
       .from("notifications")
@@ -235,6 +224,8 @@ export const adminService = {
   },
 
   async markResetHandled(notificationId: string) {
-    await supabase.from("notifications").delete().eq("id", notificationId);
+    const { data, error } = await supabase.from("notifications").delete().eq("id", notificationId).select();
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Mark reset failed — RLS or permissions.");
   },
 };

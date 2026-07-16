@@ -406,6 +406,150 @@ export type Database = {
           },
         ]
       }
+      escrow_events: {
+        Row: {
+          created_at: string | null
+          escrow_id: string
+          event_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          escrow_id: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          escrow_id?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escrow_events_escrow_id_fkey"
+            columns: ["escrow_id"]
+            isOneToOne: false
+            referencedRelation: "escrow_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escrow_transactions: {
+        Row: {
+          amount: number
+          buyer_id: string
+          created_at: string | null
+          dispute_reason: string | null
+          held_at: string | null
+          id: string
+          product_id: string
+          provider: string
+          provider_ref: string | null
+          released_at: string | null
+          seller_id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          buyer_id: string
+          created_at?: string | null
+          dispute_reason?: string | null
+          held_at?: string | null
+          id?: string
+          product_id: string
+          provider: string
+          provider_ref?: string | null
+          released_at?: string | null
+          seller_id: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          buyer_id?: string
+          created_at?: string | null
+          dispute_reason?: string | null
+          held_at?: string | null
+          id?: string
+          product_id?: string
+          provider?: string
+          provider_ref?: string | null
+          released_at?: string | null
+          seller_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escrow_transactions_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escrow_transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escrow_transactions_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_interests: {
+        Row: {
+          accommodation_id: string
+          created_at: string
+          id: string
+          note: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accommodation_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accommodation_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_interests_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "accommodations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_interests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           attachment_type: string | null
@@ -485,6 +629,71 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      offers: {
+        Row: {
+          amount: number
+          buyer_id: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          parent_offer_id: string | null
+          product_id: string
+          seller_id: string
+          status: string | null
+        }
+        Insert: {
+          amount: number
+          buyer_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          parent_offer_id?: string | null
+          product_id: string
+          seller_id: string
+          status?: string | null
+        }
+        Update: {
+          amount?: number
+          buyer_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          parent_offer_id?: string | null
+          product_id?: string
+          seller_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_parent_offer_id_fkey"
+            columns: ["parent_offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       password_reset_requests: {
         Row: {
@@ -636,18 +845,21 @@ export type Database = {
           created_at: string | null
           id: string
           image_url: string
+          phash: string | null
           product_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
           image_url: string
+          phash?: string | null
           product_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
           image_url?: string
+          phash?: string | null
           product_id?: string
         }
         Relationships: [
@@ -692,6 +904,8 @@ export type Database = {
       }
       products: {
         Row: {
+          auto_hidden: boolean | null
+          category: string | null
           condition: string | null
           created_at: string | null
           description: string | null
@@ -702,11 +916,16 @@ export type Database = {
           in_stock: boolean | null
           is_hidden: boolean | null
           price: number
+          risk_score: number | null
           seller_id: string
           shop_id: string | null
+          sold_at: string | null
+          status: string | null
           title: string
         }
         Insert: {
+          auto_hidden?: boolean | null
+          category?: string | null
           condition?: string | null
           created_at?: string | null
           description?: string | null
@@ -717,11 +936,16 @@ export type Database = {
           in_stock?: boolean | null
           is_hidden?: boolean | null
           price: number
+          risk_score?: number | null
           seller_id: string
           shop_id?: string | null
+          sold_at?: string | null
+          status?: string | null
           title: string
         }
         Update: {
+          auto_hidden?: boolean | null
+          category?: string | null
           condition?: string | null
           created_at?: string | null
           description?: string | null
@@ -732,8 +956,11 @@ export type Database = {
           in_stock?: boolean | null
           is_hidden?: boolean | null
           price?: number
+          risk_score?: number | null
           seller_id?: string
           shop_id?: string | null
+          sold_at?: string | null
+          status?: string | null
           title?: string
         }
         Relationships: [
@@ -760,6 +987,7 @@ export type Database = {
           full_name: string | null
           going_out_pattern: string | null
           id: string
+          id_verified_at: string | null
           is_admin: boolean
           is_banned: boolean | null
           is_landlord: boolean | null
@@ -767,6 +995,7 @@ export type Database = {
           last_seen: string | null
           looking_for_roommate: boolean | null
           notification_preferences: Json | null
+          phone_verified_at: string | null
           privacy_needed: boolean | null
           referral_code: string | null
           referred_by: string | null
@@ -782,6 +1011,7 @@ export type Database = {
           university: string | null
           updated_at: string | null
           username: string | null
+          verification_tier: string | null
           year_of_study: number | null
         }
         Insert: {
@@ -797,6 +1027,7 @@ export type Database = {
           full_name?: string | null
           going_out_pattern?: string | null
           id: string
+          id_verified_at?: string | null
           is_admin?: boolean
           is_banned?: boolean | null
           is_landlord?: boolean | null
@@ -804,6 +1035,7 @@ export type Database = {
           last_seen?: string | null
           looking_for_roommate?: boolean | null
           notification_preferences?: Json | null
+          phone_verified_at?: string | null
           privacy_needed?: boolean | null
           referral_code?: string | null
           referred_by?: string | null
@@ -819,6 +1051,7 @@ export type Database = {
           university?: string | null
           updated_at?: string | null
           username?: string | null
+          verification_tier?: string | null
           year_of_study?: number | null
         }
         Update: {
@@ -834,6 +1067,7 @@ export type Database = {
           full_name?: string | null
           going_out_pattern?: string | null
           id?: string
+          id_verified_at?: string | null
           is_admin?: boolean
           is_banned?: boolean | null
           is_landlord?: boolean | null
@@ -841,6 +1075,7 @@ export type Database = {
           last_seen?: string | null
           looking_for_roommate?: boolean | null
           notification_preferences?: Json | null
+          phone_verified_at?: string | null
           privacy_needed?: boolean | null
           referral_code?: string | null
           referred_by?: string | null
@@ -856,6 +1091,7 @@ export type Database = {
           university?: string | null
           updated_at?: string | null
           username?: string | null
+          verification_tier?: string | null
           year_of_study?: number | null
         }
         Relationships: []
@@ -916,6 +1152,50 @@ export type Database = {
           status?: string | null
         }
         Relationships: []
+      }
+      reputation_scores: {
+        Row: {
+          account_age_days: number | null
+          avg_rating: number | null
+          avg_response_minutes: number | null
+          badge: string | null
+          completed_sales: number | null
+          dispute_rate: number | null
+          score: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_age_days?: number | null
+          avg_rating?: number | null
+          avg_response_minutes?: number | null
+          badge?: string | null
+          completed_sales?: number | null
+          dispute_rate?: number | null
+          score?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_age_days?: number | null
+          avg_rating?: number | null
+          avg_response_minutes?: number | null
+          badge?: string | null
+          completed_sales?: number | null
+          dispute_rate?: number | null
+          score?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reputation_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
@@ -1000,6 +1280,38 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_searches: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          query: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          query?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          query?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_searches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shop_collaborators: {
         Row: {
           id: string
@@ -1029,6 +1341,39 @@ export type Database = {
           },
           {
             foreignKeyName: "shop_collaborators_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_followers: {
+        Row: {
+          created_at: string | null
+          shop_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          shop_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          shop_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_followers_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_followers_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1131,6 +1476,61 @@ export type Database = {
         }
         Relationships: []
       }
+      tenancies: {
+        Row: {
+          accommodation_id: string
+          created_at: string
+          created_from_interest_id: string | null
+          id: string
+          moved_in_at: string
+          moved_out_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          accommodation_id: string
+          created_at?: string
+          created_from_interest_id?: string | null
+          id?: string
+          moved_in_at?: string
+          moved_out_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          accommodation_id?: string
+          created_at?: string
+          created_from_interest_id?: string | null
+          id?: string
+          moved_in_at?: string
+          moved_out_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenancies_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "accommodations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenancies_created_from_interest_id_fkey"
+            columns: ["created_from_interest_id"]
+            isOneToOne: false
+            referencedRelation: "listing_interests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenancies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       verification_requests: {
         Row: {
           created_at: string | null
@@ -1218,6 +1618,7 @@ export type Database = {
         Args: { p_response_time_ms: number; p_user_id: string }
         Returns: undefined
       }
+      is_admin: { Args: never; Returns: boolean }
       search_all: {
         Args: { search_term: string }
         Returns: {

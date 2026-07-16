@@ -1,4 +1,7 @@
-import { Outlet, Navigate, Link, useLocation } from "react-router-dom";
+import { Outlet, Navigate, Link, useSearchParams } from "react-router-dom";
+
+
+
 import { useAuthStore } from "@/store/auth/authStore";
 import { useState } from "react";
 import {
@@ -6,24 +9,26 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { label: "Overview",        path: "/admin/overview",        icon: LayoutDashboard },
-  { label: "Users",           path: "/admin/users",           icon: Users },
-  { label: "Content",         path: "/admin/content",         icon: FileText },
-  { label: "Verifications",   path: "/admin/verifications",   icon: ShieldCheck },
-  { label: "Reports",         path: "/admin/reports",         icon: FileText },
-  { label: "Tags",            path: "/admin/tags",            icon: Tag },
-  { label: "Password Resets", path: "/admin/password-resets", icon: KeyRound },
+  { label: "Overview",        tab: "overview",      icon: LayoutDashboard },
+  { label: "Users",           tab: "users",          icon: Users },
+  { label: "Content",         tab: "content",        icon: FileText },
+  { label: "Verifications",   tab: "verifications",  icon: ShieldCheck },
+  { label: "Reports",         tab: "reports",        icon: FileText },
+  { label: "Tags",            tab: "tags",           icon: Tag },
+  { label: "Password Resets", tab: "resets",         icon: KeyRound },
 ];
 
 export default function AdminLayout() {
   const { user, profile, loading } = useAuthStore();
-  const location = useLocation();
+
+  const [searchParams] = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) return null;
   if (!user || !profile?.is_admin) return <Navigate to="/" replace />;
 
   const closeSidebar = () => setSidebarOpen(false);
+  const activeTab = searchParams.get("tab") || "overview";
 
   return (
     <div className="flex h-[100dvh] overflow-hidden" style={{ background: "var(--color-bg)" }}>
@@ -32,7 +37,7 @@ export default function AdminLayout() {
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={closeSidebar} />
       )}
 
-      {/* Sidebar – hidden on mobile, shown on large screens, or when toggled */}
+      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-56 flex-shrink-0 flex flex-col transform transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
         style={{ background: "var(--color-surface)", borderRight: "1px solid var(--color-border)" }}
@@ -48,12 +53,12 @@ export default function AdminLayout() {
         </div>
         <nav className="flex-1 px-2 space-y-1 text-sm overflow-y-auto">
           {navItems.map((item) => {
-            const active = location.pathname === item.path;
+            const active = activeTab === item.tab;
             const Icon = item.icon;
             return (
               <Link
-                key={item.path}
-                to={item.path}
+                key={item.tab}
+                to={`/admin?tab=${item.tab}`}
                 onClick={closeSidebar}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl font-medium transition-all"
                 style={{
@@ -74,7 +79,6 @@ export default function AdminLayout() {
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto">
-        {/* Mobile header with hamburger */}
         <div className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3 lg:hidden" style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}>
           <button onClick={() => setSidebarOpen(true)} className="p-1">
             <Menu size={24} />

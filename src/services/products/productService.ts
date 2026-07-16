@@ -14,9 +14,17 @@ export const productService = {
   ) {
     const { data, error } = await supabase
       .from("products")
-      .insert({ seller_id, title, description, price, image_url: image_url ?? null, condition: condition ?? null })
+      .insert({
+        seller_id,
+        title,
+        description,
+        price,
+        image_url: image_url ?? null,
+        condition: condition ?? null,
+      })
       .select()
       .single();
+
     if (error) throw error;
     return data;
   },
@@ -26,6 +34,7 @@ export const productService = {
       .from("products")
       .select("*")
       .order("created_at", { ascending: false });
+
     if (error) throw error;
     return data || [];
   },
@@ -36,8 +45,9 @@ export const productService = {
       .select("*")
       .eq("id", id)
       .single();
+
     if (error) throw error;
-    return data || [];
+    return data;
   },
 
   async getProductsByIds(ids: string[]) {
@@ -46,6 +56,7 @@ export const productService = {
       .from("products")
       .select("*")
       .in("id", ids);
+
     if (error) throw error;
     return data || [];
   },
@@ -56,6 +67,7 @@ export const productService = {
       .select("*")
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
+
     if (error) throw error;
     return data || [];
   },
@@ -66,6 +78,7 @@ export const productService = {
       .select("*")
       .eq("id", id)
       .single();
+
     if (error || !product) throw error;
 
     const { data: seller } = await supabase
@@ -82,6 +95,7 @@ export const productService = {
       .from("products")
       .update({ in_stock: inStock })
       .eq("id", productId);
+
     if (error) throw error;
   },
 
@@ -94,6 +108,7 @@ export const productService = {
     const { error } = await supabase
       .from("product_images")
       .insert({ product_id: productId, image_url: imageUrl });
+
     if (error) throw error;
   },
 
@@ -103,6 +118,7 @@ export const productService = {
       .select("*")
       .eq("product_id", productId)
       .order("created_at", { ascending: true });
+
     if (error) throw error;
     return data || [];
   },
@@ -112,6 +128,8 @@ export const productService = {
       .from("product_images")
       .delete()
       .eq("id", imageId);
+
     if (error) throw error;
   },
 };
+

@@ -20,9 +20,16 @@ const COMMON_AMENITIES = [
 interface Props {
   onClose: () => void;
   onCreated: () => void;
+  initialListingType?: "property" | "room" | "bedspace";
+  initialParentId?: string;
 }
 
-export default function AccommodationComposer({ onClose, onCreated }: Props) {
+export default function AccommodationComposer({
+  onClose,
+  onCreated,
+  initialListingType,
+  initialParentId,
+}: Props) {
   const user = useAuthStore((s) => s.user);
 
   // Basic fields
@@ -36,8 +43,10 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
   const [posting, setPosting] = useState(false);
 
   // Listing type fields
-  const [listingType, setListingType] = useState<"property" | "room" | "bedspace">("property");
-  const [parentPropertyId, setParentPropertyId] = useState<string>("");
+  const [listingType, setListingType] = useState<"property" | "room" | "bedspace">(
+    initialListingType ?? "property"
+  );
+  const [parentPropertyId, setParentPropertyId] = useState<string>(initialParentId ?? "");
   const [capacity, setCapacity] = useState<string>("");
 
   // My properties (for parent selector)
@@ -88,7 +97,9 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
         image_url,
         listingType,
         listingType !== "property" ? parentPropertyId || undefined : undefined,
-        listingType === "room" || listingType === "bedspace" ? Number(capacity) || undefined : undefined
+        listingType === "room" || listingType === "bedspace"
+          ? Number(capacity) || undefined
+          : undefined
       );
 
       if (selectedAmenities.length > 0) {
@@ -104,6 +115,8 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
       setPosting(false);
     }
   };
+
+  const isAddingRoom = !!initialParentId;
 
   return (
     <div
@@ -128,7 +141,7 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
           style={{ borderBottom: "1px solid var(--color-border)" }}
         >
           <h2 className="text-base font-bold" style={{ color: "var(--color-text)" }}>
-            New listing
+            {isAddingRoom ? "Add Room" : "New listing"}
           </h2>
           <button
             onClick={onClose}
@@ -139,43 +152,48 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
             <X size={16} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="px-5 py-4 flex flex-col gap-4">
-          {/* Listing type */}
-          <div>
-            <label className="field-label">Listing type</label>
-            <label className="sr-only">Listing type</label>
-            <select
-              aria-label="Listing type"
-              value={listingType}
-              onChange={(e) => setListingType(e.target.value as any)}
-              className="input-field"
-            >
-              <option value="property">Property (house/plot)</option>
-              <option value="room">Room (inside a property)</option>
-              <option value="bedspace">Bedspace (squatting)</option>
-            </select>
-          </div>
 
-          {/* Parent property selector (for rooms/bedspaces) */}
-          {(listingType === "room" || listingType === "bedspace") && myProperties.length > 0 && (
+        <form onSubmit={handleSubmit} className="px-5 py-4 flex flex-col gap-4">
+          {/* Listing type – hidden when adding a room */}
+          {!isAddingRoom && (
             <div>
-              <label className="field-label">Parent property</label>
+              <label className="field-label">Listing type</label>
+              <label className="sr-only">Listing type</label>
               <select
-                value={parentPropertyId}
-                onChange={(e) => setParentPropertyId(e.target.value)}
+                aria-label="Listing type"
+                value={listingType}
+                onChange={(e) => setListingType(e.target.value as any)}
                 className="input-field"
               >
-                <option value="">Select a property</option>
-                {myProperties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title}
-                  </option>
-                ))}
+                <option value="property">Property (house/plot)</option>
+                <option value="room">Room (inside a property)</option>
+                <option value="bedspace">Bedspace (squatting)</option>
               </select>
             </div>
           )}
 
-          {/* Capacity (for rooms/bedspaces) */}
+          {/* Parent property selector */}
+          {(listingType === "room" || listingType === "bedspace") &&
+            myProperties.length > 0 &&
+            !isAddingRoom && (
+              <div>
+                <label className="field-label">Parent property</label>
+                <select
+                  value={parentPropertyId}
+                  onChange={(e) => setParentPropertyId(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="">Select a property</option>
+                  {myProperties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+          {/* Capacity */}
           {(listingType === "room" || listingType === "bedspace") && (
             <div>
               <label className="field-label">Capacity (number of tenants)</label>
@@ -200,6 +218,7 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
+
           <div>
             <label className="field-label">Location</label>
             <div className="relative">
@@ -218,6 +237,7 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
               />
             </div>
           </div>
+
           <div>
             <label className="field-label">Monthly rent (ZMW)</label>
             <input
@@ -230,6 +250,7 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
               onChange={(e) => setRent(e.target.value)}
             />
           </div>
+
           <div>
             <label className="field-label">Description (optional)</label>
             <textarea
@@ -260,9 +281,13 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
                       : "bg-surface text-text-secondary border-border"
                   }`}
                   style={{
-                    background: selectedAmenities.includes(a) ? "var(--color-primary)" : "var(--color-surface)",
+                    background: selectedAmenities.includes(a)
+                      ? "var(--color-primary)"
+                      : "var(--color-surface)",
                     color: selectedAmenities.includes(a) ? "#fff" : "var(--color-text-secondary)",
-                    borderColor: selectedAmenities.includes(a) ? "var(--color-primary)" : "var(--color-border)",
+                    borderColor: selectedAmenities.includes(a)
+                      ? "var(--color-primary)"
+                      : "var(--color-border)",
                   }}
                 >
                   {a}
@@ -320,6 +345,8 @@ export default function AccommodationComposer({ onClose, onCreated }: Props) {
               <span className="flex items-center gap-2">
                 <Loader2 size={15} className="animate-spin" /> Listing…
               </span>
+            ) : isAddingRoom ? (
+              "Add Room"
             ) : (
               "Add listing"
             )}

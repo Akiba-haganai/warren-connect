@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { productService } from "@/services/products/productService";
+import toast from "react-hot-toast";
 
 export function useToggleProductStock() {
   const queryClient = useQueryClient();
@@ -60,7 +61,7 @@ export function useToggleProductStock() {
           context.previousProduct
         );
       }
-      alert("Could not update stock. Please try again.");
+      toast.error("Could not update stock. Please try again.");
     },
 
     onSettled: (_, __, { productId }) => {

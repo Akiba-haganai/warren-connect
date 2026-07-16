@@ -4,8 +4,11 @@ import BottomNav from "@/components/navigation/BottomNav";
 import InstallBanner from "@/components/ui/InstallBanner";
 import OfflineBanner from "@/components/ui/OfflineBanner";
 import OnboardingCarousel from "@/components/ui/OnBoardingCarousel";
+import { useMarketplaceNotifications } from "@/hooks/useMarketplaceNotifications";
 
 export default function MainLayout() {
+  useMarketplaceNotifications();
+
   return (
     <div
       className="flex flex-col h-[100dvh] overflow-hidden"
@@ -13,6 +16,7 @@ export default function MainLayout() {
     >
       <OfflineBanner />
       <Navbar />
+
 
       <div
         className="flex-1 overflow-y-auto"

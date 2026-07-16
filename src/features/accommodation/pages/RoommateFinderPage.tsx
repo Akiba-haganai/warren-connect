@@ -5,10 +5,10 @@ import { useAuthStore } from "@/store/auth/authStore";
 import { roommateService } from "@/services/roommates/roommateService";
 import { triggerNotification } from "@/services/notifications/triggerService";
 import { triggerHaptic } from "@/utils/haptic";
+import { isOnline } from "@/utils/timeAgo";
 import { Users, Loader2 } from "lucide-react";
 import RoommateFilters from "@/features/accommodation/components/RoommateFilters";
 import RoommateCard from "@/features/accommodation/components/RoommateCard";
-import { messageService } from "@/services/messages/messageService";
 
 const PAGE_SIZE = 20;
 
@@ -16,13 +16,7 @@ function computeCompatibility(me: any, them: any): number {
   if (!me || !them) return 0;
   let score = 0;
   let total = 0;
-  const fields = [
-    "smoking_preference",
-    "drinking_preference",
-    "study_habit",
-    "going_out_pattern",
-    "roommate_gender_preference",
-  ];
+  const fields = ["smoking_preference", "drinking_preference", "study_habit", "going_out_pattern", "roommate_gender_preference"];
   fields.forEach((field) => {
     const myVal = me[field];
     const theirVal = them[field];
@@ -31,12 +25,14 @@ function computeCompatibility(me: any, them: any): number {
       if (myVal === theirVal) score++;
     }
   });
-  const myMin = me.roommate_budget_min ?? 0;
-  const myMax = me.roommate_budget_max ?? Infinity;
-  const theirMin = them.roommate_budget_min ?? 0;
-  const theirMax = them.roommate_budget_max ?? Infinity;
-  if (myMax > 0 || theirMax > 0) {
+  const myHasBudget = me.roommate_budget_min != null || me.roommate_budget_max != null;
+  const theirHasBudget = them.roommate_budget_min != null || them.roommate_budget_max != null;
+  if (myHasBudget && theirHasBudget) {
     total++;
+    const myMin = me.roommate_budget_min ?? 0;
+    const myMax = me.roommate_budget_max ?? Infinity;
+    const theirMin = them.roommate_budget_min ?? 0;
+    const theirMax = them.roommate_budget_max ?? Infinity;
     if (myMax >= theirMin && theirMax >= myMin) score++;
   }
   return total === 0 ? 0 : Math.round((score / total) * 100);
@@ -46,8 +42,13 @@ export default function RoommateFinderPage() {
   const currentProfile = useAuthStore((s) => s.profile);
   const currentUserId = useAuthStore((s) => s.user?.id);
 
-  // Filters
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const [universityFilter, setUniversityFilter] = useState("");
   const [smokingFilter, setSmokingFilter] = useState("no-preference");
   const [drinkingFilter, setDrinkingFilter] = useState("no-preference");
@@ -56,20 +57,17 @@ export default function RoommateFinderPage() {
   const [genderFilter, setGenderFilter] = useState("no-preference");
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
-  const [privacyFilter, setPrivacyFilter] = useState<boolean | null>(null);   // ← new
+  const [privacyFilter, setPrivacyFilter] = useState<boolean | null>(null);
 
-  // Like state
   const [likedUsers, setLikedUsers] = useState<Set<string>>(new Set());
   const [mutualUsers, setMutualUsers] = useState<Set<string>>(new Set());
 
   const { data: users, isLoading } = useQuery({
-    queryKey: ["roommate-users"],
+    queryKey: ["roommate-users", smokingFilter, drinkingFilter, studyFilter, goingOutFilter, genderFilter, privacyFilter],
     queryFn: async () => {
       let query = supabase
         .from("profiles")
-        .select(
-          "id, full_name, username, avatar_url, last_seen, course, year_of_study, university, roommate_preferences, smoking_preference, drinking_preference, study_habit, going_out_pattern, roommate_budget_min, roommate_budget_max, roommate_gender_preference, privacy_needed"
-        )
+        .select("id, full_name, username, avatar_url, last_seen, course, year_of_study, university, roommate_preferences, smoking_preference, drinking_preference, study_habit, going_out_pattern, roommate_budget_min, roommate_budget_max, roommate_gender_preference, privacy_needed")
         .eq("looking_for_roommate", true)
         .order("created_at", { ascending: false })
         .limit(PAGE_SIZE);
@@ -79,7 +77,7 @@ export default function RoommateFinderPage() {
       if (studyFilter !== "no-preference") query = query.eq("study_habit", studyFilter);
       if (goingOutFilter !== "no-preference") query = query.eq("going_out_pattern", goingOutFilter);
       if (genderFilter !== "no-preference") query = query.eq("roommate_gender_preference", genderFilter);
-      if (privacyFilter !== null) query = query.eq("privacy_needed", privacyFilter);   // ← new
+      if (privacyFilter !== null) query = query.eq("privacy_needed", privacyFilter);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -87,18 +85,15 @@ export default function RoommateFinderPage() {
     },
   });
 
-  // Fetch like statuses
   useEffect(() => {
     if (!currentUserId || !users) return;
-    Promise.all(
-      users.map(async (u) => {
-        const [liked, mutual] = await Promise.all([
-          roommateService.hasLiked(currentUserId, u.id),
-          roommateService.checkMutual(currentUserId, u.id),
-        ]);
-        return { id: u.id, liked, mutual };
-      })
-    ).then((results) => {
+    Promise.all(users.map(async (u) => {
+      const [liked, mutual] = await Promise.all([
+        roommateService.hasLiked(currentUserId, u.id),
+        roommateService.checkMutual(currentUserId, u.id),
+      ]);
+      return { id: u.id, liked, mutual };
+    })).then((results) => {
       const likedSet = new Set<string>();
       const mutualSet = new Set<string>();
       results.forEach((r) => {
@@ -111,147 +106,103 @@ export default function RoommateFinderPage() {
   }, [users, currentUserId]);
 
   const handleLikeToggle = async (userId: string) => {
-  if (!currentUserId || !currentProfile) return;
-  triggerHaptic();
-  const currentlyLiked = likedUsers.has(userId);
-  if (currentlyLiked) {
-    await roommateService.unlikeUser(currentUserId, userId);
-    setLikedUsers((prev) => {
-      const next = new Set(prev);
-      next.delete(userId);
-      return next;
-    });
-  } else {
-    await roommateService.likeUser(currentUserId, userId);
-    setLikedUsers((prev) => new Set(prev).add(userId));
-    triggerNotification.like(userId, currentUserId, currentProfile.full_name ?? "Someone");
+    if (!currentUserId || !currentProfile) return;
+    triggerHaptic();
+    const currentlyLiked = likedUsers.has(userId);
+    if (currentlyLiked) {
+      await roommateService.unlikeUser(currentUserId, userId);
+      setLikedUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+    } else {
+      await roommateService.likeUser(currentUserId, userId);
+      setLikedUsers((prev) => new Set(prev).add(userId));
+      triggerNotification.like(userId, currentUserId, currentProfile.full_name ?? "Someone");
 
-    // Check for mutual match
-    const mutual = await roommateService.checkMutual(currentUserId, userId);
-    if (mutual) {
-      // Create a conversation between the two users if not exists
-      const existingConvos = await messageService.getConversations(currentUserId);
-      const existingConv = existingConvos.find(
-        (c) =>
-          (c.user1_id === currentUserId && c.user2_id === userId) ||
-          (c.user2_id === currentUserId && c.user1_id === userId)
-      );
-      let convId = existingConv?.id;
-      if (!convId) {
-        const newConv = await messageService.createConversation(currentUserId, userId);
-        convId = newConv.id;
+      const mutual = await roommateService.checkMutual(currentUserId, userId);
+      if (mutual) {
+        const { messageService } = await import("@/services/messages/messageService");
+        const existingConvos = await messageService.getConversations(currentUserId);
+        const existingConv = existingConvos.find(
+          (c) => (c.user1_id === currentUserId && c.user2_id === userId) || (c.user2_id === currentUserId && c.user1_id === userId)
+        );
+        let convId = existingConv?.id;
+        if (!convId) {
+          const newConv = await messageService.createConversation(currentUserId, userId);
+          convId = newConv.id;
+        }
+        await triggerNotification.system(currentUserId, "Mutual Match!", `You and ${currentProfile.full_name || "someone"} matched!`, `/messages?conversation=${convId}`);
+        await triggerNotification.system(userId, "Mutual Match!", `You and ${currentProfile.full_name || "someone"} matched!`, `/messages?conversation=${convId}`);
       }
-      // Send special notification to both users
-      await triggerNotification.system(
-        currentUserId,
-        "Mutual Match!",
-        `You and ${currentProfile.full_name || "someone"} matched! Start chatting now.`,
-        `/messages?conversation=${convId}`
-      );
-      await triggerNotification.system(
-        userId,
-        "Mutual Match!",
-        `You and ${currentProfile.full_name || "someone"} matched! Start chatting now.`,
-        `/messages?conversation=${convId}`
-      );
+      setMutualUsers((prev) => {
+        const next = new Set(prev);
+        if (mutual) next.add(userId);
+        else next.delete(userId);
+        return next;
+      });
     }
-  }
+  };
 
-  // Refresh mutual status
-  const mutual = await roommateService.checkMutual(currentUserId, userId);
-  setMutualUsers((prev) => {
-    const next = new Set(prev);
-    if (mutual) next.add(userId);
-    else next.delete(userId);
-    return next;
-  });
-};
-
-  const allUniversities = useMemo(
-    () => [...new Set((users ?? []).map((u) => u.university).filter(Boolean))].sort() as string[],
-    [users]
-  );
+  const allUniversities = useMemo(() => [...new Set((users ?? []).map((u) => u.university).filter(Boolean))].sort() as string[], [users]);
 
   const processed = useMemo(() => {
     if (!users) return [];
     const filtered = users.filter((u) => {
       const matchSearch =
-        (u.full_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-        (u.course ?? "").toLowerCase().includes(search.toLowerCase()) ||
-        (u.roommate_preferences ?? "").toLowerCase().includes(search.toLowerCase());
+        (u.full_name ?? "").toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (u.course ?? "").toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (u.roommate_preferences ?? "").toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchUniversity = !universityFilter || u.university === universityFilter;
       const matchBudgetMin = !budgetMin || (u.roommate_budget_min ?? 0) >= Number(budgetMin);
       const matchBudgetMax = !budgetMax || (u.roommate_budget_max ?? Infinity) <= Number(budgetMax);
       return matchSearch && matchUniversity && matchBudgetMin && matchBudgetMax;
     });
     const hasOwnPrefs = currentProfile?.looking_for_roommate;
-    const scored = filtered.map((u) => ({
-      ...u,
-      compatibility: hasOwnPrefs ? computeCompatibility(currentProfile, u) : 0,
-    }));
-    if (hasOwnPrefs) {
-      scored.sort((a, b) => b.compatibility - a.compatibility);
-    }
+    const scored = filtered.map((u) => ({ ...u, compatibility: hasOwnPrefs ? computeCompatibility(currentProfile, u) : 0 }));
+    if (hasOwnPrefs) scored.sort((a, b) => b.compatibility - a.compatibility);
     return scored;
-  }, [users, search, universityFilter, budgetMin, budgetMax, currentProfile]);
-
-  const isOnline = (lastSeen: string | null): boolean =>
-    !!(lastSeen && Date.now() - new Date(lastSeen).getTime() < 5 * 60 * 1000);
+  }, [users, debouncedSearch, universityFilter, budgetMin, budgetMax, currentProfile]);
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
       <div className="sticky top-0 z-10 px-4 py-3" style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}>
-        <h1 className="text-base font-bold" style={{ color: "var(--color-primary)" }}>
-          🧑‍🤝‍🧑 Roommate Finder
-        </h1>
+        <h1 className="text-base font-bold" style={{ color: "var(--color-primary)" }}>🧑‍🤝‍🧑 Roommate Finder</h1>
       </div>
-
       <div className="px-4 pt-4 pb-8 space-y-4">
         <RoommateFilters
-          search={search} onSearchChange={setSearch}
-          universityFilter={universityFilter} onUniversityChange={setUniversityFilter}
+          search={searchInput}
+          onSearchChange={setSearchInput}
+          universityFilter={universityFilter}
+          onUniversityChange={setUniversityFilter}
           universities={allUniversities}
-          smokingFilter={smokingFilter} onSmokingChange={setSmokingFilter}
-          drinkingFilter={drinkingFilter} onDrinkingChange={setDrinkingFilter}
-          studyFilter={studyFilter} onStudyChange={setStudyFilter}
-          goingOutFilter={goingOutFilter} onGoingOutChange={setGoingOutFilter}
-          genderFilter={genderFilter} onGenderChange={setGenderFilter}
-          budgetMin={budgetMin} onBudgetMinChange={setBudgetMin}
-          budgetMax={budgetMax} onBudgetMaxChange={setBudgetMax}
+          smokingFilter={smokingFilter}
+          onSmokingChange={setSmokingFilter}
+          drinkingFilter={drinkingFilter}
+          onDrinkingChange={setDrinkingFilter}
+          studyFilter={studyFilter}
+          onStudyChange={setStudyFilter}
+          goingOutFilter={goingOutFilter}
+          onGoingOutChange={setGoingOutFilter}
+          genderFilter={genderFilter}
+          onGenderChange={setGenderFilter}
+          budgetMin={budgetMin}
+          onBudgetMinChange={setBudgetMin}
+          budgetMax={budgetMax}
+          onBudgetMaxChange={setBudgetMax}
         />
-
-        {/* Privacy filter button (standalone, not inside RoommateFilters) */}
         <button
-          onClick={() =>
-            setPrivacyFilter((prev) => (prev === null ? true : prev === true ? false : null))
-          }
-          className={`input-field w-auto text-xs cursor-pointer ${
-            privacyFilter === true ? "bg-primary text-white" : privacyFilter === false ? "bg-red-100 text-red-800" : ""
-          }`}
+          onClick={() => setPrivacyFilter((prev) => (prev === null ? true : prev === true ? false : null))}
+          className={`input-field w-auto text-xs cursor-pointer ${privacyFilter === true ? "bg-primary text-white" : privacyFilter === false ? "bg-red-100 text-red-800" : ""}`}
           style={{
-            background:
-              privacyFilter === true
-                ? "var(--color-primary)"
-                : privacyFilter === false
-                ? "#FEE2E2"
-                : "var(--color-surface)",
-            color:
-              privacyFilter !== null
-                ? privacyFilter
-                  ? "#fff"
-                  : "#991B1B"
-                : "var(--color-text-secondary)",
-            borderColor:
-              privacyFilter !== null
-                ? privacyFilter
-                  ? "var(--color-primary)"
-                  : "#FECACA"
-                : "var(--color-border)",
+            background: privacyFilter === true ? "var(--color-primary)" : privacyFilter === false ? "#FEE2E2" : "var(--color-surface)",
+            color: privacyFilter !== null ? (privacyFilter ? "#fff" : "#991B1B") : "var(--color-text-secondary)",
+            borderColor: privacyFilter !== null ? (privacyFilter ? "var(--color-primary)" : "#FECACA") : "var(--color-border)",
           }}
         >
           🔒 {privacyFilter === null ? "Privacy" : privacyFilter ? "Needed" : "Not needed"}
         </button>
-
         {isLoading ? (
           <div className="flex justify-center py-12"><Loader2 className="animate-spin" /></div>
         ) : processed.length === 0 ? (

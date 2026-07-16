@@ -7,6 +7,7 @@ import { shopService } from "@/services/shop/shopService";
 import { compressImage } from "@/utils/compressImage";
 import TagInput from "@/components/ui/TagInput";
 import { tagService } from "@/services/tags/tagService";
+import { priceEngine } from "@/services/pricing/priceEngine";
 
 interface Props {
   onClose: () => void;
@@ -48,7 +49,44 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
     });
   };
 
+  const [category, setCategory] = useState("");
+
+  // Backward-safe: if products table doesn’t yet have category, we’ll just keep category empty.
+
+  const [priceHint, setPriceHint] = useState<
+    | null
+    | {
+        low: number;
+        median: number;
+        high: number;
+        sampleSize: number;
+      }
+  >(null);
+  const [suggesting, setSuggesting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!category || !condition) {
+        setPriceHint(null);
+        return;
+      }
+      setSuggesting(true);
+      try {
+        const hint = await priceEngine.suggestPrice(category, condition);
+        if (!cancelled) setPriceHint(hint);
+      } finally {
+        if (!cancelled) setSuggesting(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [category, condition]);
+
   const handleSubmit = async (e: React.FormEvent) => {
+
     e.preventDefault();
     if (!user || !title.trim() || !price) return;
     setPosting(true);
@@ -131,7 +169,18 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             <input id="product-price" required type="number" min="0" step="0.01" className="input-field" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
           </div>
           <div>
+            <label className="field-label" htmlFor="product-category">Category</label>
+            <input
+              id="product-category"
+              className="input-field"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="e.g. phones, laptops"
+            />
+          </div>
+          <div>
             <label className="field-label" htmlFor="product-condition">Condition</label>
+
             <select id="product-condition" className="input-field" value={condition} onChange={(e) => setCondition(e.target.value)}>
               <option value="">Select condition (optional)</option>
               <option value="new">New</option>
@@ -173,9 +222,29 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
               <input type="file" accept="image/*" multiple className="hidden" onChange={handleImages} aria-label="Select product images" />
             </label>
           </div>
+          {priceHint && (
+            <div className="px-1">
+              <div className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                <span style={{ color: "var(--color-text)" }}>
+                  Similar items sold for
+                </span>{" "}
+                K{priceHint.low.toLocaleString()} – K{priceHint.high.toLocaleString()} recently
+                <span style={{ opacity: 0.8 }}>
+                  {" "}(n={priceHint.sampleSize}, median K{priceHint.median.toLocaleString()})
+                </span>
+              </div>
+            </div>
+          )}
+          {suggesting && !priceHint && (
+            <div className="px-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Suggesting price…
+            </div>
+          )}
+
           <button type="submit" disabled={posting} className="btn-primary" aria-label="Publish listing">
             {posting ? <span className="flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Listing…</span> : "List item"}
           </button>
+
         </form>
       </div>
     </div>
