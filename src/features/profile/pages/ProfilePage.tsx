@@ -32,14 +32,18 @@ export default function ProfilePage() {
     let cancelled = false;
 
     const load = async () => {
-      const [reviews, avg] = await Promise.all([
-        reviewService.getUserReviews(user.id),
-        reviewService.getUserAverageRating(user.id),
-      ]);
-      if (cancelled) return;
-      setRecentReviews(reviews.slice(0, 3));
-      setAvgRating(avg);
-      setReviewCount(reviews.length);
+      try {
+        const [reviews, avg] = await Promise.all([
+          reviewService.getUserReviews(user.id),
+          reviewService.getUserAverageRating(user.id),
+        ]);
+        if (cancelled) return;
+        setRecentReviews(reviews.slice(0, 3));
+        setAvgRating(avg);
+        setReviewCount(reviews.length);
+      } catch {
+        // Secondary data — silently show zero reviews rather than crashing
+      }
     };
 
     load();
@@ -76,7 +80,7 @@ export default function ProfilePage() {
   };
 
   const handleGoToAdmin = () => {
-    try { navigate("/admin"); } catch { window.location.href = "/admin"; }
+    navigate("/admin");
   };
 
   return (

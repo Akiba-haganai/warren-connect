@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth/authStore";
 import { notificationService } from "@/services/notifications/notificationService";
 import { roommateService } from "@/services/roommates/roommateService";
+import { supabase } from "@/lib/supabase/client";
 
 const tabs = [
   { label: "Home",      path: "/feed",          icon: Home },
@@ -30,7 +31,6 @@ export default function BottomNav() {
     queryKey: ["roommate-matches", user?.id],
     queryFn: () => roommateService.getNewMatchesCount(user!.id),
     enabled: !!user,
-    refetchInterval: 30_000,
   });
 
   const unreadCount = notifications?.filter((n: any) => !n.is_read).length ?? 0;
@@ -41,6 +41,23 @@ export default function BottomNav() {
       queryClient.invalidateQueries({ queryKey: ["roommate-matches", user?.id] });
     }
   }, [location.pathname, queryClient, user?.id]);
+
+  // Realtime: invalidate match badge instantly when someone likes us
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("roommate-likes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "roommate_likes", filter: `liked_id=eq.${user.id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["roommate-matches", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["roommate-like-state", user.id] });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, queryClient]);
 
   return (
     <nav

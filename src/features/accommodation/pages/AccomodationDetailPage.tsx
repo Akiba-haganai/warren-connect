@@ -75,6 +75,10 @@ export default function AccommodationDetailPage() {
   const loadAccommodation = async () => {
     if (!id) return;
     const data = await accommodationService.getAccommodationWithLandlord(id);
+    if (!data) {
+      setAccommodation(null); // triggers "Listing not found" UI
+      return;
+    }
     setAccommodation(data);
     const imgs = await accommodationService.getImages(id);
     setImages(imgs);

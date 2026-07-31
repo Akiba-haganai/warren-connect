@@ -1602,6 +1602,43 @@ export type Database = {
           title: string
         }[]
       }
+      get_roommate_matches: {
+        Args: {
+          me: string
+          p_budget_max?: number
+          p_budget_min?: number
+          p_drinking?: string
+          p_gender?: string
+          p_going_out?: string
+          p_limit?: number
+          p_offset?: number
+          p_privacy?: boolean
+          p_search?: string
+          p_smoking?: string
+          p_study?: string
+          p_university?: string
+        }
+        Returns: {
+          avatar_url: string
+          compatibility: number
+          course: string
+          drinking_preference: string
+          full_name: string
+          going_out_pattern: string
+          id: string
+          last_seen: string
+          privacy_needed: boolean
+          roommate_budget_max: number
+          roommate_budget_min: number
+          roommate_gender_preference: string
+          roommate_preferences: string
+          smoking_preference: string
+          study_habit: string
+          university: string
+          username: string
+          year_of_study: number
+        }[]
+      }
       get_trending_posts: {
         Args: { limit_count?: number }
         Returns: {

@@ -1,8 +1,10 @@
 import { Search } from "lucide-react";
 
 interface Props {
-  search: string;
-  onSearchChange: (val: string) => void;
+  // search is still accepted (used by the standalone input in the page)
+  // but no longer rendered inside this component to avoid duplication
+  search?: string;
+  onSearchChange?: (val: string) => void;
   universityFilter: string;
   onUniversityChange: (val: string) => void;
   universities: string[];
@@ -23,7 +25,6 @@ interface Props {
 }
 
 export default function RoommateFilters({
-  search, onSearchChange,
   universityFilter, onUniversityChange, universities,
   smokingFilter, onSmokingChange,
   drinkingFilter, onDrinkingChange,
@@ -35,20 +36,11 @@ export default function RoommateFilters({
 }: Props) {
   return (
     <>
-      {/* Search & University */}
+      {/* University */}
       <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--color-text-muted)" }} />
-          <input
-            className="input-field pl-9"
-            placeholder="Search by name, course…"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
+        <Search size={15} className="self-center flex-shrink-0" style={{ color: "var(--color-text-muted)" }} />
         <select
-          className="input-field w-auto text-sm"
-          style={{ width: 140 }}
+          className="input-field flex-1 text-sm"
           value={universityFilter}
           onChange={(e) => onUniversityChange(e.target.value)}
         >
@@ -60,7 +52,7 @@ export default function RoommateFilters({
       </div>
 
       {/* Quick lifestyle filters */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div className="flex gap-2 overflow-x-auto pb-1">
         <select value={smokingFilter} onChange={(e) => onSmokingChange(e.target.value)} className="input-field w-auto text-xs">
           <option value="no-preference">🚬 Any</option>
           <option value="non-smoker">Non‑smoker</option>
@@ -97,14 +89,14 @@ export default function RoommateFilters({
       <div className="flex gap-2">
         <input
           type="number"
-          placeholder="Min budget"
+          placeholder="Min budget (K)"
           value={budgetMin}
           onChange={(e) => onBudgetMinChange(e.target.value)}
           className="input-field flex-1 text-xs"
         />
         <input
           type="number"
-          placeholder="Max budget"
+          placeholder="Max budget (K)"
           value={budgetMax}
           onChange={(e) => onBudgetMaxChange(e.target.value)}
           className="input-field flex-1 text-xs"

@@ -92,9 +92,10 @@ export const accommodationService = {
       .from("accommodations")
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle(); // returns null instead of throwing PGRST116 when 0 rows
 
-    if (error || !acc) throw error || new Error("Not found");
+    if (error) throw error;
+    if (!acc) return null; // listing was deleted or never existed
 
     const { data: landlord } = await supabase
       .from("profiles")
