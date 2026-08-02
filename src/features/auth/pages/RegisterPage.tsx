@@ -45,7 +45,7 @@ export default function RegisterPage() {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold tracking-tight" style={{ color: "var(--color-text)" }}>
-          Join Warren Connect
+          Join Market
         </h2>
         <p className="text-sm mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
           Your campus tribe is waiting

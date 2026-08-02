@@ -1,7 +1,7 @@
 {
-  "name": "Warren Connect",
-  "short_name": "Warren",
-  "description": "Connect with students, buy/sell, find housing.",
+  "name": "Market",
+  "short_name": "Market",
+  "description": "Buy, sell, and find housing. by Warren.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

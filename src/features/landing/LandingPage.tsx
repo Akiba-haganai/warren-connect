@@ -10,7 +10,8 @@ export default function LandingPage() {
       {/* Hero */}
       <div className="px-4 pt-16 pb-12 text-center">
         <h1 className="text-3xl font-extrabold mb-3" style={{ color: "var(--color-text)" }}>
-          Warren Connect
+          Market
+          <span className="block text-base font-normal mt-1" style={{ color: "var(--color-text-secondary)" }}>by Warren</span>
         </h1>
         <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: "var(--color-text-secondary)" }}>
           The all‑in‑one student marketplace — buy, sell, find housing, connect with classmates, and build trust.
@@ -105,7 +106,7 @@ export default function LandingPage() {
         <Link to="/privacy" className="underline" style={{ color: "inherit" }}>
           Privacy Policy
         </Link>
-        <p className="mt-2">© {new Date().getFullYear()} Warren Connect. All rights reserved.</p>
+        <p className="mt-2">© {new Date().getFullYear()} Market by Warren. All rights reserved.</p>
       </div>
     </div>
   );

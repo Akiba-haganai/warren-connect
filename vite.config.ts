@@ -44,9 +44,9 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: "Warren Connect",
-        short_name: "Warren",
-        description: "Connect with students, buy/sell, find housing.",
+        name: "Market",
+        short_name: "Market",
+        description: "Buy, sell, and find housing. by Warren.",
         theme_color: "#1E40AF",
         background_color: "#1E40AF",
         display: "standalone",

@@ -24,13 +24,13 @@ export default function AuthLayout() {
           className="text-2xl font-bold tracking-tight"
           style={{ color: "var(--color-text)" }}
         >
-          Warren Connect
+          Market
         </h1>
         <p
           className="text-sm mt-1.5"
           style={{ color: "var(--color-text-secondary)" }}
         >
-          Your warren, connected
+          by Warren
         </p>
       </div>
 
