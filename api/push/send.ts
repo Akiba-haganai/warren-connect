@@ -3,7 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 export const runtime = "edge";
 
 export async function POST(request: Request) {
-  const { userId, title, body, url } = await request.json();
+  const { userId, title, body, url } = (await request.json()) as {
+    userId?: string;
+    title?: string;
+    body?: string;
+    url?: string;
+  };
   if (!userId || !title) return new Response("Missing fields", { status: 400 });
 
   const supabase = createClient(
