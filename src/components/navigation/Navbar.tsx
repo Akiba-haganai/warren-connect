@@ -31,16 +31,15 @@ export default function Navbar() {
       >
         <div className="flex items-center justify-between h-14 px-4">
           {/* Logo – now points to /feed */}
-          <Link to="/feed" className="flex items-center gap-2" aria-label="Market home">
+          <Link to="/feed" className="flex items-center gap-2" aria-label="Campus home">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
               style={{ background: "rgba(255,255,255,0.2)" }}
             >
-              W
+              C
             </div>
             <span className="text-white font-bold text-base tracking-tight hidden sm:block">
-              Market
-              <span className="text-white/50 text-xs ml-1 font-normal">by Warren</span>
+              Campus
             </span>
           </Link>
 

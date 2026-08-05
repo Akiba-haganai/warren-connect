@@ -5,7 +5,7 @@ export default function TermsPage() {
 
       <h2 className="text-lg font-semibold mt-6 mb-2">1. Acceptance of Terms</h2>
       <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--color-text-secondary)" }}>
-        By accessing Market by Warren, you agree to these terms. If you do not agree, please do not use the service.
+        By accessing Campus, you agree to these terms. If you do not agree, please do not use the service.
       </p>
 
       <h2 className="text-lg font-semibold mt-6 mb-2">2. User Conduct</h2>
@@ -20,7 +20,7 @@ export default function TermsPage() {
 
       <h2 className="text-lg font-semibold mt-6 mb-2">4. Limitation of Liability</h2>
       <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--color-text-secondary)" }}>
-        Market by Warren is provided "as is". We make no warranties regarding its availability or fitness for a particular purpose.
+        Campus is provided "as is". We make no warranties regarding its availability or fitness for a particular purpose.
       </p>
 
       <h2 className="text-lg font-semibold mt-6 mb-2">5. Contact</h2>

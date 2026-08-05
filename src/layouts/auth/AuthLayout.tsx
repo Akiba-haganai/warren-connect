@@ -16,7 +16,7 @@ export default function AuthLayout() {
             boxShadow: "var(--shadow-lg)",
           }}
         >
-          <span className="text-2xl font-bold text-white">W</span>
+          <span className="text-2xl font-bold text-white">C</span>
         </div>
 
         {/* Title */}
@@ -24,14 +24,8 @@ export default function AuthLayout() {
           className="text-2xl font-bold tracking-tight"
           style={{ color: "var(--color-text)" }}
         >
-          Market
+          Campus
         </h1>
-        <p
-          className="text-sm mt-1.5"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
-          by Warren
-        </p>
       </div>
 
       {/* Page content */}
