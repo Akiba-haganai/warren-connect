@@ -9,21 +9,13 @@ export default defineConfig({
     tailwindcss(),
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         cleanupOutdatedCaches: true,
         skipWaiting: false,
         clientsClaim: true,
         runtimeCaching: [
-          {
-            urlPattern: /\.(?:js|css|html|ico|png|svg|woff2)$/,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "static-assets",
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            },
-          },
           {
             urlPattern: /^https:\/\/[a-z]+\.supabase\.co\/rest\/v1\/.*/i,
             handler: "StaleWhileRevalidate",
