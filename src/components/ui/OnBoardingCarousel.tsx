@@ -1,33 +1,33 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
-import { MessageCircle, BookOpen, MapPin, ArrowRight, X, ChevronRight } from "lucide-react";
+import { ShoppingBag, Building2, Shield, ArrowRight, X, ChevronRight } from "lucide-react";
 
 const slides = [
   {
-    title: "Stay in the loop",
-    description: "Follow posts, announcements, and discussions from your campus.",
-    icon: MessageCircle,
-    action: "Open feed",
-    path: "/",
+    title: "Buy & Sell Easily",
+    description: "Discover verified listings from fellow students or list items you no longer need.",
+    icon: ShoppingBag,
+    action: "Browse market",
+    path: "/feed",
     gradient: "from-blue-600 to-cyan-500",
     bg: "from-blue-600/10 to-cyan-500/10",
   },
   {
-    title: "Study better together",
-    description: "Find notes, past papers, and join study groups for your courses.",
-    icon: BookOpen,
-    action: "Go to Study",
-    path: "/study",
+    title: "Find Student Housing",
+    description: "Explore nearby accommodations, contact landlords, and locate potential roommates.",
+    icon: Building2,
+    action: "Explore housing",
+    path: "/feed",
     gradient: "from-purple-600 to-pink-500",
     bg: "from-purple-600/10 to-pink-500/10",
   },
   {
-    title: "Never get lost",
-    description: "Use the campus map to locate offices, lecture halls, and more.",
-    icon: MapPin,
-    action: "Open map",
-    path: "/campus-map",
+    title: "Trade with Confidence",
+    description: "Connect safely with verified profiles and built-in chat messaging.",
+    icon: Shield,
+    action: "Get started",
+    path: "/feed",
     gradient: "from-emerald-600 to-green-500",
     bg: "from-emerald-600/10 to-green-500/10",
   },

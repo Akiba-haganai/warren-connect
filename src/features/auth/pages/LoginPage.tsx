@@ -42,7 +42,7 @@ export default function LoginPage() {
           Sign in
         </h2>
         <p className="text-sm mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
-          Welcome back to campus
+          Welcome back to Market
         </p>
       </div>
 

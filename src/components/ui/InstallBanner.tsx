@@ -81,21 +81,21 @@ export default function InstallBanner() {
   return (
     <>
       {/* Floating Banner */}
-      <div className="fixed bottom-24 left-4 right-4 z-[55]">
+      <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] left-4 right-4 z-[55]">
         <div className="relative overflow-hidden rounded-3xl border border-blue-100 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 p-4 pr-10 shadow-2xl backdrop-blur-md">
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-500" />
 
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 shrink-0 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-black shadow-md shadow-blue-500/20">
-                C
+                M
               </div>
               <div className="text-left">
                 <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 tracking-wider uppercase">
                   App Available
                 </p>
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                  Install Campus App
+                  Install Market App
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Add to home screen for native experience
@@ -134,7 +134,7 @@ export default function InstallBanner() {
                   Install on iPhone / iPad
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Add Campus to your home screen in 3 steps
+                  Add Market to your home screen in 3 steps
                 </p>
               </div>
               <button

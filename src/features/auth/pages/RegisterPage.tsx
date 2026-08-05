@@ -48,7 +48,7 @@ export default function RegisterPage() {
           Join Market
         </h2>
         <p className="text-sm mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
-          Your campus tribe is waiting
+          Your Market community is waiting
         </p>
       </div>
 

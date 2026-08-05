@@ -57,7 +57,7 @@ export default function SettingsPage() {
   };
 
   const handleUploadClick = () => {
-    if (window.confirm("I understand that this document will be reviewed by campus administrators and stored securely.")) {
+    if (window.confirm("I understand that this document will be reviewed by university administrators and stored securely.")) {
       document.getElementById("id-upload")?.click();
     }
   };

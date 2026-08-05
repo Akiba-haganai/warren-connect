@@ -1,7 +1,7 @@
 {
-  "name": "Campus",
-  "short_name": "Campus",
-  "description": "Buy, sell, find housing, and connect on Campus.",
+  "name": "Market",
+  "short_name": "Market",
+  "description": "Buy, sell, trade, and find housing on Market.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

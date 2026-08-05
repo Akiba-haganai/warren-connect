@@ -36,9 +36,9 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: "Campus",
-        short_name: "Campus",
-        description: "Buy, sell, find housing, and connect on Campus.",
+        name: "Market",
+        short_name: "Market",
+        description: "Buy, sell, trade, and find housing on Market.",
         theme_color: "#1E40AF",
         background_color: "#1E40AF",
         display: "standalone",
