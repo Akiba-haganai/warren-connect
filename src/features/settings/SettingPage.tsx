@@ -4,6 +4,7 @@ import { useAuthStore } from "@/store/auth/authStore";
 import { supabase } from "@/lib/supabase/client";
 import { ArrowLeft, Lock, Loader2, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
+import { useVersionCheck } from "@/hooks/useVersionCheck";
 
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
@@ -15,6 +16,27 @@ export default function SettingsPage() {
   const [message, setMessage] = useState("");
   const [verificationStatus, setVerificationStatus] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState(false);
+
+  const { updateAvailable, currentVersion, serverVersion } = useVersionCheck();
+  const [clearing, setClearing] = useState(false);
+
+  const handleForceRefresh = async () => {
+    setClearing(true);
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      toast.success("Cache cleared! Reloading…");
+      setTimeout(() => window.location.reload(), 500);
+    } catch (err) {
+      console.error("Force refresh failed:", err);
+      window.location.reload();
+    }
+  };
 
   // Check verification request status on mount
   useEffect(() => {
@@ -198,6 +220,39 @@ export default function SettingsPage() {
               {loading ? <Loader2 size={14} className="animate-spin" /> : "Change password"}
             </button>
           </form>
+        </div>
+
+        {/* App Version Info & Diagnostics */}
+        <div className="card p-4">
+          <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>App Information</h2>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between text-xs py-1" style={{ color: "var(--color-text-secondary)" }}>
+              <span>Current Version</span>
+              <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                {currentVersion.slice(0, 7)}
+              </span>
+            </div>
+            {updateAvailable && serverVersion && (
+              <div className="flex items-center justify-between text-xs py-1 text-amber-600 dark:text-amber-400">
+                <span>Update Available</span>
+                <span className="font-mono bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/50">
+                  {serverVersion.slice(0, 7)}
+                </span>
+              </div>
+            )}
+            <p className="text-[11px] mt-1" style={{ color: "var(--color-text-muted)" }}>
+              If you are facing display, caching, or update issues, you can clear all service worker caches manually.
+            </p>
+            <button
+              type="button"
+              onClick={handleForceRefresh}
+              disabled={clearing}
+              className="mt-2 w-full text-center px-4 py-2 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition-colors disabled:opacity-50"
+            >
+              {clearing ? <Loader2 size={12} className="animate-spin mr-1 inline" /> : null}
+              {clearing ? "Clearing cache…" : "Force Refresh App"}
+            </button>
+          </div>
         </div>
 
         {/* Danger Zone */}

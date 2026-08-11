@@ -3,18 +3,52 @@ import react from "@vitejs/plugin-react";
 import path from "node:path";
 import { VitePWA } from "vite-plugin-pwa";
 import tailwindcss from "@tailwindcss/vite";
+import fs from "node:fs";
+
+const appVersion = process.env.VERCEL_GIT_COMMIT_SHA || `dev-${Date.now()}`;
+
+const versionPlugin = () => {
+  return {
+    name: "generate-version-json",
+    configureServer(server: any) {
+      server.middlewares.use((req: any, res: any, next: any) => {
+        if (req.url?.startsWith("/version.json")) {
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ version: appVersion }));
+        } else {
+          next();
+        }
+      });
+    },
+    closeBundle() {
+      const distPath = path.resolve(__dirname, "dist");
+      if (!fs.existsSync(distPath)) {
+        fs.mkdirSync(distPath, { recursive: true });
+      }
+      fs.writeFileSync(
+        path.resolve(distPath, "version.json"),
+        JSON.stringify({ version: appVersion })
+      );
+    },
+  };
+};
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   plugins: [
     tailwindcss(),
     react(),
+    versionPlugin(),
     VitePWA({
-      registerType: "prompt",
+      registerType: "autoUpdate",
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         cleanupOutdatedCaches: true,
-        skipWaiting: false,
+        skipWaiting: true,
         clientsClaim: true,
+        navigateFallback: "/index.html",
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/[a-z]+\.supabase\.co\/rest\/v1\/.*/i,

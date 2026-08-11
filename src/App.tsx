@@ -5,6 +5,7 @@ import AuthProvider from "@/app/providers/AuthProvider";
 import { Toaster } from "react-hot-toast";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import UpdatePrompt from "@/components/layout/UpdatePrompt";
+import RebrandBanner from "@/components/layout/RebrandBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +40,7 @@ export default function App() {
             }}
           />
           <UpdatePrompt />
+          <RebrandBanner />
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

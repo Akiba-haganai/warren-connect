@@ -13,7 +13,7 @@ import VerificationStatusBanner from "@/features/profile/components/Verification
 import ProfileCompletionMeter from "@/features/profile/components/ProfileCompletionMeter";
 import RoommatePreferencesCard from "@/features/profile/components/RoommatePreferencesCard";
 import DeleteAccountButton from "@/features/profile/components/DeleteAccountButton";
-import { Shield, LogOut, Loader2, Star, Clock } from "lucide-react";
+import { Shield, LogOut, Loader2, Star, Clock, Settings } from "lucide-react";
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
@@ -150,6 +150,10 @@ export default function ProfilePage() {
             <Shield size={15} /> Admin
           </button>
         )}
+        <button onClick={() => navigate("/settings")} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium active:scale-95 transition-transform"
+                style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", color: "var(--color-text-secondary)", minHeight: 44 }}>
+          <Settings size={15} /> Settings
+        </button>
         <button onClick={handleSignOut} disabled={signingOut} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium active:scale-95 transition-transform"
                 style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", color: "var(--color-text-secondary)", minHeight: 44 }}>
           {signingOut ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={15} />}
