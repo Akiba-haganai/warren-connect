@@ -46,6 +46,7 @@ export default function AdminDashboardPage() {
   const [accommodations, setAccommodations] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
   const [resetReqs, setResetReqs] = useState<any[]>([]);
+  const [newTagName, setNewTagName] = useState("");
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
@@ -197,12 +198,13 @@ export default function AdminDashboardPage() {
     } catch (e) { err(e); }
   };
 
-  const handleCreateTag = async () => {
-    const name = prompt("Tag name:");
-    if (!name) return;
+  const handleCreateTag = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newTagName.trim()) return;
     try {
-      await adminService.createTag(name);
+      await adminService.createTag(newTagName.trim());
       setTags(await adminService.getAllTags());
+      setNewTagName("");
       toast.success("Tag created");
     } catch (e) { err(e); }
   };
@@ -217,22 +219,44 @@ export default function AdminDashboardPage() {
     } catch (e) { err(e); }
   };
 
-
-
   if (loading)
     return <div className="flex justify-center py-20"><Loader2 className="animate-spin" /></div>;
 
-  const Pill = ({ tab }: { tab: string }) => (
-    <button
-      onClick={() => setSearchParams({ tab })}
-      className={`text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap ${
-        activeTab === tab ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-      }`}
-      style={activeTab === tab ? { background: "var(--color-primary)", color: "#fff" } : {}}
-    >
-      {tab}
-    </button>
-  );
+  const pendingResetCount = resetReqs.filter((r) => r.status === "verified_pending_admin").length;
+  const pendingVerificationCount = requests.filter((r) => r.status === "pending").length;
+  const pendingReportCount = reports.filter((r) => !r.status || r.status === "pending").length;
+
+  const Pill = ({ tab }: { tab: string }) => {
+    const count =
+      tab === "resets"
+        ? pendingResetCount
+        : tab === "verifications"
+        ? pendingVerificationCount
+        : tab === "reports"
+        ? pendingReportCount
+        : 0;
+
+    return (
+      <button
+        onClick={() => setSearchParams({ tab })}
+        className={`text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap flex items-center gap-1.5 transition-all ${
+          activeTab === tab ? "bg-primary text-white shadow-sm" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+        }`}
+        style={activeTab === tab ? { background: "var(--color-primary)", color: "#fff" } : {}}
+      >
+        <span className="capitalize">{tab}</span>
+        {count > 0 && (
+          <span className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
+            activeTab === tab
+              ? "bg-white text-blue-700"
+              : "bg-red-500 text-white"
+          }`}>
+            {count}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   const TinyStat = ({ icon: Icon, label, value, color }: any) => (
     <div className="card p-2 flex items-center gap-2">
@@ -414,13 +438,34 @@ export default function AdminDashboardPage() {
 
         {/* Tags */}
         {activeTab === "tags" && (
-          <div className="space-y-2">
-            <button onClick={handleCreateTag} className="btn-primary w-auto px-4 py-1.5 text-xs">+ Create Tag</button>
+          <div className="space-y-3">
+            <form onSubmit={handleCreateTag} className="flex gap-2">
+              <input
+                type="text"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder="Enter new tag name..."
+                className="input-field text-xs flex-1"
+              />
+              <button
+                type="submit"
+                disabled={!newTagName.trim()}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shrink-0 transition-all"
+              >
+                + Add Tag
+              </button>
+            </form>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {tags.map((tag) => (
-                <div key={tag.id} className="card p-2 flex items-center justify-between gap-2">
-                  <span className="text-xs truncate">{tag.name}</span>
-                  <button onClick={() => handleDeleteTag(tag.id)} className="text-[10px] px-2 py-1 rounded bg-red-100 text-red-800">Del</button>
+                <div key={tag.id} className="card p-2.5 flex items-center justify-between gap-2 border border-slate-200 dark:border-slate-800">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{tag.name}</span>
+                  <button
+                    onClick={() => handleDeleteTag(tag.id)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 hover:bg-red-200 transition-colors shrink-0"
+                    title="Delete Tag"
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               ))}
             </div>
