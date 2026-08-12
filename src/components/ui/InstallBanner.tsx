@@ -8,11 +8,16 @@ export default function InstallBanner() {
   const [showIOSModal, setShowIOSModal] = useState(false);
 
   useEffect(() => {
-    // Debug trigger: Ctrl + Shift + P or ?pwa=1 query param forces banner open
+    // Custom event listener for mobile taps (e.g., from Settings page button or app header)
+    const customEventListener = () => {
+      setShowBanner(true);
+    };
+    window.addEventListener("pwa-open-install-banner", customEventListener);
+
+    // Debug trigger: ?pwa=1 query param forces banner open
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("pwa") === "1") {
       setShowBanner(true);
-      return;
     }
 
     const keyListener = (e: KeyboardEvent) => {
@@ -27,13 +32,21 @@ export default function InstallBanner() {
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as any).standalone === true;
-    if (isStandalone && !urlParams.get("pwa")) return () => window.removeEventListener("keydown", keyListener);
+    if (isStandalone && !urlParams.get("pwa")) {
+      return () => {
+        window.removeEventListener("pwa-open-install-banner", customEventListener);
+        window.removeEventListener("keydown", keyListener);
+      };
+    }
 
     // 2. 30‑day dismissal
     const dismissedAt = localStorage.getItem("pwa-install-dismissed-at");
     const thirtyDays = 30 * 24 * 60 * 60 * 1000;
     if (dismissedAt && Date.now() - parseInt(dismissedAt) < thirtyDays && !urlParams.get("pwa")) {
-      return () => window.removeEventListener("keydown", keyListener);
+      return () => {
+        window.removeEventListener("pwa-open-install-banner", customEventListener);
+        window.removeEventListener("keydown", keyListener);
+      };
     }
 
     // 3. Detect iOS
@@ -46,10 +59,8 @@ export default function InstallBanner() {
 
     if (isIOS) {
       setIsIOSDevice(true);
-      // Show iOS banner after 2 seconds
       timer = setTimeout(() => setShowBanner(true), 2000);
     } else {
-      // Android / desktop Chrome / Edge – listen for the install prompt
       const handler = (e: Event) => {
         e.preventDefault();
         setDeferredPrompt(e);
@@ -57,19 +68,20 @@ export default function InstallBanner() {
       };
       window.addEventListener("beforeinstallprompt", handler);
 
-      // Fallback: if the event never fires, still show after 5 seconds
       timer = setTimeout(() => {
         if (!deferredPrompt) setShowBanner(true);
       }, 5000);
 
       return () => {
         window.removeEventListener("beforeinstallprompt", handler);
+        window.removeEventListener("pwa-open-install-banner", customEventListener);
         window.removeEventListener("keydown", keyListener);
         if (timer) clearTimeout(timer);
       };
     }
 
     return () => {
+      window.removeEventListener("pwa-open-install-banner", customEventListener);
       window.removeEventListener("keydown", keyListener);
       if (timer) clearTimeout(timer);
     };
@@ -77,16 +89,14 @@ export default function InstallBanner() {
 
   const handleInstall = async () => {
     if (isIOSDevice) {
-      setShowIOSModal(true);            // Show iOS walkthrough
+      setShowIOSModal(true);
     } else if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === "accepted") setShowBanner(false);
       setDeferredPrompt(null);
     } else {
-      // Fallback: open a generic install guide or simply dismiss
-      alert("You can install this app from your browser menu.");
-      setShowBanner(false);
+      setShowIOSModal(true); // Fallback to visual install guide modal for all mobile devices
     }
   };
 
@@ -99,45 +109,50 @@ export default function InstallBanner() {
 
   return (
     <>
-      {/* Floating Banner */}
-      <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] left-4 right-4 z-[55]">
-        <div className="relative overflow-hidden rounded-3xl border border-blue-100 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 p-4 pr-10 shadow-2xl backdrop-blur-md">
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-500" />
+      {/* Mobile-First Bottom Floating Sheet */}
+      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-3 right-3 z-[55] max-w-md mx-auto">
+        <div className="relative overflow-hidden rounded-2xl border border-blue-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-3.5 shadow-2xl backdrop-blur-md">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-500" />
 
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 shrink-0 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-black shadow-md shadow-blue-500/20">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-black shadow-md shadow-blue-500/20 text-base">
                 W
               </div>
-              <div className="text-left">
-                <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 tracking-wider uppercase">
-                  App Available
-                </p>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                  Install Warren Connect
-                </p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Add to home screen for native experience
+              <div className="text-left min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                    Install Warren Connect
+                  </p>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 shrink-0">
+                    App
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                  Add to home screen for native speed & alerts
                 </p>
               </div>
             </div>
 
-            <button
-              onClick={handleInstall}
-              className="flex items-center gap-1.5 rounded-2xl bg-blue-600 dark:bg-blue-500 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.99] transition-all duration-200 shrink-0"
-            >
-              <Download size={13} />
-              Install
-            </button>
-          </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={handleInstall}
+                className="min-h-[40px] px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white shadow-md shadow-blue-600/20 active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <Download size={14} />
+                Install
+              </button>
 
-          <button
-            onClick={handleDismiss}
-            className="absolute top-3.5 right-3 p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors duration-150"
-            aria-label="Dismiss banner"
-          >
-            <X size={16} />
-          </button>
+              {/* 44px Touch Target for Close Button */}
+              <button
+                onClick={handleDismiss}
+                className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Dismiss banner"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
