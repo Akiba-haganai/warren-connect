@@ -21,15 +21,22 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const openAiKey = Deno.env.get("OPENAI_API_KEY")!;
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Check if user is banned
+    const { data: profile } = await supabaseAuth.from("profiles").select("is_banned").eq("id", user.id).single();
+    if (profile?.is_banned) {
+      return new Response(JSON.stringify({ error: "Your account has been banned due to policy violations." }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Moderation check
@@ -53,8 +60,9 @@ serve(async (req) => {
       }
     }
 
-    // Insert normally
-    const { data, error } = await supabase
+    // Insert using Service Role client (bypasses RLS since caller identity is verified and text is moderated)
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const { data, error } = await supabaseAdmin
       .from("posts")
       .insert({ 
         user_id: user.id, 
