@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { profileService } from "@/services/profiles/profileService";
+import { Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function RoommatePreferencesCard() {
   const user = useAuthStore((s) => s.user);
@@ -8,6 +10,7 @@ export default function RoommatePreferencesCard() {
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
 
   const [looking, setLooking] = useState(profile?.looking_for_roommate ?? false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [prefs, setPrefs] = useState({
     smoking: profile?.smoking_preference ?? "no-preference",
     drinking: profile?.drinking_preference ?? "no-preference",
@@ -39,47 +42,60 @@ export default function RoommatePreferencesCard() {
 
   if (!user) return null;
 
-  // Optimistic toggle – no saving guard, just flip and update backend
   const handleToggleLooking = async () => {
+    if (isUpdating) return;
     const newValue = !looking;
     setLooking(newValue);
+    setIsUpdating(true);
     try {
       await profileService.updateProfile(user.id, { looking_for_roommate: newValue });
-      refreshProfile(user.id);
-    } catch {
+      await refreshProfile(user.id);
+    } catch (e: any) {
       setLooking(!newValue); // rollback on error
+      toast.error(e.message || "Failed to update roommate status");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  // Optimistic save for any preference field
   const handleSave = async (field: string, value: any) => {
+    if (isUpdating) return;
     const previous = { ...prefs };
     setPrefs((p) => ({ ...p, [field]: value }));
+    setIsUpdating(true);
     try {
       await profileService.updateProfile(user.id, { [field]: value });
-      refreshProfile(user.id);
-    } catch {
+      await refreshProfile(user.id);
+    } catch (e: any) {
       setPrefs(previous); // rollback
+      toast.error(e.message || "Failed to update preference");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   return (
-    <div className="card p-4 mx-4 mt-4">
+    <div className="card p-4 mx-4 mt-4 relative">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
           Looking for roommate
         </span>
         <button
           onClick={handleToggleLooking}
-          className={`w-12 h-6 rounded-full transition-colors ${looking ? "bg-green-500" : "bg-gray-300"}`}
+          disabled={isUpdating}
+          className={`w-12 h-6 rounded-full transition-colors flex items-center justify-center ${looking ? "bg-green-500" : "bg-gray-300"} ${isUpdating ? "opacity-50 cursor-not-allowed" : ""}`}
           style={{ position: "relative" }}
           aria-pressed={looking}
           aria-label="Toggle looking for roommate"
         >
-          <span
-            className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform"
-            style={{ transform: looking ? "translateX(24px)" : "translateX(0)" }}
-          />
+          {isUpdating ? (
+            <Loader2 size={12} className="animate-spin text-white z-10" />
+          ) : (
+            <span
+              className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform"
+              style={{ transform: looking ? "translateX(24px)" : "translateX(0)" }}
+            />
+          )}
         </button>
       </div>
 

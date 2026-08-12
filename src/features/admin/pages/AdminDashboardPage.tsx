@@ -48,9 +48,17 @@ export default function AdminDashboardPage() {
   const [resetReqs, setResetReqs] = useState<any[]>([]);
   const [newTagName, setNewTagName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
   const [search, setSearch] = useState("");
   const [contentType, setContentType] = useState<"posts" | "products" | "accommodations">("posts");
+
+  const withProcessing = (id: string, fn: (...args: any[]) => Promise<void>) => async (...args: any[]) => {
+    if (processingIds.has(id)) return;
+    setProcessingIds((p) => new Set(p).add(id));
+    try { await fn(...args); }
+    finally { setProcessingIds((p) => { const n = new Set(p); n.delete(id); return n; }); }
+  };
 
   useEffect(() => {
     (async () => {
@@ -270,19 +278,22 @@ export default function AdminDashboardPage() {
     </div>
   );
 
-  const ActionButtons = ({ type, item }: any) => (
-    <div className="flex gap-1 flex-shrink-0">
-      <button onClick={() => handleFeature(type, item.id, item.featured)} className={`p-1 rounded ${item.featured ? "bg-yellow-300" : "bg-yellow-100"}`} title={item.featured ? "Unfeature" : "Feature"}>
-        <Star size={12} />
-      </button>
-      <button onClick={() => item.is_hidden ? handleUnhide(type, item.id) : handleHide(type, item.id)} className="p-1 rounded bg-yellow-100" title={item.is_hidden ? "Unhide" : "Hide"}>
-        <EyeOff size={12} />
-      </button>
-      <button onClick={() => handleDelete(type, item.id)} className="p-1 rounded bg-red-100 text-red-800" title="Delete">
-        <Trash2 size={12} />
-      </button>
-    </div>
-  );
+  const ActionButtons = ({ type, item }: any) => {
+    if (processingIds.has(item.id)) return <div className="flex items-center justify-center w-20"><Loader2 size={14} className="animate-spin text-muted" /></div>;
+    return (
+      <div className="flex gap-1 flex-shrink-0">
+        <button onClick={() => withProcessing(item.id, async () => handleFeature(type, item.id, item.featured))()} className={`p-1 rounded ${item.featured ? "bg-yellow-300" : "bg-yellow-100"}`} title={item.featured ? "Unfeature" : "Feature"}>
+          <Star size={12} />
+        </button>
+        <button onClick={() => withProcessing(item.id, async () => item.is_hidden ? handleUnhide(type, item.id) : handleHide(type, item.id))()} className="p-1 rounded bg-yellow-100" title={item.is_hidden ? "Unhide" : "Hide"}>
+          <EyeOff size={12} />
+        </button>
+        <button onClick={() => withProcessing(item.id, async () => handleDelete(type, item.id))()} className="p-1 rounded bg-red-100 text-red-800" title="Delete">
+          <Trash2 size={12} />
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -334,18 +345,24 @@ export default function AdminDashboardPage() {
                   <p className="text-[10px] text-muted truncate">{u.email}</p>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
-                  <button onClick={() => handleBan(u.id, u.is_banned ?? false)} className="text-[10px] px-2 py-1 rounded bg-red-100 text-red-800">
-                    {u.is_banned ? "Unban" : "Ban"}
-                  </button>
-                  <button onClick={() => handleRole(u.id, "is_admin", u.is_admin)} className="text-[10px] px-2 py-1 rounded bg-purple-100 text-purple-800">
-                    {u.is_admin ? "Revoke" : "Admin"}
-                  </button>
-                  <button onClick={() => handleRole(u.id, "is_verified", u.is_verified)} className="text-[10px] px-2 py-1 rounded bg-green-100 text-green-800">
-                    {u.is_verified ? "Unverify" : "Verify"}
-                  </button>
-                  <button onClick={() => handleRole(u.id, "is_landlord", u.is_landlord ?? false)} className="text-[10px] px-2 py-1 rounded bg-blue-100 text-blue-800">
-                    {u.is_landlord ? "Remove" : "Landlord"}
-                  </button>
+                  {processingIds.has(u.id) ? (
+                    <div className="flex items-center justify-center w-24"><Loader2 size={14} className="animate-spin text-muted" /></div>
+                  ) : (
+                    <>
+                      <button onClick={() => withProcessing(u.id, async () => handleBan(u.id, u.is_banned ?? false))()} className="text-[10px] px-2 py-1 rounded bg-red-100 text-red-800 disabled:opacity-50">
+                        {u.is_banned ? "Unban" : "Ban"}
+                      </button>
+                      <button onClick={() => withProcessing(u.id, async () => handleRole(u.id, "is_admin", u.is_admin))()} className="text-[10px] px-2 py-1 rounded bg-purple-100 text-purple-800 disabled:opacity-50">
+                        {u.is_admin ? "Revoke" : "Admin"}
+                      </button>
+                      <button onClick={() => withProcessing(u.id, async () => handleRole(u.id, "is_verified", u.is_verified))()} className="text-[10px] px-2 py-1 rounded bg-green-100 text-green-800 disabled:opacity-50">
+                        {u.is_verified ? "Unverify" : "Verify"}
+                      </button>
+                      <button onClick={() => withProcessing(u.id, async () => handleRole(u.id, "is_landlord", u.is_landlord ?? false))()} className="text-[10px] px-2 py-1 rounded bg-blue-100 text-blue-800 disabled:opacity-50">
+                        {u.is_landlord ? "Remove" : "Landlord"}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -367,8 +384,9 @@ export default function AdminDashboardPage() {
               </select>
             </div>
             {(contentType === "posts" ? posts : contentType === "products" ? products : accommodations).map((item) => (
-              <div key={item.id} className="card p-2 flex items-start justify-between gap-2">
+              <div key={item.id} className={`card p-2 flex items-start justify-between gap-2 ${item.is_hidden ? 'opacity-50' : ''}`}>
                 <p className="text-xs line-clamp-2 flex-1 min-w-0">
+                  {item.is_hidden && <span className="font-bold text-red-600 mr-1">[HIDDEN]</span>}
                   {contentType === "posts" ? item.content : item.title}
                   {item.price ? ` – K${item.price}` : item.monthly_rent ? ` – K${item.monthly_rent}/mo` : ""}
                 </p>
@@ -393,8 +411,14 @@ export default function AdminDashboardPage() {
                   <span className={`text-[10px] px-2 py-1 rounded-full ${req.status === "pending" ? "bg-yellow-100" : req.status === "approved" ? "bg-green-100" : "bg-red-100"}`}>{req.status}</span>
                   {req.status === "pending" && (
                     <div className="flex gap-1">
-                      <button onClick={() => handleApprove(req)} className="text-[10px] px-2 py-1 bg-green-500 text-white rounded">Approve</button>
-                      <button onClick={() => handleReject(req)} className="text-[10px] px-2 py-1 bg-red-500 text-white rounded">Reject</button>
+                      {processingIds.has(req.id) ? (
+                        <Loader2 size={16} className="animate-spin text-muted" />
+                      ) : (
+                        <>
+                          <button onClick={() => withProcessing(req.id, async () => handleApprove(req))()} className="text-[10px] px-2 py-1 bg-green-500 text-white rounded">Approve</button>
+                          <button onClick={() => withProcessing(req.id, async () => handleReject(req))()} className="text-[10px] px-2 py-1 bg-red-500 text-white rounded">Reject</button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -421,12 +445,18 @@ export default function AdminDashboardPage() {
                     <p className="text-[10px] text-muted mt-1">Status: {r.status || "pending"}</p>
                   </div>
                   <div className="flex gap-1 flex-shrink-0 flex-wrap">
-                    <button onClick={() => handleReportAction(r.id, "reviewed")} className="text-[10px] px-2 py-1 rounded bg-yellow-100 text-yellow-800">Review</button>
-                    <button onClick={() => handleReportAction(r.id, "resolved")} className="text-[10px] px-2 py-1 rounded bg-green-100 text-green-800">Resolve</button>
-                    {r.content_type !== "user" && (
+                    {processingIds.has(r.id) ? (
+                      <div className="flex items-center justify-center w-24"><Loader2 size={14} className="animate-spin text-muted" /></div>
+                    ) : (
                       <>
-                        <button onClick={() => handleHide(r.content_type, r.content_id)} className="text-[10px] px-2 py-1 rounded bg-red-100 text-red-800">Hide</button>
-                        <button onClick={() => handleDelete(r.content_type, r.content_id)} className="text-[10px] px-2 py-1 rounded bg-red-200 text-red-900">Delete</button>
+                        <button onClick={() => withProcessing(r.id, async () => handleReportAction(r.id, "reviewed"))()} className="text-[10px] px-2 py-1 rounded bg-yellow-100 text-yellow-800">Review</button>
+                        <button onClick={() => withProcessing(r.id, async () => handleReportAction(r.id, "resolved"))()} className="text-[10px] px-2 py-1 rounded bg-green-100 text-green-800">Resolve</button>
+                        {r.content_type !== "user" && r.content_id && (
+                          <>
+                            <button onClick={() => withProcessing(r.id, async () => handleHide(r.content_type, r.content_id))()} className="text-[10px] px-2 py-1 rounded bg-red-100 text-red-800">Hide</button>
+                            <button onClick={() => withProcessing(r.id, async () => handleDelete(r.content_type, r.content_id))()} className="text-[10px] px-2 py-1 rounded bg-red-200 text-red-900">Delete</button>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
@@ -459,13 +489,19 @@ export default function AdminDashboardPage() {
               {tags.map((tag) => (
                 <div key={tag.id} className="card p-2.5 flex items-center justify-between gap-2 border border-slate-200 dark:border-slate-800">
                   <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{tag.name}</span>
-                  <button
-                    onClick={() => handleDeleteTag(tag.id)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 hover:bg-red-200 transition-colors shrink-0"
-                    title="Delete Tag"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  {processingIds.has(tag.id) ? (
+                    <div className="w-7 h-7 flex items-center justify-center shrink-0">
+                      <Loader2 size={13} className="animate-spin text-muted" />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => withProcessing(tag.id, async () => handleDeleteTag(tag.id))()}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 hover:bg-red-200 transition-colors shrink-0"
+                      title="Delete Tag"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -501,34 +537,40 @@ export default function AdminDashboardPage() {
 
                 {r.status === "verified_pending_admin" && (
                   <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={async () => {
-                        try {
-                          await recoveryService.adminApproveReset(r.id);
-                          setResetReqs((prev) => prev.map((item) => (item.id === r.id ? { ...item, status: "approved" } : item)));
-                          toast.success("Approved & Reset email dispatched!");
-                        } catch (e: any) {
-                          toast.error(e.message || "Failed to approve");
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
-                    >
-                      Approve & Send Email
-                    </button>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await recoveryService.adminRejectReset(r.id);
-                          setResetReqs((prev) => prev.map((item) => (item.id === r.id ? { ...item, status: "rejected" } : item)));
-                          toast.success("Request rejected");
-                        } catch (e: any) {
-                          toast.error(e.message || "Failed to reject");
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950 dark:text-red-300 transition-all"
-                    >
-                      Reject
-                    </button>
+                    {processingIds.has(r.id) ? (
+                      <Loader2 size={16} className="animate-spin text-muted" />
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => withProcessing(r.id, async () => {
+                            try {
+                              await recoveryService.adminApproveReset(r.id);
+                              setResetReqs((prev) => prev.map((item) => (item.id === r.id ? { ...item, status: "approved" } : item)));
+                              toast.success("Approved & Reset email dispatched!");
+                            } catch (e: any) {
+                              toast.error(e.message || "Failed to approve");
+                            }
+                          })()}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
+                        >
+                          Approve & Send Email
+                        </button>
+                        <button
+                          onClick={() => withProcessing(r.id, async () => {
+                            try {
+                              await recoveryService.adminRejectReset(r.id);
+                              setResetReqs((prev) => prev.map((item) => (item.id === r.id ? { ...item, status: "rejected" } : item)));
+                              toast.success("Request rejected");
+                            } catch (e: any) {
+                              toast.error(e.message || "Failed to reject");
+                            }
+                          })()}
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950 dark:text-red-300 transition-all"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

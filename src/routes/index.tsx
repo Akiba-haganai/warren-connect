@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Outlet } from "react-router-dom";
 import { lazy, Suspense } from "react";
 
 import AuthLayout from "@/layouts/auth/AuthLayout";
@@ -11,6 +11,14 @@ import AdminRoute from "@/routes/guards/AdminRoute";
 
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import { Loader2 } from "lucide-react";
+import NProgressHandler from "@/components/navigation/NProgressHandler";
+
+const Root = () => (
+  <>
+    <NProgressHandler />
+    <Outlet />
+  </>
+);
 
 // ---------- LAZY PAGES ----------
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
@@ -75,105 +83,110 @@ const withBoundary = (Component: React.LazyExoticComponent<React.ComponentType<a
 
 // ---------- ROUTER ----------
 export const router = createBrowserRouter([
-  // =========================
-  // PUBLIC LANDING PAGE
-  // =========================
   {
-    path: "/",
-    element: (
-      <Suspense fallback={<PageLoader />}>
-        <LandingPage />
-      </Suspense>
-    ),
-  },
-
-  // =========================
-  // AUTH ROUTES
-  // =========================
-  {
-    element: (
-      <GuestRoute>
-        <AuthLayout />
-      </GuestRoute>
-    ),
+    element: <Root />,
     children: [
-      { path: "/login", element: withBoundary(LoginPage) },
-      { path: "/register", element: withBoundary(RegisterPage) },
-      { path: "/forgot-password", element: withBoundary(ForgotPasswordPage) },
-      { path: "/reset-password", element: withBoundary(ResetPasswordPage) },
-    ],
-  },
-
-  // =========================
-  // MAIN APP ROUTES (protected)
-  // =========================
-  {
-    element: (
-      <ProtectedRoute>
-        <MainLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      { path: "/feed", element: withBoundary(HomeFeedPage) },
-      { path: "/user/:id", element: withBoundary(PublicProfilePage) },
-      { path: "/profile", element: withBoundary(ProfilePage) },
-      { path: "/complete-profile", element: withBoundary(CompleteProfilePage) },
-      { path: "/marketplace/:id", element: withBoundary(ProductDetailPage) },
-      { path: "/marketplace", element: withBoundary(MarketplacePage) },
-      { path: "/accommodation/:id", element: withBoundary(AccommodationDetailPage) },
-      { path: "/accommodation", element: withBoundary(AccommodationPage) },
-      { path: "/roommates", element: withBoundary(RoommateFinderPage) },
-      { path: "/messages", element: withBoundary(MessagesPage) },
-      { path: "/notifications", element: withBoundary(NotificationsPage) },
-      { path: "/verification", element: withBoundary(VerificationRequestPage) },
-      { path: "/saved", element: withBoundary(SavedItemsPage) },
-      { path: "/shop/:id", element: withBoundary(ShopPage) },
-      { path: "/shop/:id/join", element: withBoundary(ShopJoinPage) },
-      { path: "/post/:id", element: withBoundary(PostDetailPage) },
-      { path: "/tag/:tagName", element: withBoundary(TagPage) },
-      { path: "/settings", element: withBoundary(SettingsPage) },
-    ],
-  },
-
-  // =========================
-  // PUBLIC LEGAL ROUTES
-  // =========================
-  {
-    path: "/terms",
-    element: (
-      <Suspense fallback={<PageLoader />}>
-        <TermsPage />
-      </Suspense>
-    ),
-  },
-  {
-    path: "/privacy",
-    element: (
-      <Suspense fallback={<PageLoader />}>
-        <PrivacyPage />
-      </Suspense>
-    ),
-  },
-
-  // =========================
-  // ADMIN ROUTES (single entry point, uses ?tab=)
-  // =========================
-  {
-    path: "/admin",
-    element: (
-      <AdminRoute>
-        <AdminLayout />
-      </AdminRoute>
-    ),
-    children: [
+      // =========================
+      // PUBLIC LANDING PAGE
+      // =========================
       {
-        index: true,
-        element: withBoundary(AdminDashboardPage),
+        path: "/",
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <LandingPage />
+          </Suspense>
+        ),
       },
-      // Catch-all to support old paths like /admin/users etc. – they still work via tab param
+
+      // =========================
+      // AUTH ROUTES
+      // =========================
       {
-        path: "*",
-        element: withBoundary(AdminLegacyRedirect),
+        element: (
+          <GuestRoute>
+            <AuthLayout />
+          </GuestRoute>
+        ),
+        children: [
+          { path: "/login", element: withBoundary(LoginPage) },
+          { path: "/register", element: withBoundary(RegisterPage) },
+          { path: "/forgot-password", element: withBoundary(ForgotPasswordPage) },
+          { path: "/reset-password", element: withBoundary(ResetPasswordPage) },
+        ],
+      },
+
+      // =========================
+      // MAIN APP ROUTES (protected)
+      // =========================
+      {
+        element: (
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          { path: "/feed", element: withBoundary(HomeFeedPage) },
+          { path: "/user/:id", element: withBoundary(PublicProfilePage) },
+          { path: "/profile", element: withBoundary(ProfilePage) },
+          { path: "/complete-profile", element: withBoundary(CompleteProfilePage) },
+          { path: "/marketplace/:id", element: withBoundary(ProductDetailPage) },
+          { path: "/marketplace", element: withBoundary(MarketplacePage) },
+          { path: "/accommodation/:id", element: withBoundary(AccommodationDetailPage) },
+          { path: "/accommodation", element: withBoundary(AccommodationPage) },
+          { path: "/roommates", element: withBoundary(RoommateFinderPage) },
+          { path: "/messages", element: withBoundary(MessagesPage) },
+          { path: "/notifications", element: withBoundary(NotificationsPage) },
+          { path: "/verification", element: withBoundary(VerificationRequestPage) },
+          { path: "/saved", element: withBoundary(SavedItemsPage) },
+          { path: "/shop/:id", element: withBoundary(ShopPage) },
+          { path: "/shop/:id/join", element: withBoundary(ShopJoinPage) },
+          { path: "/post/:id", element: withBoundary(PostDetailPage) },
+          { path: "/tag/:tagName", element: withBoundary(TagPage) },
+          { path: "/settings", element: withBoundary(SettingsPage) },
+        ],
+      },
+
+      // =========================
+      // PUBLIC LEGAL ROUTES
+      // =========================
+      {
+        path: "/terms",
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <TermsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/privacy",
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <PrivacyPage />
+          </Suspense>
+        ),
+      },
+
+      // =========================
+      // ADMIN ROUTES (single entry point, uses ?tab=)
+      // =========================
+      {
+        path: "/admin",
+        element: (
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        ),
+        children: [
+          {
+            index: true,
+            element: withBoundary(AdminDashboardPage),
+          },
+          // Catch-all to support old paths like /admin/users etc. – they still work via tab param
+          {
+            path: "*",
+            element: withBoundary(AdminLegacyRedirect),
+          },
+        ],
       },
     ],
   },

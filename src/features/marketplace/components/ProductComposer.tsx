@@ -156,6 +156,8 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
 
       onCreated();
       onClose();
+    } catch (e: any) {
+      import("react-hot-toast").then((m) => m.default.error(e.message || "Failed to list item"));
     } finally {
       setPosting(false);
     }
@@ -235,7 +237,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             )}
             <label className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-sm font-medium cursor-pointer" style={{ background: "var(--color-bg)", border: "1.5px dashed var(--color-border)", color: "var(--color-text-secondary)" }}>
               <Plus size={16} /> Add photos
-              <input type="file" accept="image/*" multiple className="hidden" onChange={handleImages} aria-label="Select product images" />
+              <input type="file" accept="image/*, image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleImages} aria-label="Select product images" />
             </label>
           </div>
           {priceHint && (
