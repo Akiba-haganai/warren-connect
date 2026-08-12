@@ -114,9 +114,8 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
       }
 
       // 2. Upload images to pending-uploads
-      let imageUrls: string[] = [];
       if (imageFiles.length > 0) {
-        const uploads = await Promise.all(
+        await Promise.all(
           imageFiles.map(async (file) => {
             const compressed = await compressImage(file);
             const fileName = `${Date.now()}_${compressed.name}`;
@@ -132,7 +131,6 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             return path; // Edge function will handle moving it to public-images
           })
         );
-        imageUrls = uploads;
       }
 
       // If multiple images, we'd normally store them in product_images, 

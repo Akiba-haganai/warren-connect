@@ -6,7 +6,8 @@ export const storageService = {
     bucket: string,
     file: File,
     userId?: string,
-    generateThumb = false
+    generateThumb = false,
+    customPath?: string
   ): Promise<{ publicUrl: string; thumbUrl?: string }> {
     const maxSize = 5 * 1024 * 1024;
 
@@ -16,7 +17,9 @@ export const storageService = {
 
     const extension = file.name.split(".").pop() ?? "jpg";
 
-    const filePath = userId
+    const filePath = customPath
+      ? customPath
+      : userId
       ? `${userId}/${crypto.randomUUID()}.${extension}`
       : `${crypto.randomUUID()}.${extension}`;
 

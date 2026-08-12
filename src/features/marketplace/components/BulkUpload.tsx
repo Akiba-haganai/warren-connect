@@ -82,7 +82,7 @@ export default function BulkUpload({ onClose, onCreated }: Props) {
             "product-images",
             compressed,
             user.id,
-            true
+            false
           );
           image_url = publicUrl;
           // thumbnail is currently not persisted on product model for this upload flow
@@ -94,7 +94,7 @@ export default function BulkUpload({ onClose, onCreated }: Props) {
           product.title.trim(),
           product.description?.trim() || "",
           product.price,
-          image_url,
+          !!image_url,
           product.condition?.trim() || undefined // pass condition if present
         );
       }

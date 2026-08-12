@@ -5,7 +5,6 @@ import { profileService } from "@/services/profiles/profileService";
 import { postService, type FeedPost } from "@/services/posts/postService";
 import { accommodationService } from "@/services/accommodation/accommodationService";
 import { reportService } from "@/services/reports/reportService";
-import { blockService } from "@/services/safety/blockService";
 import { isOnline, timeAgo } from "@/utils/timeAgo";
 import { useProfileCompletion } from "@/hooks/useProfileCompletion";
 import { supabase } from "@/lib/supabase/client";

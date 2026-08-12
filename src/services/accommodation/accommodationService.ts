@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
 import type { Tables } from "@/types/database/database.types";
-import { handleSupabaseError } from "@/utils/supabaseErrorHandler";
 
 export type Accommodation = Tables<"accommodations">;
 export type Profile = Tables<"profiles">;

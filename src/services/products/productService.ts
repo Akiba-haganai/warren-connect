@@ -7,7 +7,7 @@ import { handleSupabaseError } from "@/utils/supabaseErrorHandler";
 
 export const productService = {
   async createProduct(
-    seller_id: string,
+    _seller_id: string,
     title: string,
     description: string,
     price: number,

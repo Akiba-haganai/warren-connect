@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Tables } from "@/types/database/database.types";
 import SaveButton from "@/components/ui/SaveButton";
-import { Share2, Star } from "lucide-react";
+import { Share2, Star, Loader2 } from "lucide-react";
 import { VerificationBadge } from "@/features/verification/components/VerificationBadge";
 
 

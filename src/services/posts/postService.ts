@@ -13,7 +13,7 @@ export interface FeedPost extends Post {
 import { handleSupabaseError } from "@/utils/supabaseErrorHandler";
 
 export const postService = {
-  async createPost(user_id: string, content: string, has_image?: boolean) {
+  async createPost(_user_id: string, content: string, has_image?: boolean) {
     const { data, error } = await supabase.functions.invoke("create-post", {
       body: { content, has_image },
     });
