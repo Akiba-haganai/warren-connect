@@ -8,16 +8,33 @@ export default function InstallBanner() {
   const [showIOSModal, setShowIOSModal] = useState(false);
 
   useEffect(() => {
+    // Debug trigger: Ctrl + Shift + P or ?pwa=1 query param forces banner open
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("pwa") === "1") {
+      setShowBanner(true);
+      return;
+    }
+
+    const keyListener = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setShowBanner(true);
+      }
+    };
+    window.addEventListener("keydown", keyListener);
+
     // 1. Already installed (standalone mode)
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as any).standalone === true;
-    if (isStandalone) return;
+    if (isStandalone && !urlParams.get("pwa")) return () => window.removeEventListener("keydown", keyListener);
 
     // 2. 30‑day dismissal
     const dismissedAt = localStorage.getItem("pwa-install-dismissed-at");
     const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-    if (dismissedAt && Date.now() - parseInt(dismissedAt) < thirtyDays) return;
+    if (dismissedAt && Date.now() - parseInt(dismissedAt) < thirtyDays && !urlParams.get("pwa")) {
+      return () => window.removeEventListener("keydown", keyListener);
+    }
 
     // 3. Detect iOS
     const ua = navigator.userAgent;
@@ -47,11 +64,13 @@ export default function InstallBanner() {
 
       return () => {
         window.removeEventListener("beforeinstallprompt", handler);
+        window.removeEventListener("keydown", keyListener);
         if (timer) clearTimeout(timer);
       };
     }
 
     return () => {
+      window.removeEventListener("keydown", keyListener);
       if (timer) clearTimeout(timer);
     };
   }, []);
