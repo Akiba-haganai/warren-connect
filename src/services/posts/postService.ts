@@ -14,8 +14,12 @@ import { handleSupabaseError } from "@/utils/supabaseErrorHandler";
 
 export const postService = {
   async createPost(_user_id: string, content: string, has_image?: boolean) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
     const { data, error } = await supabase.functions.invoke("create-post", {
       body: { content, has_image },
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     
     if (error) {

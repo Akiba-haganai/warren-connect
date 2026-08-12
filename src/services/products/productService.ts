@@ -15,8 +15,12 @@ export const productService = {
     condition?: string,
     category?: string
   ) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
     const { data, error } = await supabase.functions.invoke("create-product", {
       body: { title, description, price, condition, category, has_image },
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
     if (error) {

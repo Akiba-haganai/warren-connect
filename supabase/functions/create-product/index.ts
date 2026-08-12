@@ -25,11 +25,12 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const openAiKey = Deno.env.get("OPENAI_API_KEY")!;
 
+    const token = authHeader.replace("Bearer ", "").trim();
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
+      global: { headers: { Authorization: `Bearer ${token}` } }
     });
 
-    const { data: { user } } = await supabaseAuth.auth.getUser();
+    const { data: { user } } = await supabaseAuth.auth.getUser(token);
     if (!user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
