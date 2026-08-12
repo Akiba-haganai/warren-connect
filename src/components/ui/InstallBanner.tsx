@@ -88,14 +88,14 @@ export default function InstallBanner() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 shrink-0 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-black shadow-md shadow-blue-500/20">
-                M
+                W
               </div>
               <div className="text-left">
                 <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 tracking-wider uppercase">
                   App Available
                 </p>
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                  Install Market App
+                  Install Warren Connect
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Add to home screen for native experience
@@ -134,7 +134,7 @@ export default function InstallBanner() {
                   Install on iPhone / iPad
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Add Market to your home screen in 3 steps
+                  Add Warren Connect to your home screen in 3 steps
                 </p>
               </div>
               <button
