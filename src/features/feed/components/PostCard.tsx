@@ -154,14 +154,20 @@ export default function PostCard({ post }: { post: FeedPost }) {
       <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--color-text)" }}>
         {post.content}
       </p>
-      {post.image_url && (
+      
+      {(post as any).moderation_status === "pending" ? (
+        <div className="mt-3 rounded-xl w-full h-40 flex flex-col items-center justify-center text-center" style={{ background: "var(--color-bg)", border: "1px dashed var(--color-border)" }}>
+          <Loader2 className="animate-spin mb-2" size={24} style={{ color: "var(--color-text-muted)" }} />
+          <span className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Scanning image...</span>
+        </div>
+      ) : post.image_url ? (
         <img
           src={post.image_url}
           alt="Post image"
           className="mt-3 rounded-xl w-full object-cover max-h-80"
           loading="lazy"
         />
-      )}
+      ) : null}
 
       {/* Actions */}
       <div className="flex items-center gap-4 mt-3 text-xs" style={{ color: "var(--color-text-muted)" }}>

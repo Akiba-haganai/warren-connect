@@ -52,7 +52,19 @@ export default function ProductCard({ product, onView }: Props) {
         <Share2 size={14} style={{ color: "var(--color-text-secondary)" }} />
       </button>
 
-      {product.image_url ? (
+      {(product as any).moderation_status === "pending" ? (
+        <div
+          className="flex flex-col items-center justify-center text-center"
+          style={{
+            height: 160,
+            background: "var(--color-bg)",
+            borderBottom: "1px dashed var(--color-border)",
+          }}
+        >
+          <Loader2 className="animate-spin mb-2" size={24} style={{ color: "var(--color-text-muted)" }} />
+          <span className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Scanning image...</span>
+        </div>
+      ) : product.image_url ? (
         <img
           src={product.image_url}
           alt={product.title}

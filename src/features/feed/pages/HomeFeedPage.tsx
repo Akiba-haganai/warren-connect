@@ -15,12 +15,18 @@ import { useRecentlyViewed } from "@/hooks/useRecentlyviewed";
 import type { FeedPost } from "@/services/posts/postService";
 import type { Tables } from "@/types/database/database.types";
 
+import { useAuthStore } from "@/store/auth/authStore";
+import { useMutedUsers } from "@/hooks/safety/useMuteUser";
+
 export default function HomeFeedPage() {
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const [showComposer, setShowComposer] = useState(false);
   const [typeFilter, setTypeFilter] = useState<"all" | "post" | "product" | "accommodation">("all");
   const [selectedTag, setSelectedTag] = useState("");
   const { recentItems } = useRecentlyViewed();
+
+  const { data: mutedUsers } = useMutedUsers(user?.id);
 
   const { data: allTags } = useQuery({
     queryKey: ["all-tags"],
@@ -38,8 +44,17 @@ export default function HomeFeedPage() {
     },
   });
 
-  // Filter by type AND tag
+  // Filter by type AND tag AND muted status
   const filtered = (items || []).filter((item) => {
+    // 1. Muted check
+    let authorId = "";
+    if (item.type === "post") authorId = item.data?.user_id;
+    else if (item.type === "product") authorId = item.data?.seller_id;
+    else if (item.type === "accommodation") authorId = item.data?.owner_id;
+    
+    if (authorId && mutedUsers?.includes(authorId)) {
+      return false;
+    }
     if (typeFilter !== "all" && item.type !== typeFilter) return false;
     if (selectedTag) {
       // For products and accommodations, we need to check tags

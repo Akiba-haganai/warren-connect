@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import type { Tables } from "@/types/database/database.types";
+import { handleSupabaseError } from "@/utils/supabaseErrorHandler";
 
 export type Accommodation = Tables<"accommodations">;
 export type Profile = Tables<"profiles">;
@@ -62,6 +63,7 @@ export const accommodationService = {
     const { data, error } = await supabase
       .from("accommodations")
       .select("*")
+      .eq("is_hidden", false)
       .order("created_at", { ascending: false });
     if (error) throw error;
     return data || [];
@@ -184,6 +186,7 @@ export const accommodationService = {
   let query = supabase
     .from("accommodations")
     .select("*")
+    .eq("is_hidden", false)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 

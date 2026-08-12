@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import toast from "react-hot-toast";
 import { X, ImagePlus, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { postService } from "@/services/posts/postService";
@@ -36,21 +37,25 @@ export default function PostComposer({ onClose, onCreated }: Props) {
     if (!user || !content.trim()) return;
     setPosting(true);
     try {
-      let image_url: string | undefined;
+      // 1. Create post (Synchronous text moderation happens here)
+      const newPost = await postService.createPost(user.id, content.trim(), !!imageFile);
+      
+      if (!newPost) {
+        throw new Error("Failed to create post");
+      }
+
+      // 2. Upload image to pending-uploads if present
       if (imageFile) {
         const compressed = await compressImage(imageFile);
-        const { publicUrl } = await storageService.uploadFile(
-          "post-images",
-          compressed,
-          user.id,
-          true
-        );
-        image_url = publicUrl;
+        // The path structure triggers the moderate-image webhook
+        const fileName = `${Date.now()}_${compressed.name}`;
+        const path = `posts/${user.id}/${newPost.id}/${fileName}`;
+        
+        await storageService.uploadFile("pending-uploads", compressed, user.id, true, path);
       }
-      const newPost = await postService.createPost(user.id, content.trim(), image_url);
 
       // Save tags
-      if (tags.length > 0 && newPost) {
+      if (tags.length > 0) {
         const tagRecords = await Promise.all(
           tags.map((tagName) => tagService.createTag(tagName))
         );
@@ -66,6 +71,9 @@ export default function PostComposer({ onClose, onCreated }: Props) {
 
       onCreated();
       onClose();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to create post.");
     } finally {
       setPosting(false);
     }

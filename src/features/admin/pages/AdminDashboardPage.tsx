@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { adminService } from "@/services/admin/adminService";
 import { verificationService } from "@/services/verification/verificationService";
@@ -156,12 +157,21 @@ export default function AdminDashboardPage() {
     } catch (e) { err(e); }
   };
 
+  const queryClient = useQueryClient();
+
   const handleBan = async (userId: string, banned: boolean) => {
     const ok = await confirm({ title: banned ? "Unban?" : "Ban?", message: "Change user access" });
     if (!ok) return;
     try {
       await adminService.toggleBanUser(userId, !banned);
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_banned: !banned } : u)));
+      
+      // Invalidate all feeds where this user might appear
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['accommodations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+
       toast.success(banned ? "Unbanned" : "Banned");
     } catch (e) { err(e); }
   };
@@ -381,10 +391,15 @@ export default function AdminDashboardPage() {
             {reports.map((r) => (
               <div key={r.id} className="card p-2 flex flex-col gap-1">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{r.reporter?.full_name || "Unknown"} reported a {r.content_type}</p>
-                    <p className="text-xs text-muted break-words">{r.reason}</p>
-                    <p className="text-[10px] text-muted">Status: {r.status || "pending"}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{r.reporter?.full_name || "System"} reported a {r.content_type}</p>
+                    <p className="text-xs text-muted break-words font-semibold mt-1">{r.reason}</p>
+                    {r.content_snapshot && (
+                      <div className="mt-1 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs text-gray-700 dark:text-gray-300 break-words whitespace-pre-wrap">
+                        {typeof r.content_snapshot === 'string' ? r.content_snapshot : JSON.stringify(r.content_snapshot, null, 2)}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted mt-1">Status: {r.status || "pending"}</p>
                   </div>
                   <div className="flex gap-1 flex-shrink-0 flex-wrap">
                     <button onClick={() => handleReportAction(r.id, "reviewed")} className="text-[10px] px-2 py-1 rounded bg-yellow-100 text-yellow-800">Review</button>

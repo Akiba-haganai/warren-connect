@@ -3,29 +3,32 @@ import type { Tables } from "@/types/database/database.types";
 
 export type Product = Tables<"products">;
 
+import { handleSupabaseError } from "@/utils/supabaseErrorHandler";
+
 export const productService = {
   async createProduct(
     seller_id: string,
     title: string,
     description: string,
     price: number,
-    image_url?: string,
-    condition?: string
+    has_image?: boolean,
+    condition?: string,
+    category?: string
   ) {
-    const { data, error } = await supabase
-      .from("products")
-      .insert({
-        seller_id,
-        title,
-        description,
-        price,
-        image_url: image_url ?? null,
-        condition: condition ?? null,
-      })
-      .select()
-      .single();
+    const { data, error } = await supabase.functions.invoke("create-product", {
+      body: { title, description, price, condition, category, has_image },
+    });
 
-    if (error) throw error;
+    if (error) {
+      const customMessage = error.context?.json?.error || error.message;
+      if (customMessage) {
+         if (customMessage.includes("community guidelines")) {
+             throw new Error("Your content violates community guidelines and cannot be posted.");
+         }
+         throw new Error(customMessage);
+      }
+      handleSupabaseError(error);
+    }
     return data;
   },
 
@@ -33,6 +36,8 @@ export const productService = {
     const { data, error } = await supabase
       .from("products")
       .select("*")
+      .eq("is_hidden", false)
+      .eq("moderation_status", "approved")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -65,6 +70,8 @@ export const productService = {
     const { data, error } = await supabase
       .from("products")
       .select("*")
+      .eq("is_hidden", false)
+      .eq("moderation_status", "approved")
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 

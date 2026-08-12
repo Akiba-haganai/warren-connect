@@ -12,8 +12,10 @@ import { supabase } from "@/lib/supabase/client";
 import type { Tables } from "@/types/database/database.types";
 import {
   ArrowLeft, BadgeCheck, GraduationCap, BookOpen, MessageCircle,
-  Loader2, Flag, Star, ShieldOff, Shield, Clock,  AlertTriangle 
+  Loader2, Flag, Star, ShieldOff, Shield, Clock, AlertTriangle, Bell, BellOff
 } from "lucide-react";
+import { useBlockUser, useBlockStatus } from "@/hooks/safety/useBlockUser";
+import { useMuteUser, useMutedUsers } from "@/hooks/safety/useMuteUser";
 
 type Profile = Tables<"profiles">;
 type Accommodation = Tables<"accommodations">;
@@ -30,8 +32,12 @@ export default function PublicProfilePage() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [listings, setListings] = useState<Accommodation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [blockToggling, setBlockToggling] = useState(false);
+
+  const { data: isBlocked, isLoading: blockLoading } = useBlockStatus(currentUser?.id, id);
+  const { mutateAsync: blockAction, isPending: blockToggling } = useBlockUser();
+  const { data: mutedUsers } = useMutedUsers(currentUser?.id);
+  const { mutateAsync: muteAction, isPending: muteToggling } = useMuteUser();
+  const isMuted = mutedUsers?.includes(id!) || false;
 
 
   useEffect(() => {
@@ -51,10 +57,6 @@ export default function PublicProfilePage() {
         setPosts(allPosts.filter((p) => p.user_id === id));
         const acc = await accommodationService.getMyAccommodations(id);
         setListings(acc);
-        if (currentUser) {
-          const blocked = await blockService.isBlocked(currentUser.id, id);
-          setIsBlocked(blocked);
-        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -98,21 +100,29 @@ export default function PublicProfilePage() {
 
   const handleBlockToggle = async () => {
     if (!currentUser || !profile) return;
-    setBlockToggling(true);
     try {
       if (isBlocked) {
-        await blockService.unblockUser(currentUser.id, profile.id);
-        setIsBlocked(false);
+        await blockAction({ blockerId: currentUser.id, blockedId: profile.id, action: 'unblock' });
       } else {
         if (confirm("Block this user? They won't be able to message you or see your posts.")) {
-          await blockService.blockUser(currentUser.id, profile.id);
-          setIsBlocked(true);
+          await blockAction({ blockerId: currentUser.id, blockedId: profile.id, action: 'block' });
         }
       }
     } catch (err) {
       console.error(err);
-    } finally {
-      setBlockToggling(false);
+    }
+  };
+
+  const handleMuteToggle = async () => {
+    if (!currentUser || !profile) return;
+    try {
+      if (isMuted) {
+        await muteAction({ muterId: currentUser.id, mutedId: profile.id, action: 'unmute' });
+      } else {
+        await muteAction({ muterId: currentUser.id, mutedId: profile.id, action: 'mute' });
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -157,7 +167,14 @@ export default function PublicProfilePage() {
         <div className="flex items-center gap-2">
           {!isOwnProfile && (
             <>
-              <button onClick={handleBlockToggle} disabled={blockToggling} className="p-1" aria-label={isBlocked ? "Unblock user" : "Block user"}>
+              <button onClick={handleMuteToggle} disabled={muteToggling} className="p-1" aria-label={isMuted ? "Unmute user" : "Mute user"}>
+                {isMuted ? (
+                  <BellOff size={18} style={{ color: "var(--color-warning)" }} />
+                ) : (
+                  <Bell size={18} style={{ color: "var(--color-text-muted)" }} />
+                )}
+              </button>
+              <button onClick={handleBlockToggle} disabled={blockToggling || blockLoading} className="p-1" aria-label={isBlocked ? "Unblock user" : "Block user"}>
                 {isBlocked ? (
                   <ShieldOff size={18} style={{ color: "var(--color-danger)" }} />
                 ) : (

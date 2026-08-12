@@ -11,9 +11,9 @@ export interface UnifiedFeedItem {
 export const unifiedFeedService = {
   async getUnifiedFeed(limit = 30): Promise<UnifiedFeedItem[]> {
     const [postsRes, productsRes, accRes] = await Promise.all([
-      supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(limit),
-      supabase.from("products").select("*").order("created_at", { ascending: false }).limit(limit),
-      supabase.from("accommodations").select("*").order("created_at", { ascending: false }).limit(limit),
+      supabase.from("posts").select("*").eq("is_hidden", false).order("created_at", { ascending: false }).limit(limit),
+      supabase.from("products").select("*").eq("is_hidden", false).order("created_at", { ascending: false }).limit(limit),
+      supabase.from("accommodations").select("*").eq("is_hidden", false).order("created_at", { ascending: false }).limit(limit),
     ]);
 
     const posts = postsRes.data || [];

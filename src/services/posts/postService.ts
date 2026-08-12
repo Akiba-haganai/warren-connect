@@ -10,14 +10,26 @@ export interface FeedPost extends Post {
   user_avatar: string | null;
 }
 
+import { handleSupabaseError } from "@/utils/supabaseErrorHandler";
+
 export const postService = {
-  async createPost(user_id: string, content: string, image_url?: string) {
-    const { data, error } = await supabase
-      .from("posts")
-      .insert({ user_id, content, image_url: image_url ?? null })
-      .select()
-      .single();
-    if (error) throw error;
+  async createPost(user_id: string, content: string, has_image?: boolean) {
+    const { data, error } = await supabase.functions.invoke("create-post", {
+      body: { content, has_image },
+    });
+    
+    if (error) {
+      // Supabase Edge Functions store custom JSON errors in error.context or we can check data
+      const customMessage = error.context?.json?.error || error.message;
+      if (customMessage) {
+         // Create a synthetic error object that handleSupabaseError can parse, or just throw it
+         if (customMessage.includes("community guidelines")) {
+             throw new Error("Your content violates community guidelines and cannot be posted.");
+         }
+         throw new Error(customMessage);
+      }
+      handleSupabaseError(error);
+    }
     return data;
   },
 
@@ -25,6 +37,8 @@ export const postService = {
     const { data: posts, error } = await supabase
       .from("posts")
       .select("*")
+      .eq("is_hidden", false)
+      .eq("moderation_status", "approved")
       .order("created_at", { ascending: false });
 
     if (error) throw error;

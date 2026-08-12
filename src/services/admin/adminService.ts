@@ -25,8 +25,15 @@ export const adminService = {
     return data.map((report) => ({ ...report, reporter: reporterMap.get(report.reporter_id) || null }));
   },
 
-  async updateReportStatus(reportId: string, status: "reviewed" | "resolved") {
-    const { data, error } = await supabase.from("reports").update({ status }).eq("id", reportId).select();
+  async updateReportStatus(reportId: string, status: "reviewed" | "resolved", resolutionNote?: string) {
+    const updatePayload: any = { status };
+    if (status === "resolved") {
+      updatePayload.resolved_at = new Date().toISOString();
+    }
+    if (resolutionNote) {
+      updatePayload.resolution_note = resolutionNote;
+    }
+    const { data, error } = await supabase.from("reports").update(updatePayload).eq("id", reportId).select();
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Report update blocked — RLS or permissions.");
   },
@@ -99,19 +106,19 @@ export const adminService = {
   },
 
   async deletePost(postId: string) {
-    const { data, error } = await supabase.from("posts").delete().eq("id", postId).select();
+    const { data, error } = await supabase.from("posts").update({ is_hidden: true }).eq("id", postId).select();
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Delete post blocked — RLS or permissions.");
   },
 
   async deleteProduct(productId: string) {
-    const { data, error } = await supabase.from("products").delete().eq("id", productId).select();
+    const { data, error } = await supabase.from("products").update({ is_hidden: true }).eq("id", productId).select();
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Delete product blocked — RLS or permissions.");
   },
 
   async deleteAccommodation(accommodationId: string) {
-    const { data, error } = await supabase.from("accommodations").delete().eq("id", accommodationId).select();
+    const { data, error } = await supabase.from("accommodations").update({ is_hidden: true }).eq("id", accommodationId).select();
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Delete accommodation blocked — RLS or permissions.");
   },
