@@ -16,6 +16,7 @@ import { Loader2 } from "lucide-react";
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 const ForgotPasswordPage = lazy(() => import("@/features/auth/pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("@/features/auth/pages/ResetPasswordPage"));
 
 const AdminLegacyRedirect = lazy(() => import("@/features/admin/pages/AdminLegacyRedirect"));
 
@@ -99,6 +100,7 @@ export const router = createBrowserRouter([
       { path: "/login", element: withBoundary(LoginPage) },
       { path: "/register", element: withBoundary(RegisterPage) },
       { path: "/forgot-password", element: withBoundary(ForgotPasswordPage) },
+      { path: "/reset-password", element: withBoundary(ResetPasswordPage) },
     ],
   },
 

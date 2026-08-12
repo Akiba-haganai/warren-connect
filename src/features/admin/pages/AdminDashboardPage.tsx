@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { adminService } from "@/services/admin/adminService";
 import { verificationService } from "@/services/verification/verificationService";
+import { recoveryService } from "@/services/auth/recoveryService";
 import { useAuthStore } from "@/store/auth/authStore";
 import { triggerNotification } from "@/services/notifications/triggerService";
 import type { Tables } from "@/types/database/database.types"; // ✅ added
@@ -59,7 +60,7 @@ export default function AdminDashboardPage() {
           verificationService.getAllRequests(),
           adminService.getReports(),
           adminService.getAllTags(),
-          adminService.getPasswordResetRequests(),
+          recoveryService.getRecoveryRequests(),
         ]);
         setStats(s); setUsers(u); setRequests(r); setReports(rp); setTags(t); setResetReqs(rs);
       } finally { setLoading(false); }
@@ -216,13 +217,7 @@ export default function AdminDashboardPage() {
     } catch (e) { err(e); }
   };
 
-  const handleMarkReset = async (id: string) => {
-    try {
-      await adminService.markResetHandled(id);
-      setResetReqs((prev) => prev.filter((r) => r.id !== id));
-      toast.success("Handled");
-    } catch (e) { err(e); }
-  };
+
 
   if (loading)
     return <div className="flex justify-center py-20"><Loader2 className="animate-spin" /></div>;
@@ -432,18 +427,65 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* Password Resets */}
+        {/* Password Resets Queue */}
         {activeTab === "resets" && (
-          <div className="space-y-2">
-            {resetReqs.length === 0 && <p className="text-xs text-muted">None</p>}
+          <div className="space-y-3">
+            {resetReqs.length === 0 && <p className="text-xs text-muted p-4 text-center">No password recovery requests pending.</p>}
             {resetReqs.map((r) => (
-              <div key={r.id} className="card p-2 flex items-center justify-between gap-2">
+              <div key={r.id} className="card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border border-slate-200 dark:border-slate-800">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{r.title}</p>
-                  <p className="text-xs text-muted truncate">{r.body}</p>
-                  <p className="text-[10px] text-muted">{new Date(r.created_at).toLocaleString()}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{r.email}</p>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      Score: {r.score}/3 Verified
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                      r.status === 'verified_pending_admin'
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                        : r.status === 'approved'
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                        : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
+                    }`}>
+                      {r.status}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Requested on: {new Date(r.created_at).toLocaleString()}
+                  </p>
                 </div>
-                <button onClick={() => handleMarkReset(r.id)} className="text-[10px] px-2 py-1 rounded bg-green-100 text-green-800 flex-shrink-0">Done</button>
+
+                {r.status === "verified_pending_admin" && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await recoveryService.adminApproveReset(r.id);
+                          setResetReqs((prev) => prev.map((item) => (item.id === r.id ? { ...item, status: "approved" } : item)));
+                          toast.success("Approved & Reset email dispatched!");
+                        } catch (e: any) {
+                          toast.error(e.message || "Failed to approve");
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
+                    >
+                      Approve & Send Email
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await recoveryService.adminRejectReset(r.id);
+                          setResetReqs((prev) => prev.map((item) => (item.id === r.id ? { ...item, status: "rejected" } : item)));
+                          toast.success("Request rejected");
+                        } catch (e: any) {
+                          toast.error(e.message || "Failed to reject");
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950 dark:text-red-300 transition-all"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
