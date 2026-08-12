@@ -67,14 +67,21 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!category || !condition) {
+      if (!category && !condition) {
         setPriceHint(null);
         return;
       }
       setSuggesting(true);
       try {
-        const hint = await priceEngine.suggestPrice(category, condition);
-        if (!cancelled) setPriceHint(hint);
+        const hint = await priceEngine.suggestPriceRange(category, condition);
+        if (!cancelled && hint) {
+          setPriceHint({
+            low: hint.suggestedMin,
+            median: hint.averagePrice,
+            high: hint.suggestedMax,
+            sampleSize: hint.sampleSize,
+          });
+        }
       } finally {
         if (!cancelled) setSuggesting(false);
       }

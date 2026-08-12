@@ -37,7 +37,7 @@ serve(async (req) => {
     const rowId = parts[2];
     const filename = parts.slice(3).join('/');
 
-    if (table !== 'posts' && table !== 'products') {
+    if (table !== 'posts' && table !== 'products' && table !== 'accommodations' && table !== 'profiles') {
         console.log("Ignoring unhandled table:", table);
         return new Response("Ignored", { status: 200 });
     }
@@ -48,9 +48,14 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // 1. Belt-and-suspenders Ownership Verification
+    let ownerField = 'user_id';
+    if (table === 'products') ownerField = 'seller_id';
+    else if (table === 'accommodations') ownerField = 'owner_id';
+    else if (table === 'profiles') ownerField = 'id';
+
     const { data: row, error: rowError } = await supabase
       .from(table)
-      .select(table === 'posts' ? 'user_id' : 'seller_id')
+      .select(ownerField)
       .eq("id", rowId)
       .single();
 
@@ -58,7 +63,7 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: "Row not found" }), { status: 404 });
     }
 
-    const actualOwnerId = table === 'posts' ? row.user_id : row.seller_id;
+    const actualOwnerId = (row as any)[ownerField];
     if (actualOwnerId !== ownerId) {
         return new Response("Ownership mismatch", { status: 403 });
     }
@@ -96,12 +101,30 @@ serve(async (req) => {
         result.offensive?.prob ?? 0
     );
 
+    const imageColumn = table === 'profiles' ? 'avatar_url' : 'image_url';
+
     // 4. Handle Moderation Result
     if (nsfwScore >= NSFW_BLOCK_THRESHOLD) {
       await supabase.storage.from("pending-uploads").remove([record.name]);
-      await supabase.from(table)
-        .update({ moderation_status: "rejected", moderation_score: result })
-        .eq("id", rowId);
+
+      if (table === 'profiles') {
+        // Revert profile avatar to null & notify user
+        await supabase.from("profiles")
+          .update({ avatar_url: null, moderation_status: "approved", moderation_score: result })
+          .eq("id", rowId);
+        
+        await supabase.from("notifications").insert({
+          user_id: ownerId,
+          title: "Avatar Removed ⚠️",
+          body: "Your profile picture was removed because it violated community guidelines.",
+          link: "/profile",
+        });
+      } else {
+        await supabase.from(table)
+          .update({ moderation_status: "rejected", moderation_score: result })
+          .eq("id", rowId);
+      }
+
       return new Response(JSON.stringify({ status: "rejected" }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -123,7 +146,7 @@ serve(async (req) => {
     const publicUrl = supabase.storage.from("public-images").getPublicUrl(publicPath).data.publicUrl;
     
     await supabase.from(table)
-      .update({ moderation_status: "approved", moderation_score: result, image_url: publicUrl })
+      .update({ moderation_status: "approved", moderation_score: result, [imageColumn]: publicUrl })
       .eq("id", rowId);
 
     // 5. Borderline -> Auto-Flag
