@@ -135,6 +135,16 @@ export default function AdminDashboardPage() {
     } catch (e) { err(e); }
   };
 
+  const handleDeleteReport = async (id: string) => {
+    const ok = await confirm({ title: "Delete Report?", message: "Permanently delete this report record?" });
+    if (!ok) return;
+    try {
+      await adminService.deleteReport(id);
+      setReports((prev) => prev.filter((r) => r.id !== id));
+      toast.success("Report deleted");
+    } catch (e) { err(e); }
+  };
+
   const handleHide = async (type: string, id: string) => {
     try {
       if (type === "post") await adminService.hidePost(id, true);
@@ -438,24 +448,47 @@ export default function AdminDashboardPage() {
                     <p className="text-sm font-medium">{r.reporter?.full_name || "System"} reported a {r.content_type}</p>
                     <p className="text-xs text-muted break-words font-semibold mt-1">{r.reason}</p>
                     {r.content_snapshot && (
-                      <div className="mt-1 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs text-gray-700 dark:text-gray-300 break-words whitespace-pre-wrap">
-                        {typeof r.content_snapshot === 'string' ? r.content_snapshot : JSON.stringify(r.content_snapshot, null, 2)}
+                      <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
+                        {typeof r.content_snapshot === 'object' && r.content_snapshot !== null ? (
+                          <div className="space-y-1">
+                            {r.content_type === "post" && (
+                              <p className="italic">"{r.content_snapshot.content}"</p>
+                            )}
+                            {r.content_type !== "post" && (
+                              <>
+                                <p className="font-bold text-sm text-slate-900 dark:text-slate-100">{r.content_snapshot.title}</p>
+                                {(r.content_snapshot.price || r.content_snapshot.monthly_rent) && (
+                                  <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                    K{r.content_snapshot.price || r.content_snapshot.monthly_rent}
+                                  </p>
+                                )}
+                                {(r.content_snapshot.description || r.content_snapshot.condition) && (
+                                  <p className="text-muted line-clamp-2 mt-1">{r.content_snapshot.description || r.content_snapshot.condition}</p>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="break-words whitespace-pre-wrap">{String(r.content_snapshot)}</div>
+                        )}
                       </div>
                     )}
-                    <p className="text-[10px] text-muted mt-1">Status: {r.status || "pending"}</p>
+                    <p className="text-[10px] text-muted mt-2">Status: <span className="font-semibold uppercase">{r.status || "pending"}</span></p>
                   </div>
-                  <div className="flex gap-1 flex-shrink-0 flex-wrap">
+                  <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end">
                     {processingIds.has(r.id) ? (
                       <div className="flex items-center justify-center w-24"><Loader2 size={14} className="animate-spin text-muted" /></div>
                     ) : (
                       <>
                         <button onClick={() => withProcessing(r.id, async () => handleReportAction(r.id, "reviewed"))()} className="text-[10px] px-2 py-1 rounded bg-yellow-100 text-yellow-800">Review</button>
                         <button onClick={() => withProcessing(r.id, async () => handleReportAction(r.id, "resolved"))()} className="text-[10px] px-2 py-1 rounded bg-green-100 text-green-800">Resolve</button>
+                        <button onClick={() => withProcessing(r.id, async () => handleDeleteReport(r.id))()} className="text-[10px] px-2 py-1 rounded bg-slate-200 text-slate-700 hover:bg-slate-300">Delete Report</button>
+                        
                         {r.content_type !== "user" && r.content_id && (
-                          <>
-                            <button onClick={() => withProcessing(r.id, async () => handleHide(r.content_type, r.content_id))()} className="text-[10px] px-2 py-1 rounded bg-red-100 text-red-800">Hide</button>
-                            <button onClick={() => withProcessing(r.id, async () => handleDelete(r.content_type, r.content_id))()} className="text-[10px] px-2 py-1 rounded bg-red-200 text-red-900">Delete</button>
-                          </>
+                          <div className="w-full flex gap-1 mt-1 justify-end">
+                            <button onClick={() => withProcessing(r.id, async () => handleHide(r.content_type, r.content_id))()} className="text-[10px] px-2 py-1 rounded bg-orange-100 text-orange-800">Hide Item</button>
+                            <button onClick={() => withProcessing(r.id, async () => handleDelete(r.content_type, r.content_id))()} className="text-[10px] px-2 py-1 rounded bg-red-100 text-red-800">Delete Item</button>
+                          </div>
                         )}
                       </>
                     )}

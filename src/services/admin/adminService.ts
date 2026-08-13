@@ -38,6 +38,12 @@ export const adminService = {
     if (!data || data.length === 0) throw new Error("Report update blocked — RLS or permissions.");
   },
 
+  async deleteReport(reportId: string) {
+    const { data, error } = await supabase.from("reports").delete().eq("id", reportId).select();
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Delete report blocked — RLS or permissions.");
+  },
+
   async getUsers() {
     const { data, error } = await supabase
       .from("profiles")
