@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth/authStore";
-import { supabase } from "@/lib/supabase/client";
 import { storageService } from "@/services/storage/storageService";
 import { verificationService } from "@/services/verification/verificationService";
 import { compressImage } from "@/utils/compressImage";
