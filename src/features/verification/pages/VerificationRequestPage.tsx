@@ -146,10 +146,8 @@ export default function VerificationRequestPage() {
                       await verificationService.requestPhoneOtp(phone.trim());
                       setOtpSent(true);
                       toast.success("Verification code sent!");
-                    } catch {
-                      // Fallback demo code
-                      setOtpSent(true);
-                      toast.success("Verification code sent! (Use 123456 for demo)");
+                    } catch (err: any) {
+                      toast.error(err.message || "Failed to send verification code");
                     } finally {
                       setOtpSending(false);
                     }
@@ -176,15 +174,8 @@ export default function VerificationRequestPage() {
                       await verificationService.confirmPhoneOtp(user.id, phone.trim(), otpCode.trim());
                       toast.success("Phone verified successfully!");
                       navigate("/profile");
-                    } catch {
-                      // Fallback verification for demo
-                      if (otpCode.trim() === "123456") {
-                        await supabase.from("profiles").update({ verification_tier: "phone", is_verified: true }).eq("id", user.id);
-                        toast.success("Phone verified successfully!");
-                        navigate("/profile");
-                      } else {
-                        toast.error("Invalid code. Try 123456");
-                      }
+                    } catch (err: any) {
+                      toast.error(err.message || "Invalid or expired verification code");
                     } finally {
                       setOtpVerifying(false);
                     }

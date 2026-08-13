@@ -14,7 +14,7 @@ export default function Navbar() {
 
   const { data: notifications } = useQuery({
     queryKey: ["notifications"],
-    queryFn: () => notificationService.getNotifications(user!.id),
+    queryFn: () => (user ? notificationService.getNotifications(user.id) : Promise.resolve([])),
     enabled: !!user,
   });
   const unreadCount = notifications?.filter((n: any) => !n.is_read).length ?? 0;

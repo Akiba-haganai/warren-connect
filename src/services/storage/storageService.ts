@@ -9,10 +9,9 @@ export const storageService = {
     generateThumb = false,
     customPath?: string
   ): Promise<{ publicUrl: string; thumbUrl?: string }> {
-    const maxSize = 5 * 1024 * 1024;
-
-    if (file.size > maxSize) {
-      throw new Error("File must be smaller than 5MB");
+    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"];
+    if (file.type && !allowedMimeTypes.includes(file.type.toLowerCase())) {
+      throw new Error("Invalid file type. Only JPEG, PNG, WebP, HEIC and PDF files are allowed.");
     }
 
     const extension = file.name.split(".").pop() ?? "jpg";

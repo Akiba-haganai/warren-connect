@@ -23,13 +23,13 @@ export default function BottomNav() {
 
   const { data: notifications } = useQuery({
     queryKey: ["notifications"],
-    queryFn: () => notificationService.getNotifications(user!.id),
+    queryFn: () => (user ? notificationService.getNotifications(user.id) : Promise.resolve([])),
     enabled: !!user,
   });
 
   const { data: newMatches } = useQuery({
     queryKey: ["roommate-matches", user?.id],
-    queryFn: () => roommateService.getNewMatchesCount(user!.id),
+    queryFn: () => (user ? roommateService.getNewMatchesCount(user.id) : Promise.resolve(0)),
     enabled: !!user,
   });
 
@@ -77,7 +77,7 @@ export default function BottomNav() {
               : location.pathname.startsWith(tab.path);
           const Icon = tab.icon;
 
-          const showNotifBadge = tab.path === "/notifications" && unreadCount > 0;
+          const showNotifBadge = tab.path === "/messages" && unreadCount > 0;
           const showMatchBadge = tab.path === "/roommates" && matchesCount > 0;
 
           return (

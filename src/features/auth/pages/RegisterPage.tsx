@@ -11,12 +11,18 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [tosAgreed, setTosAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!tosAgreed) {
+      setError("You must agree to the Terms of Service and Privacy Policy.");
+      return;
+    }
 
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
@@ -125,8 +131,29 @@ export default function RegisterPage() {
           </div>
         )}
 
+        {/* Terms Agreement */}
+        <label className="flex items-start gap-2.5 cursor-pointer mt-1 text-xs select-none">
+          <input
+            type="checkbox"
+            checked={tosAgreed}
+            onChange={(e) => setTosAgreed(e.target.checked)}
+            className="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 shrink-0"
+          />
+          <span style={{ color: "var(--color-text-secondary)" }}>
+            I agree to the{" "}
+            <Link to="/terms" target="_blank" className="font-bold underline" style={{ color: "var(--color-primary)" }}>
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link to="/privacy" target="_blank" className="font-bold underline" style={{ color: "var(--color-primary)" }}>
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </label>
+
         {/* Submit button */}
-        <button type="submit" disabled={loading} className="btn-primary mt-1">
+        <button type="submit" disabled={loading || !tosAgreed} className="btn-primary mt-1">
           {loading ? (
             <span className="flex items-center justify-center gap-2">
               <Spinner size={16} /> Creating account…

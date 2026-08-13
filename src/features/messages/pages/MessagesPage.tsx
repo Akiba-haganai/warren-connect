@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
 import { supabase } from "@/lib/supabase/client";
 import { messageService } from "@/services/messages/messageService";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useConversations } from "@/hooks/useConversations";
 import { useMessages } from "@/hooks/useMessages";
 import { useSendMessage } from "@/hooks/useSendMessage";
@@ -24,6 +25,7 @@ export default function MessagesPage() {
   const profile = useAuthStore((s) => s.profile);
   const [searchParams, setSearchParams] = useSearchParams();
   const { confirm, ConfirmDialog } = useConfirm();
+  const queryClient = useQueryClient();
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -92,12 +94,13 @@ export default function MessagesPage() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${activeId}` },
         () => {
-          // React Query will invalidate cache
+          queryClient.invalidateQueries({ queryKey: ["messages", activeId] });
+          queryClient.invalidateQueries({ queryKey: ["conversations", user?.id] });
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [activeId]);
+  }, [activeId, queryClient, user?.id]);
 
   // Realtime typing
   useEffect(() => {
