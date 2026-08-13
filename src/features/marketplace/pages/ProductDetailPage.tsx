@@ -108,7 +108,12 @@ export default function ProductDetailPage() {
   };
 
   if (isLoading) return <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>;
-  if (!product) return <div className="text-center py-10 text-sm">Product not found.</div>;
+  if (!product) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4 px-4">
+      <p className="text-sm text-center" style={{ color: "var(--color-text-muted)" }}>This item could not be found or has been removed.</p>
+      <button onClick={() => navigate("/marketplace")} className="btn-primary w-auto px-6">← Back to Marketplace</button>
+    </div>
+  );
 
   const isOwner = user?.id === product.seller_id;
 

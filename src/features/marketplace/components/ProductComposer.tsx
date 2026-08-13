@@ -188,13 +188,24 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
           </div>
           <div>
             <label className="field-label" htmlFor="product-category">Category</label>
-            <input
+            <select
               id="product-category"
               className="input-field"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              placeholder="e.g. phones, laptops"
-            />
+            >
+              <option value="">Select category (optional)</option>
+              <option value="phones">Phones & Tablets</option>
+              <option value="laptops">Laptops & Computers</option>
+              <option value="electronics">Electronics & Gadgets</option>
+              <option value="clothing">Clothing & Fashion</option>
+              <option value="furniture">Furniture & Home</option>
+              <option value="books">Books & Stationery</option>
+              <option value="food">Food & Groceries</option>
+              <option value="vehicles">Vehicles & Transport</option>
+              <option value="services">Services</option>
+              <option value="other">Other</option>
+            </select>
           </div>
           <div>
             <label className="field-label" htmlFor="product-condition">Condition</label>

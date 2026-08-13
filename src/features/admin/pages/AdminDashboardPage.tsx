@@ -52,6 +52,7 @@ export default function AdminDashboardPage() {
 
   const [search, setSearch] = useState("");
   const [contentType, setContentType] = useState<"posts" | "products" | "accommodations">("posts");
+  const [contentLoading, setContentLoading] = useState(false);
 
   const withProcessing = (id: string, fn: (...args: any[]) => Promise<void>) => async (...args: any[]) => {
     if (processingIds.has(id)) return;
@@ -72,12 +73,15 @@ export default function AdminDashboardPage() {
           recoveryService.getRecoveryRequests(),
         ]);
         setStats(s); setUsers(u); setRequests(r); setReports(rp); setTags(t); setResetReqs(rs);
+      } catch (e: any) {
+        toast.error(e?.message || "Failed to load admin data");
       } finally { setLoading(false); }
     })();
   }, []);
 
   useEffect(() => {
     if (activeTab !== "content") return;
+    setContentLoading(true);
     const fetcher =
       contentType === "posts"
         ? adminService.getAllPosts
@@ -88,7 +92,8 @@ export default function AdminDashboardPage() {
       if (contentType === "posts") setPosts(d || []);
       else if (contentType === "products") setProducts(d || []);
       else setAccommodations(d || []);
-    });
+    }).catch((e) => toast.error(e?.message || "Failed to load content"))
+    .finally(() => setContentLoading(false));
   }, [activeTab, contentType, search]);
 
   const err = (e: any) => toast.error(e?.message || "Error");
@@ -393,16 +398,28 @@ export default function AdminDashboardPage() {
                 <option value="accommodations">Accommodations</option>
               </select>
             </div>
-            {(contentType === "posts" ? posts : contentType === "products" ? products : accommodations).map((item) => (
-              <div key={item.id} className={`card p-2 flex items-start justify-between gap-2 ${item.is_hidden ? 'opacity-50' : ''}`}>
-                <p className="text-xs line-clamp-2 flex-1 min-w-0">
-                  {item.is_hidden && <span className="font-bold text-red-600 mr-1">[HIDDEN]</span>}
-                  {contentType === "posts" ? item.content : item.title}
-                  {item.price ? ` – K${item.price}` : item.monthly_rent ? ` – K${item.monthly_rent}/mo` : ""}
-                </p>
-                <ActionButtons type={contentType === "posts" ? "post" : contentType === "products" ? "product" : "accommodation"} item={item} />
-              </div>
-            ))}
+            {contentLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="animate-spin text-muted" size={20} /></div>
+            ) : (contentType === "posts" ? posts : contentType === "products" ? products : accommodations).map((item) => {
+              const detailPath = contentType === "posts" ? `/post/${item.id}` : contentType === "products" ? `/marketplace/${item.id}` : `/accommodation/${item.id}`;
+              const imageUrl = item.image_url || item.images?.[0] || null;
+              return (
+                <div key={item.id} className={`card p-2 flex items-start justify-between gap-2 ${item.is_hidden ? 'opacity-50' : ''}`}>
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                    {imageUrl && <img src={imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />}
+                    <div className="min-w-0">
+                      <p className="text-xs line-clamp-2">
+                        {item.is_hidden && <span className="font-bold text-red-600 mr-1">[HIDDEN]</span>}
+                        {contentType === "posts" ? item.content : item.title}
+                        {item.price ? ` – K${item.price}` : item.monthly_rent ? ` – K${item.monthly_rent}/mo` : ""}
+                      </p>
+                      <a href={detailPath} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 underline mt-0.5 inline-block">View live ↗</a>
+                    </div>
+                  </div>
+                  <ActionButtons type={contentType === "posts" ? "post" : contentType === "products" ? "product" : "accommodation"} item={item} />
+                </div>
+              );
+            })}
           </div>
         )}
 

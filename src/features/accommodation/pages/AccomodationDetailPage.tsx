@@ -288,9 +288,9 @@ export default function AccommodationDetailPage() {
 
   if (!accommodation) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-2">
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Listing not found.</p>
-        <button onClick={() => navigate(-1)} className="btn-ghost text-xs">Go back</button>
+      <div className="flex flex-col items-center justify-center h-64 gap-3 px-4">
+        <p className="text-sm text-center" style={{ color: "var(--color-text-muted)" }}>This listing could not be found or has been removed.</p>
+        <button onClick={() => navigate("/accommodation")} className="btn-primary w-auto px-6">← Back to Housing</button>
       </div>
     );
   }

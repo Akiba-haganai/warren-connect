@@ -4,6 +4,7 @@ import { useAuthStore } from "@/store/auth/authStore";
 import { supabase } from "@/lib/supabase/client";
 import { type FeedPost } from "@/services/posts/postService";
 import { reviewService } from "@/services/reviews/reviewService";
+import { profileService } from "@/services/profiles/profileService";
 import ProfileHeader from "@/features/profile/components/ProfileHeader";
 import ProfileBio from "@/features/profile/components/ProfileBio";
 import ProfileInfo from "@/features/profile/components/ProfileInfo";
@@ -20,7 +21,7 @@ export default function ProfilePage() {
   const profile = useAuthStore((s) => s.profile);
   const navigate = useNavigate();
   const [uploading, setUploading] = useState<"avatar" | "cover" | null>(null);
-  const [posts] = useState<FeedPost[]>([]);
+  const [posts, setPosts] = useState<FeedPost[]>([]);
   const [signingOut, setSigningOut] = useState(false);
   const [recentReviews, setRecentReviews] = useState<any[]>([]);
   const [avgRating, setAvgRating] = useState<number | null>(null);
@@ -30,7 +31,6 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-
     const load = async () => {
       try {
         const [reviews, avg] = await Promise.all([
@@ -45,8 +45,16 @@ export default function ProfilePage() {
         // Secondary data — silently show zero reviews rather than crashing
       }
     };
-
+    const loadPosts = async () => {
+      try {
+        const userPosts = await profileService.getUserPosts(user.id);
+        if (!cancelled) setPosts((userPosts as any) || []);
+      } catch {
+        // silently fail — posts section shows empty
+      }
+    };
     load();
+    loadPosts();
     return () => { cancelled = true; };
   }, [user?.id]);
 
