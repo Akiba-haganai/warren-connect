@@ -452,18 +452,18 @@ export default function AdminDashboardPage() {
                         {typeof r.content_snapshot === 'object' && r.content_snapshot !== null ? (
                           <div className="space-y-1">
                             {r.content_type === "post" && (
-                              <p className="italic">"{r.content_snapshot.content}"</p>
+                              <p className="italic">"{(r.content_snapshot as any).content}"</p>
                             )}
                             {r.content_type !== "post" && (
                               <>
-                                <p className="font-bold text-sm text-slate-900 dark:text-slate-100">{r.content_snapshot.title}</p>
-                                {(r.content_snapshot.price || r.content_snapshot.monthly_rent) && (
+                                <p className="font-bold text-sm text-slate-900 dark:text-slate-100">{(r.content_snapshot as any).title}</p>
+                                {((r.content_snapshot as any).price || (r.content_snapshot as any).monthly_rent) && (
                                   <p className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                    K{r.content_snapshot.price || r.content_snapshot.monthly_rent}
+                                    K{(r.content_snapshot as any).price || (r.content_snapshot as any).monthly_rent}
                                   </p>
                                 )}
-                                {(r.content_snapshot.description || r.content_snapshot.condition) && (
-                                  <p className="text-muted line-clamp-2 mt-1">{r.content_snapshot.description || r.content_snapshot.condition}</p>
+                                {((r.content_snapshot as any).description || (r.content_snapshot as any).condition) && (
+                                  <p className="text-muted line-clamp-2 mt-1">{(r.content_snapshot as any).description || (r.content_snapshot as any).condition}</p>
                                 )}
                               </>
                             )}
