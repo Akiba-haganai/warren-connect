@@ -50,4 +50,35 @@ export const storageService = {
 
     return { publicUrl: data.publicUrl, thumbUrl };
   },
+
+  async uploadPrivateFile(
+    bucket: string,
+    file: File,
+    userId?: string
+  ): Promise<{ path: string }> {
+    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"];
+    if (file.type && !allowedMimeTypes.includes(file.type.toLowerCase())) {
+      throw new Error("Invalid file type. Only JPEG, PNG, WebP, HEIC and PDF files are allowed.");
+    }
+
+    const extension = file.name.split(".").pop() ?? "jpg";
+    const filePath = userId
+      ? `${userId}/${crypto.randomUUID()}.${extension}`
+      : `${crypto.randomUUID()}.${extension}`;
+
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file, { upsert: false });
+
+    if (error) throw error;
+    return { path: filePath };
+  },
+
+  async getSignedUrl(bucket: string, path: string, expiresInSeconds = 3600): Promise<string> {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(path, expiresInSeconds);
+    if (error) throw error;
+    return data.signedUrl;
+  },
 };

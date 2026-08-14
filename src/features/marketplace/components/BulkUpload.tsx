@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { productService } from "@/services/products/productService";
+import { shopService } from "@/services/shop/shopService";
 import { storageService } from "@/services/storage/storageService";
 import { compressImage } from "@/utils/compressImage";
-import { X, Upload, Loader2, CheckCircle, ImagePlus } from "lucide-react";
+import { X, Upload, Loader2, CheckCircle, ImagePlus, Store } from "lucide-react";
 import Papa from "papaparse";
 import { triggerHaptic } from "@/utils/haptic";
 import toast from "react-hot-toast";
@@ -22,6 +23,8 @@ interface CsvRow {
 
 export default function BulkUpload({ onClose, onCreated }: Props) {
   const user = useAuthStore((s) => s.user);
+  const [hasShop, setHasShop] = useState(false);
+  const [checkingShop, setCheckingShop] = useState(true);
   const [products, setProducts] = useState<CsvRow[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -29,6 +32,17 @@ export default function BulkUpload({ onClose, onCreated }: Props) {
   const [done, setDone] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    shopService.getMyShop(user.id).then((shop) => {
+      setHasShop(!!shop);
+      setCheckingShop(false);
+    }).catch(() => {
+      setHasShop(false);
+      setCheckingShop(false);
+    });
+  }, [user]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -145,7 +159,20 @@ export default function BulkUpload({ onClose, onCreated }: Props) {
         </div>
 
         <div className="px-5 py-4 space-y-4">
-          {products.length === 0 ? (
+          {checkingShop ? (
+            <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-primary" /></div>
+          ) : !hasShop ? (
+            <div className="text-center py-10 space-y-3">
+              <Store size={40} className="mx-auto text-amber-500" />
+              <h3 className="font-bold text-slate-900 dark:text-white">Shop Ownership Required</h3>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                Bulk CSV uploads are reserved for verified student shop owners to prevent spam listings.
+              </p>
+              <button onClick={onClose} className="btn-primary w-auto px-6 mx-auto">
+                Close & Create Shop
+              </button>
+            </div>
+          ) : products.length === 0 ? (
             <div className="text-center py-10">
               <Upload size={32} style={{ color: "var(--color-text-muted)", margin: "0 auto 8px" }} />
               <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)" }}>

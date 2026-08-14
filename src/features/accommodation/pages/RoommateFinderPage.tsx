@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth/authStore";
@@ -6,7 +7,8 @@ import { roommateService } from "@/services/roommates/roommateService";
 import { triggerNotification } from "@/services/notifications/triggerService";
 import { triggerHaptic } from "@/utils/haptic";
 import { isOnline } from "@/utils/timeAgo";
-import { Users, Loader2, X, Sparkles, SlidersHorizontal } from "lucide-react";
+import { ZAMBIA_UNIVERSITIES_COLLEGES } from "@/constants/locations";
+import { Users, Loader2, X, Sparkles, SlidersHorizontal, Search, GraduationCap } from "lucide-react";
 import toast from "react-hot-toast";
 import RoommateFilters from "@/features/accommodation/components/RoommateFilters";
 import RoommateCard from "@/features/accommodation/components/RoommateCard";
@@ -43,11 +45,10 @@ function getCompatibilityBreakdown(me: any, them: any): string[] {
 function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
   return (
     <span
-      className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full flex-shrink-0"
-      style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+      className="inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full flex-shrink-0 bg-surface border border-border text-slate-700 dark:text-slate-200 font-medium"
     >
       {label}
-      <button onClick={onClear} aria-label={`Remove ${label} filter`}><X size={12} /></button>
+      <button onClick={onClear} aria-label={`Remove ${label} filter`} className="hover:text-red-500"><X size={13} /></button>
     </span>
   );
 }
@@ -57,7 +58,7 @@ export default function RoommateFinderPage() {
   const currentUserId = useAuthStore((s) => s.user?.id) || undefined;
   const queryClient = useQueryClient();
 
-  // ---- Search (always visible) ----
+  // ---- Search ----
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
@@ -111,7 +112,8 @@ export default function RoommateFinderPage() {
     queryKey: ["roommate-universities"],
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("university").eq("looking_for_roommate", true).not("university", "is", null);
-      return [...new Set((data ?? []).map((d: any) => d.university))].sort() as string[];
+      const dynamicUnis = (data ?? []).map((d: any) => d.university);
+      return Array.from(new Set([...ZAMBIA_UNIVERSITIES_COLLEGES, ...dynamicUnis]));
     },
     staleTime: 1000 * 60 * 10,
   });
@@ -159,8 +161,6 @@ export default function RoommateFinderPage() {
   const { data: likeState } = useQuery({
     queryKey: ["roommate-like-state", currentUserId],
     queryFn: async () => {
-      // Narrow currentUserId to string — enabled guard stops us reaching here
-      // when undefined, but TS can't see that connection statically
       if (!currentUserId) throw new Error("No user");
       const [{ data: myLikes }, { data: likesOnMe }] = await Promise.all([
         supabase.from("roommate_likes").select("liked_id").eq("liker_id", currentUserId),
@@ -227,29 +227,96 @@ export default function RoommateFinderPage() {
   };
 
   return (
-    <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
-      {/* ---- Compact header ---- */}
-      <div className="sticky top-0 z-10 px-4 py-2 flex items-center justify-between"
-           style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}>
-        <h1 className="text-base font-bold" style={{ color: "var(--color-primary)" }}>Roommates</h1>
-        <button onClick={() => setFiltersOpen(true)} className="relative p-1.5 rounded-full"
-                style={{ background: activeFilterCount ? "var(--color-primary-light)" : "transparent" }}>
-          <SlidersHorizontal size={20} style={{ color: activeFilterCount ? "var(--color-primary)" : "var(--color-text-secondary)" }} />
-          {activeFilterCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full text-[10px] font-bold"
-                  style={{ width: 16, height: 16, background: "var(--color-primary)", color: "#fff" }}>{activeFilterCount}</span>
-          )}
-        </button>
+    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
+      {/* ---- Top Header Console ---- */}
+      <div className="sticky top-0 z-10 px-4 py-3 bg-surface border-b border-border shadow-2xs">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              <Users className="text-primary" size={18} /> Roommate Finder
+            </h1>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">Discover compatible campus roommates</p>
+          </div>
+          <button
+            onClick={() => setFiltersOpen(true)}
+            className="btn-ghost text-xs px-3.5 py-1.5 rounded-full flex items-center gap-1.5 border border-border text-slate-700 dark:text-slate-200 hover:border-slate-300 transition-all shrink-0"
+          >
+            <SlidersHorizontal size={14} className={activeFilterCount ? "text-primary" : ""} />
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="bg-primary text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
-      <div className="px-4 pt-3 pb-8">
-        {/* ---- Always‑visible search ---- */}
-        <input value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
-               placeholder="Search by name, course…" className="input-field mb-3 w-full" />
+      <div className="px-4 pt-4 pb-8 space-y-4 max-w-5xl mx-auto">
+        {/* Profile Completion Callout Banner */}
+        {(!currentProfile?.university || !(currentProfile as any)?.location) && (
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Sparkles size={18} className="text-amber-300 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold truncate">Boost Match Accuracy</p>
+                <p className="text-[11px] text-blue-100 truncate">Complete your university & location to unlock 95%+ match scores.</p>
+              </div>
+            </div>
+            <Link to="/profile" className="text-xs font-bold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-full shrink-0 transition-colors">
+              Edit Profile
+            </Link>
+          </div>
+        )}
 
-        {/* ---- Horizontally scrollable filter chips ---- */}
+        {/* ---- Search input ---- */}
+        <div className="relative">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search roommate by name, course, or interests..."
+            className="input-field pl-10 text-xs shadow-2xs rounded-full"
+          />
+        </div>
+
+        {/* ---- Side-scrolling University Pill Bar ---- */}
+        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5 flex-nowrap">
+          <button
+            type="button"
+            onClick={() => setUniversityFilter("")}
+            className={`text-xs px-3.5 py-1.5 rounded-full font-semibold transition-all shrink-0 border ${
+              !universityFilter
+                ? "bg-primary text-white border-primary shadow-xs"
+                : "bg-surface text-slate-700 dark:text-slate-300 border-border hover:border-slate-300"
+            }`}
+          >
+            All Universities
+          </button>
+          {ZAMBIA_UNIVERSITIES_COLLEGES.map((uni) => {
+            const shortName = uni.includes("(") ? uni.split("(")[1].replace(")", "") : uni;
+            const isActive = universityFilter === uni;
+            return (
+              <button
+                key={uni}
+                type="button"
+                onClick={() => setUniversityFilter(isActive ? "" : uni)}
+                className={`text-xs px-3.5 py-1.5 rounded-full font-medium transition-all shrink-0 border flex items-center gap-1 ${
+                  isActive
+                    ? "bg-primary text-white border-primary shadow-xs"
+                    : "bg-surface text-slate-700 dark:text-slate-300 border-border hover:border-slate-300"
+                }`}
+              >
+                <GraduationCap size={13} />
+                <span>{shortName}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ---- Horizontally scrollable active filter chips ---- */}
         {activeFilterCount > 0 && (
-          <div className="flex gap-1.5 overflow-x-auto flex-nowrap mb-3 pb-1 scrollbar-hide">
+          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar py-0.5 flex-nowrap items-center">
             {smokingFilter !== "no-preference" && <FilterChip label={`Smoking: ${smokingFilter}`} onClear={() => setSmokingFilter("no-preference")} />}
             {drinkingFilter !== "no-preference" && <FilterChip label={`Drinking: ${drinkingFilter}`} onClear={() => setDrinkingFilter("no-preference")} />}
             {studyFilter !== "no-preference" && <FilterChip label={`Study: ${studyFilter}`} onClear={() => setStudyFilter("no-preference")} />}
@@ -258,46 +325,77 @@ export default function RoommateFinderPage() {
             {privacyFilter !== null && <FilterChip label={privacyFilter ? "Privacy needed" : "Privacy not needed"} onClear={() => setPrivacyFilter(null)} />}
             {universityFilter && <FilterChip label={universityFilter} onClear={() => setUniversityFilter("")} />}
             {(budgetMin || budgetMax) && <FilterChip label={`K${budgetMin||0}–K${budgetMax||"∞"}`} onClear={() => { setBudgetMinInput(""); setBudgetMaxInput(""); }} />}
-            <button onClick={clearAllFilters} className="text-xs underline flex-shrink-0 self-center ml-1" style={{ color: "var(--color-text-secondary)" }}>Clear all</button>
+            <button onClick={clearAllFilters} className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline shrink-0 ml-1">Clear all</button>
           </div>
         )}
 
         {/* ---- Results ---- */}
         {isLoading ? (
-          <div className="grid grid-cols-1 gap-3">{Array.from({ length: 4 }).map((_, i) => <RoommateCardSkeleton key={i} />)}</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{Array.from({ length: 4 }).map((_, i) => <RoommateCardSkeleton key={i} />)}</div>
         ) : allResults.length === 0 ? (
-          <div className="rounded-2xl py-16 text-center" style={{ background: "var(--color-surface)", border: "1px dashed var(--color-border)" }}>
-            <Users size={40} style={{ color: "var(--color-text-muted)", margin: "0 auto 12px" }} />
-            <h3 className="text-lg font-bold mb-1">No roommates found</h3>
-            <p className="text-sm mb-3">{currentProfile?.looking_for_roommate ? "Try loosening a filter or invite friends." : "Set your preferences first to get matches."}</p>
-            {activeFilterCount > 0 && <button onClick={clearAllFilters} className="text-sm font-medium underline" style={{ color: "var(--color-primary)" }}>Clear all filters</button>}
+          <div className="card p-12 text-center border border-dashed border-border bg-surface rounded-3xl">
+            <Users size={44} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">No Roommate Matches Found</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-4">
+              {currentProfile?.looking_for_roommate
+                ? "Try relaxing your lifestyle filters or selecting a broader university area."
+                : "Enable 'Looking for roommate' in your profile preferences to start matching!"}
+            </p>
+            {activeFilterCount > 0 && (
+              <button onClick={clearAllFilters} className="btn-primary text-xs px-5 py-2 rounded-full font-bold">
+                Reset All Filters
+              </button>
+            )}
           </div>
         ) : (
           <>
+            {/* Top Match Spotlight Hero */}
             {topMatch && page === 0 && (
-              <div className="rounded-2xl p-4 mb-4" style={{ background: "linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%)" }}>
-                <div className="flex items-center gap-1 text-xs font-bold text-white mb-2 opacity-90"><Sparkles size={14} /> Your top match</div>
-                <RoommateCard user={topMatch} isOnline={isOnline(topMatch.last_seen)} compatibility={topMatch.compatibility}
+              <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-3xl p-5 shadow-xl shadow-blue-500/10 mb-4 border border-blue-400/20">
+                <div className="flex items-center gap-1.5 text-xs font-extrabold text-blue-100 uppercase tracking-wider mb-3">
+                  <Sparkles size={14} className="text-amber-300 animate-pulse" /> Top Match Recommendation
+                </div>
+                <RoommateCard
+                  user={topMatch}
+                  isOnline={isOnline(topMatch.last_seen)}
+                  compatibility={topMatch.compatibility}
                   compatibilityBreakdown={getCompatibilityBreakdown(currentProfile, topMatch)}
-                  isLiked={likedUsers.has(topMatch.id)} isMutual={mutualUsers.has(topMatch.id)}
-                  disabled={pendingLikes.has(topMatch.id)} onToggleLike={() => handleLikeToggle(topMatch.id)} spotlight />
+                  isLiked={likedUsers.has(topMatch.id)}
+                  isMutual={mutualUsers.has(topMatch.id)}
+                  disabled={pendingLikes.has(topMatch.id)}
+                  onToggleLike={() => handleLikeToggle(topMatch.id)}
+                  spotlight
+                />
               </div>
             )}
-            <div className="grid grid-cols-1 gap-3">
+
+            {/* Roommate Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {allResults.map((user) => (
-                <RoommateCard key={user.id} user={user} isOnline={isOnline(user.last_seen)} compatibility={user.compatibility}
+                <RoommateCard
+                  key={user.id}
+                  user={user}
+                  isOnline={isOnline(user.last_seen)}
+                  compatibility={user.compatibility}
                   compatibilityBreakdown={getCompatibilityBreakdown(currentProfile, user)}
-                  isLiked={likedUsers.has(user.id)} isMutual={mutualUsers.has(user.id)}
-                  disabled={pendingLikes.has(user.id)} onToggleLike={() => handleLikeToggle(user.id)} />
+                  isLiked={likedUsers.has(user.id)}
+                  isMutual={mutualUsers.has(user.id)}
+                  disabled={pendingLikes.has(user.id)}
+                  onToggleLike={() => handleLikeToggle(user.id)}
+                />
               ))}
             </div>
-            {isFetching && <div className="flex justify-center py-2"><Loader2 size={16} className="animate-spin" /></div>}
+
+            {isFetching && <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-primary" /></div>}
+
             {hasMore && !isLoading && (
               <div className="flex justify-center pt-4">
-                <button onClick={() => setPage((p) => p + 1)} disabled={isFetching}
-                        className="text-sm font-medium px-6 py-2.5 rounded-full transition-opacity"
-                        style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)", opacity: isFetching ? 0.6 : 1 }}>
-                  {isFetching ? "Loading…" : "Load 20 more"}
+                <button
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={isFetching}
+                  className="btn-ghost text-xs font-semibold px-6 py-2.5 rounded-full border border-border text-slate-700 dark:text-slate-200 hover:border-slate-300 transition-all shadow-xs"
+                >
+                  {isFetching ? "Loading..." : "Load More Roommates"}
                 </button>
               </div>
             )}
@@ -305,7 +403,7 @@ export default function RoommateFinderPage() {
         )}
       </div>
 
-      {/* ---- Bottom Sheet for filters ---- */}
+      {/* ---- Bottom Sheet for detailed filters ---- */}
       <AnimatePresence>
         {filtersOpen && (
           <BottomSheet onClose={() => setFiltersOpen(false)}>
@@ -323,15 +421,11 @@ export default function RoommateFinderPage() {
             />
             <button
               onClick={() => setPrivacyFilter((prev) => (prev === null ? true : prev === true ? false : null))}
-              className="input-field w-full mt-3 text-sm text-left"
-              style={{
-                background: privacyFilter === true ? "var(--color-primary)" : "var(--color-surface)",
-                color: privacyFilter !== null ? "#fff" : "var(--color-text)",
-              }}
+              className="input-field w-full mt-3 text-xs text-left cursor-pointer rounded-xl font-medium"
             >
-              🔒 {privacyFilter === null ? "Privacy: any" : privacyFilter ? "Needed" : "Not needed"}
+              🔒 {privacyFilter === null ? "Privacy Preference: Any" : privacyFilter ? "Occasional Privacy Needed" : "Shared Space Preferred"}
             </button>
-            <button onClick={() => setFiltersOpen(false)} className="btn-primary w-full mt-4">Show results</button>
+            <button onClick={() => setFiltersOpen(false)} className="btn-primary w-full mt-4 rounded-full py-2.5 font-bold text-xs">Show Results</button>
           </BottomSheet>
         )}
       </AnimatePresence>

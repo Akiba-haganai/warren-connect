@@ -190,7 +190,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             <label className="field-label" htmlFor="product-category">Category</label>
             <select
               id="product-category"
-              className="input-field"
+              className="glass-select w-full"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
@@ -210,7 +210,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
           <div>
             <label className="field-label" htmlFor="product-condition">Condition</label>
 
-            <select id="product-condition" className="input-field" value={condition} onChange={(e) => setCondition(e.target.value)}>
+            <select id="product-condition" className="glass-select w-full" value={condition} onChange={(e) => setCondition(e.target.value)}>
               <option value="">Select condition (optional)</option>
               <option value="new">New</option>
               <option value="used">Used</option>
@@ -220,7 +220,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
           {shops.length > 0 && (
             <div>
               <label className="field-label" htmlFor="product-shop">Add to Shop (optional)</label>
-              <select id="product-shop" className="input-field" value={selectedShopId} onChange={(e) => setSelectedShopId(e.target.value)}>
+              <select id="product-shop" className="glass-select w-full" value={selectedShopId} onChange={(e) => setSelectedShopId(e.target.value)}>
                 <option value="">No shop</option>
                 {shops.map((shop) => (
                   <option key={shop.id} value={shop.id}>{shop.name}</option>

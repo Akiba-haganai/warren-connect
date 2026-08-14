@@ -5,12 +5,14 @@ import { useAuthStore } from "@/store/auth/authStore";
 import type { Tables } from "@/types/database/database.types";
 import CreateShopModal from "@/features/marketplace/components/CreateShopModal";
 import { shopService } from "@/services/shop/shopService";
+import { productService, type Product } from "@/services/products/productService";
 
 type Accommodation = Tables<"accommodations">;
 
 export default function MyListings() {
   const user = useAuthStore((s) => s.user);
   const [listings, setListings] = useState<Accommodation[]>([]);
+  const [myProducts, setMyProducts] = useState<Product[]>([]);
   const [myShop, setMyShop] = useState<any>(null);
   const [shopCount, setShopCount] = useState<number>(0);
   // const [loadingShopCount, setLoadingShopCount] = useState(false);
@@ -23,6 +25,10 @@ export default function MyListings() {
       .then(setListings)
       .catch(console.error);
 
+    productService
+      .getUserProducts(user.id)
+      .then(setMyProducts)
+      .catch(console.error);
 
     shopService
       .getShopsForUser(user.id)
@@ -35,7 +41,7 @@ export default function MyListings() {
   
   }, [user]);
 
-  if (!listings.length && !myShop) return null; // hide if nothing to show
+  if (!listings.length && !myProducts.length && !myShop) return null; // hide if nothing to show
 
   return (
     <div className="mt-4 px-4">
@@ -68,7 +74,34 @@ export default function MyListings() {
         </>
       )}
 
-      {/* Shop section */}
+      {/* Marketplace Products */}
+      {myProducts.length > 0 && (
+        <div className="mt-3">
+          <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--color-text-secondary)" }}>
+            My Marketplace Products ({myProducts.length})
+          </h3>
+          <div className="flex flex-col gap-2">
+            {myProducts.map((p) => (
+              <Link
+                key={p.id}
+                to={`/marketplace/${p.id}`}
+                className="card p-3 flex justify-between items-center"
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{p.title}</p>
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    K{p.price} {p.condition ? `· ${p.condition}` : ""}
+                  </p>
+                </div>
+                {p.is_hidden && (
+                  <span className="badge badge-amber text-[10px]">Hidden</span>
+                )}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="mt-4">
         {myShop ? (
           <div className="flex gap-2">

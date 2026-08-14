@@ -11,7 +11,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { productService } from "@/services/products/productService";
 import {
-  ArrowLeft, MessageCircle, Share2, Loader2, ShieldCheck, Flag, ShoppingBag, ChevronLeft, ChevronRight
+  ArrowLeft, MessageCircle, Share2, Loader2, ShieldCheck, Flag, ShoppingBag, ChevronLeft, ChevronRight, Lock
 } from "lucide-react";
 
 export default function ProductDetailPage() {
@@ -220,7 +220,24 @@ export default function ProductDetailPage() {
           </span>
         )}
 
-        {product.description && <p className="text-sm" style={{ color: "var(--color-text)" }}>{product.description}</p>}
+        {product.description && <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">{product.description}</p>}
+
+        {/* Student Buyer Protection & Escrow Trust Card */}
+        <div className="p-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10 space-y-2">
+          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-xs">
+            <ShieldCheck size={16} />
+            <span>Student Buyer Guarantee & Escrow Safety</span>
+          </div>
+          <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-normal">
+            Transactions are protected. Always inspect items in public campus areas before finalizing payment. Instant report & dispute protection included.
+          </p>
+          <div className="flex items-center gap-3 pt-1 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+            <span className="flex items-center gap-1"><Lock size={11} className="text-emerald-500" /> Verified Seller ID</span>
+            <span>•</span>
+            <span>Campus Safe Zone</span>
+          </div>
+        </div>
+
         {product.seller && (
           <div className="card p-4 flex items-center gap-4">
             <Link to={`/user/${product.seller.id}`} className="flex-shrink-0">

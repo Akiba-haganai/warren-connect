@@ -3,7 +3,7 @@
 
 /* ===== DESIGN TOKENS (Light) ===== */
 :root {
-  --color-primary: #1E40AF;
+  --color-primary: #2563EB;
   /* z-index scale (elevation) */
   --z-bottom-nav: 50;
   --z-banner: 55;
@@ -167,34 +167,32 @@ img {
 
 /* ===== BUTTONS ===== */
 .btn-primary {
-  width: 100%;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.875rem 1.25rem;
-  border-radius: var(--radius-xl);
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-full);
   font-weight: 600;
   font-size: 0.875rem;
   color: white;
   border: none;
   cursor: pointer;
   transition: all var(--transition);
-  background: var(--color-primary);
-  box-shadow: var(--shadow-sm);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  box-shadow: 0 2px 8px rgba(37,99,235,0.25);
 }
-.btn-primary:hover { background: var(--color-primary-light); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.btn-primary:hover { background: var(--color-primary-light); box-shadow: 0 4px 12px rgba(37,99,235,0.35); transform: translateY(-1px); }
 .btn-primary:active { transform: scale(0.98); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
 .btn-accent {
-  width: 100%;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.875rem 1.25rem;
-  border-radius: var(--radius-xl);
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-full);
   font-weight: 600;
   font-size: 0.875rem;
   color: white;
@@ -202,19 +200,19 @@ img {
   cursor: pointer;
   transition: all var(--transition);
   background: var(--color-accent);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(249,115,22,0.25);
 }
 .btn-accent:active { transform: scale(0.98); }
 
 .btn-ghost {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1rem;
-  border-radius: var(--radius-xl);
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--radius-full);
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--color-text-secondary);
   background: transparent;
   border: none;
@@ -227,21 +225,53 @@ img {
 /* ===== INPUTS ===== */
 .input-field {
   width: 100%;
-  padding: 0.875rem 1rem;
-  border-radius: var(--radius-lg);
-  font-size: 0.9rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
   outline: none;
   transition: all 0.2s ease;
   background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  border: 1px solid var(--color-border);
   color: var(--color-text);
 }
-.input-field::placeholder { color: var(--color-text-muted); font-size: 0.85rem; }
+.input-field::placeholder { color: var(--color-text-muted); font-size: 0.8125rem; }
 .input-field:focus {
-  border-color: var(--color-primary-light);
+  border-color: var(--color-primary);
   background: var(--color-surface);
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+/* ===== GLASS SELECT DROPDOWNS ===== */
+.glass-select {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dark .glass-select {
+  background-color: rgba(15, 23, 42, 0.85);
+  border-color: rgba(51, 65, 85, 0.8);
+  color: #F8FAFC;
+}
+
+.glass-select:focus, .glass-select:hover {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.dark .glass-select:focus, .dark .glass-select:hover {
+  background-color: rgba(15, 23, 42, 0.95);
 }
 
 /* ===== CARDS ===== */

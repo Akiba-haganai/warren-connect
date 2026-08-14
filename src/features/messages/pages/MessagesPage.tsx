@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
 import { supabase } from "@/lib/supabase/client";
 import { messageService } from "@/services/messages/messageService";
@@ -240,35 +240,46 @@ export default function MessagesPage() {
           className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
           style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
-          <button aria-label="Back" onClick={() => setActiveId(null)} className="p-1">
-            <ArrowLeft size={20} style={{ color: "var(--color-text-secondary)" }} />
+          <button aria-label="Back" onClick={() => setActiveId(null)} className="p-1 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">
+            <ArrowLeft size={20} />
           </button>
-          {activeOtherProfile?.avatar_url ? (
-            <div className="relative">
-              <img src={activeOtherProfile.avatar_url} className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm" alt="" />
-              {activeOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />}
-            </div>
-          ) : (
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-sm" style={{ background: "var(--color-primary)" }}>
-                {(activeOtherProfile?.full_name?.[0] || "?").toUpperCase()}
+          
+          {/* Recipient Profile Clickable Header */}
+          {activeOtherId ? (
+            <Link to={`/user/${activeOtherId}`} className="flex items-center gap-3 min-w-0 flex-1 group hover:opacity-90 transition-opacity">
+              {activeOtherProfile?.avatar_url ? (
+                <div className="relative shrink-0">
+                  <img src={activeOtherProfile.avatar_url} className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500/20 shadow-xs group-hover:scale-105 transition-transform" alt="" />
+                  {activeOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-surface rounded-full" />}
+                </div>
+              ) : (
+                <div className="relative shrink-0">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-xs bg-primary group-hover:scale-105 transition-transform">
+                    {(activeOtherProfile?.full_name?.[0] || "?").toUpperCase()}
+                  </div>
+                  {activeOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-surface rounded-full" />}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <span className="font-bold text-sm text-slate-900 dark:text-white block truncate group-hover:text-primary transition-colors">
+                  {activeOtherProfile?.full_name || "View Profile"}
+                </span>
+                {isTyping ? (
+                  <p className="text-xs italic text-primary">typing…</p>
+                ) : activeOnline ? (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Online now</p>
+                ) : activeOtherProfile?.last_seen ? (
+                  <p className="text-xs text-slate-400">Last seen {timeAgo(activeOtherProfile.last_seen)}</p>
+                ) : null}
               </div>
-              {activeOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />}
+            </Link>
+          ) : (
+            <div className="flex-1 min-w-0">
+              <span className="font-bold text-sm text-slate-900 dark:text-white">Chat</span>
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <span className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>
-              {activeOtherProfile?.full_name || "Unknown"}
-            </span>
-            {isTyping ? (
-              <p className="text-xs italic" style={{ color: "var(--color-primary)" }}>typing…</p>
-            ) : activeOnline ? (
-              <p className="text-xs" style={{ color: "var(--color-success)" }}>Online now</p>
-            ) : activeOtherProfile?.last_seen ? (
-              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Last seen {timeAgo(activeOtherProfile.last_seen)}</p>
-            ) : null}
-          </div>
-          <button onClick={() => handleDeleteConversation(activeId)} className="p-2 rounded-full hover:bg-red-100" aria-label="Delete conversation" style={{ color: "var(--color-text-muted)" }}>
+
+          <button onClick={() => handleDeleteConversation(activeId)} className="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-950/50 text-slate-400 hover:text-red-500 transition-colors" aria-label="Delete conversation">
             <Trash2 size={16} />
           </button>
         </div>

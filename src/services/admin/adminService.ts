@@ -117,10 +117,20 @@ export const adminService = {
     if (!data || data.length === 0) throw new Error("Delete post blocked — RLS or permissions.");
   },
 
+  async hardDeletePost(postId: string) {
+    const { error } = await supabase.from("posts").delete().eq("id", postId);
+    if (error) throw error;
+  },
+
   async deleteProduct(productId: string) {
     const { data, error } = await supabase.from("products").update({ is_hidden: true }).eq("id", productId).select();
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Delete product blocked — RLS or permissions.");
+  },
+
+  async hardDeleteProduct(productId: string) {
+    const { error } = await supabase.from("products").delete().eq("id", productId);
+    if (error) throw error;
   },
 
   async deleteAccommodation(accommodationId: string) {
@@ -129,8 +139,14 @@ export const adminService = {
     if (!data || data.length === 0) throw new Error("Delete accommodation blocked — RLS or permissions.");
   },
 
+  async hardDeleteAccommodation(accommodationId: string) {
+    const { error } = await supabase.from("accommodations").delete().eq("id", accommodationId);
+    if (error) throw error;
+  },
+
   async getStats(): Promise<{
     totalUsers: number; totalProducts: number; totalAccommodations: number;
+    totalPosts: number; totalEscrows: number; totalBanned: number;
     pendingReports: number; pendingVerifications: number;
     recentUsers: any[];
   }> {
@@ -138,6 +154,9 @@ export const adminService = {
       { count: totalUsers },
       { count: totalProducts },
       { count: totalAccommodations },
+      { count: totalPosts },
+      { count: totalEscrows },
+      { count: totalBanned },
       { count: pendingReports },
       { count: pendingVerifications },
       { data: recentUsers },
@@ -145,6 +164,9 @@ export const adminService = {
       supabase.from("profiles").select("*", { count: "exact", head: true }),
       supabase.from("products").select("*", { count: "exact", head: true }),
       supabase.from("accommodations").select("*", { count: "exact", head: true }),
+      supabase.from("posts").select("*", { count: "exact", head: true }),
+      supabase.from("escrow_transactions").select("*", { count: "exact", head: true }),
+      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_banned", true),
       supabase.from("reports").select("*", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("verification_requests").select("*", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(5),
@@ -153,6 +175,9 @@ export const adminService = {
       totalUsers: totalUsers ?? 0,
       totalProducts: totalProducts ?? 0,
       totalAccommodations: totalAccommodations ?? 0,
+      totalPosts: totalPosts ?? 0,
+      totalEscrows: totalEscrows ?? 0,
+      totalBanned: totalBanned ?? 0,
       pendingReports: pendingReports ?? 0,
       pendingVerifications: pendingVerifications ?? 0,
       recentUsers: recentUsers || [],
@@ -160,26 +185,39 @@ export const adminService = {
   },
 
   async getAllPosts(search = "") {
-    let query = supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(50);
+    let query = supabase.from("posts").select("*, profiles!posts_user_id_fkey(full_name, avatar_url, email)").order("created_at", { ascending: false }).limit(50);
     if (search) query = query.ilike("content", `%${search}%`);
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      // Fallback query if foreign key join fails
+      const fallback = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(50);
+      if (fallback.error) throw fallback.error;
+      return fallback.data || [];
+    }
     return data || [];
   },
 
   async getAllProducts(search = "") {
-    let query = supabase.from("products").select("*").order("created_at", { ascending: false }).limit(50);
+    let query = supabase.from("products").select("*, profiles!products_user_id_fkey(full_name, avatar_url, email)").order("created_at", { ascending: false }).limit(50);
     if (search) query = query.ilike("title", `%${search}%`);
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      const fallback = await supabase.from("products").select("*").order("created_at", { ascending: false }).limit(50);
+      if (fallback.error) throw fallback.error;
+      return fallback.data || [];
+    }
     return data || [];
   },
 
   async getAllAccommodations(search = "") {
-    let query = supabase.from("accommodations").select("*").order("created_at", { ascending: false }).limit(50);
+    let query = supabase.from("accommodations").select("*, profiles!accommodations_landlord_id_fkey(full_name, avatar_url, email)").order("created_at", { ascending: false }).limit(50);
     if (search) query = query.ilike("title", `%${search}%`);
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      const fallback = await supabase.from("accommodations").select("*").order("created_at", { ascending: false }).limit(50);
+      if (fallback.error) throw fallback.error;
+      return fallback.data || [];
+    }
     return data || [];
   },
 

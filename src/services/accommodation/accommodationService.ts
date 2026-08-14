@@ -174,33 +174,56 @@ export const accommodationService = {
   },
 
   async getAccommodationsPaginated(limit: number, offset: number, filters?: {
-  search?: string;
-  location?: string;
-  roommate?: boolean;
-  gender?: string;
-  priceMin?: number;
-  priceMax?: number;
-  listingType?: string;
-}) {
-  let query = supabase
-    .from("accommodations")
-    .select("*")
-    .eq("is_hidden", false)
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
+    search?: string;
+    location?: string;
+    roommate?: boolean;
+    gender?: string;
+    priceMin?: number;
+    priceMax?: number;
+    listingType?: string;
+    sort?: "newest" | "oldest" | "price_asc" | "price_desc";
+    amenities?: string[];
+  }) {
+    let query = supabase
+      .from("accommodations")
+      .select("*")
+      .eq("is_hidden", false);
 
-  if (filters?.search) query = query.ilike("title", `%${filters.search}%`);
-  if (filters?.location) query = query.eq("location", filters.location);
-  if (filters?.roommate) query = query.eq("looking_for_roommate", true);
-  if (filters?.gender) query = query.eq("gender_preference", filters.gender);
-  if (filters?.priceMin !== undefined) query = query.gte("monthly_rent", filters.priceMin);
-  if (filters?.priceMax !== undefined) query = query.lte("monthly_rent", filters.priceMax);
-  if (filters?.listingType && filters.listingType !== "all") query = query.eq("listing_type", filters.listingType);
+    if (filters?.sort === "oldest") {
+      query = query.order("created_at", { ascending: true });
+    } else if (filters?.sort === "price_asc") {
+      query = query.order("monthly_rent", { ascending: true });
+    } else if (filters?.sort === "price_desc") {
+      query = query.order("monthly_rent", { ascending: false });
+    } else {
+      query = query.order("created_at", { ascending: false });
+    }
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data || [];
-},
+    if (filters?.amenities && filters.amenities.length > 0) {
+      const { data: amenityRows } = await supabase
+        .from("accommodation_amenities")
+        .select("accommodation_id")
+        .in("amenity", filters.amenities);
+      
+      const matchingIds = [...new Set((amenityRows || []).map((r) => r.accommodation_id))];
+      if (matchingIds.length === 0) return [];
+      query = query.in("id", matchingIds);
+    }
+
+    query = query.range(offset, offset + limit - 1);
+
+    if (filters?.search) query = query.ilike("title", `%${filters.search}%`);
+    if (filters?.location) query = query.eq("location", filters.location);
+    if (filters?.roommate) query = query.eq("looking_for_roommate", true);
+    if (filters?.gender) query = query.eq("gender_preference", filters.gender);
+    if (filters?.priceMin !== undefined) query = query.gte("monthly_rent", filters.priceMin);
+    if (filters?.priceMax !== undefined) query = query.lte("monthly_rent", filters.priceMax);
+    if (filters?.listingType && filters.listingType !== "all") query = query.eq("listing_type", filters.listingType);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  },
 
   async getLandlordStats(ownerId: string) {
     const { data: accommodations, error } = await supabase

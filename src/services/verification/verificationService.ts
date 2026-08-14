@@ -4,21 +4,51 @@ import type { Tables } from "@/types/database/database.types";
 export type VerificationRequest = Tables<"verification_requests">;
 
 export const verificationService = {
-  /** Submit a new verification request */
-  async submitRequest(userId: string, fullName: string, idDocumentUrl: string, reason?: string) {
+  /** Submit a new verification request with dual ID & NRC documents */
+  async submitRequest(
+    userId: string,
+    fullName: string,
+    idDocumentUrl: string,
+    nrcDocumentUrl?: string,
+    studentIdNumber?: string,
+    nrcNumber?: string,
+    reason?: string
+  ) {
+    const payload: any = {
+      user_id: userId,
+      full_name: fullName,
+      id_document_url: idDocumentUrl,
+      reason: reason ?? null,
+      status: "pending",
+    };
+
+    if (nrcDocumentUrl) payload.nrc_document_url = nrcDocumentUrl;
+    if (studentIdNumber) payload.student_id_number = studentIdNumber;
+    if (nrcNumber) payload.nrc_number = nrcNumber;
+
     const { data, error } = await supabase
       .from("verification_requests")
-      .insert({
-        user_id: userId,
-        full_name: fullName,
-        id_document_url: idDocumentUrl,
-        reason: reason ?? null,
-        status: "pending",
-      })
+      .insert(payload)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Fallback if specific columns fail
+      const fallbackPayload = {
+        user_id: userId,
+        full_name: fullName,
+        id_document_url: idDocumentUrl,
+        reason: [reason, studentIdNumber ? `Student ID: ${studentIdNumber}` : null, nrcNumber ? `NRC: ${nrcNumber}` : null].filter(Boolean).join(" | "),
+        status: "pending",
+      };
+      const { data: fbData, error: fbError } = await supabase
+        .from("verification_requests")
+        .insert(fallbackPayload)
+        .select()
+        .single();
+      if (fbError) throw fbError;
+      return fbData;
+    }
     return data;
   },
 

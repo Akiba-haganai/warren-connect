@@ -127,7 +127,7 @@ export default function RoommatePreferencesCard() {
                 setPrefs((p) => ({ ...p, smoking: e.target.value }));
                 handleSave("smoking_preference", e.target.value);
               }}
-              className="input-field text-sm"
+              className="glass-select w-full text-xs"
             >
               <option value="no-preference">No preference</option>
               <option value="non-smoker">Non‑smoker</option>
@@ -145,7 +145,7 @@ export default function RoommatePreferencesCard() {
                 setPrefs((p) => ({ ...p, drinking: e.target.value }));
                 handleSave("drinking_preference", e.target.value);
               }}
-              className="input-field text-sm"
+              className="glass-select w-full text-xs"
             >
               <option value="no-preference">No preference</option>
               <option value="non-drinker">Non‑drinker</option>
@@ -163,7 +163,7 @@ export default function RoommatePreferencesCard() {
                 setPrefs((p) => ({ ...p, study: e.target.value }));
                 handleSave("study_habit", e.target.value);
               }}
-              className="input-field text-sm"
+              className="glass-select w-full text-xs"
             >
               <option value="no-preference">No preference</option>
               <option value="quiet">Quiet</option>
@@ -181,7 +181,7 @@ export default function RoommatePreferencesCard() {
                 setPrefs((p) => ({ ...p, goingOut: e.target.value }));
                 handleSave("going_out_pattern", e.target.value);
               }}
-              className="input-field text-sm"
+              className="glass-select w-full text-xs"
             >
               <option value="no-preference">No preference</option>
               <option value="rarely">Rarely</option>
@@ -227,7 +227,7 @@ export default function RoommatePreferencesCard() {
                 setPrefs((p) => ({ ...p, genderPref: e.target.value }));
                 handleSave("roommate_gender_preference", e.target.value);
               }}
-              className="input-field text-sm"
+              className="glass-select w-full text-xs"
             >
               <option value="no-preference">No preference</option>
               <option value="male">Male</option>

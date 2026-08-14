@@ -246,8 +246,7 @@ export default function MarketplacePage() {
               <select
                 value={sortMode}
                 onChange={(e) => setSortMode(e.target.value as SortMode)}
-                className="input-field w-auto text-xs"
-                style={{ width: 100 }}
+                className="glass-select text-xs py-2 px-3 shrink-0"
               >
                 <option value="newest">Newest</option>
                 <option value="oldest">Oldest</option>

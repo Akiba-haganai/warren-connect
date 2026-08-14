@@ -16,11 +16,14 @@ import RoommatePreferencesCard from "@/features/profile/components/RoommatePrefe
 import DeleteAccountButton from "@/features/profile/components/DeleteAccountButton";
 import { Shield, LogOut, Loader2, Star, Clock, Settings } from "lucide-react";
 
+import EditProfileModal from "@/features/profile/components/EditProfileModal";
+
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
   const navigate = useNavigate();
   const [uploading, setUploading] = useState<"avatar" | "cover" | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [signingOut, setSigningOut] = useState(false);
   const [recentReviews, setRecentReviews] = useState<any[]>([]);
@@ -96,11 +99,13 @@ export default function ProfilePage() {
       <ProfileHeader uploading={uploading} setUploading={setUploading} />
 
       <div className="px-4 pt-10">
-        <ProfileInfo />
+        <ProfileInfo onEdit={() => setEditModalOpen(true)} />
         <div className="mt-1">
           <ProfileBio />
         </div>
       </div>
+
+      <EditProfileModal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} />
 
       {/* Response time */}
       {responseTimeText && (

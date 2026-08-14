@@ -1,8 +1,7 @@
-import { Search } from "lucide-react";
+import { Cigarette, Wine, BookOpen, Moon, Users, GraduationCap, DollarSign } from "lucide-react";
+import { ZAMBIA_UNIVERSITIES_COLLEGES } from "@/constants/locations";
 
 interface Props {
-  // search is still accepted (used by the standalone input in the page)
-  // but no longer rendered inside this component to avoid duplication
   search?: string;
   onSearchChange?: (val: string) => void;
   universityFilter: string;
@@ -34,74 +33,207 @@ export default function RoommateFilters({
   budgetMin, onBudgetMinChange,
   budgetMax, onBudgetMaxChange,
 }: Props) {
+  const allUnisList = Array.from(new Set([...ZAMBIA_UNIVERSITIES_COLLEGES, ...universities]));
+
   return (
-    <>
-      {/* University */}
-      <div className="flex gap-2">
-        <Search size={15} className="self-center flex-shrink-0" style={{ color: "var(--color-text-muted)" }} />
+    <div className="space-y-4">
+      {/* University Selector */}
+      <div>
+        <label className="field-label flex items-center gap-1.5 mb-1.5">
+          <GraduationCap size={14} className="text-primary" /> University
+        </label>
         <select
-          className="input-field flex-1 text-sm"
+          className="glass-select text-xs w-full cursor-pointer"
           value={universityFilter}
           onChange={(e) => onUniversityChange(e.target.value)}
         >
           <option value="">All universities</option>
-          {universities.map((uni) => (
+          {allUnisList.map((uni) => (
             <option key={uni} value={uni}>{uni}</option>
           ))}
         </select>
       </div>
 
-      {/* Quick lifestyle filters */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        <select value={smokingFilter} onChange={(e) => onSmokingChange(e.target.value)} className="input-field w-auto text-xs">
-          <option value="no-preference">🚬 Any</option>
-          <option value="non-smoker">Non‑smoker</option>
-          <option value="smoker">Smoker</option>
-          <option value="outside-only">Outside only</option>
-        </select>
-        <select value={drinkingFilter} onChange={(e) => onDrinkingChange(e.target.value)} className="input-field w-auto text-xs">
-          <option value="no-preference">🍺 Any</option>
-          <option value="non-drinker">Non‑drinker</option>
-          <option value="drinker">Drinker</option>
-          <option value="socially">Socially</option>
-        </select>
-        <select value={studyFilter} onChange={(e) => onStudyChange(e.target.value)} className="input-field w-auto text-xs">
-          <option value="no-preference">📚 Any</option>
-          <option value="quiet">Quiet</option>
-          <option value="moderate">Moderate</option>
-          <option value="loud">Loud</option>
-        </select>
-        <select value={goingOutFilter} onChange={(e) => onGoingOutChange(e.target.value)} className="input-field w-auto text-xs">
-          <option value="no-preference">🌙 Any</option>
-          <option value="rarely">Rarely</option>
-          <option value="weekends">Weekends</option>
-          <option value="often">Often</option>
-        </select>
-        <select value={genderFilter} onChange={(e) => onGenderChange(e.target.value)} className="input-field w-auto text-xs">
-          <option value="no-preference">⚤ Any</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-          <option value="mixed">Mixed</option>
-        </select>
+      {/* Lifestyle Filter Tracks */}
+      <div className="space-y-3">
+        {/* Smoking */}
+        <div>
+          <label className="field-label flex items-center gap-1.5 mb-1.5">
+            <Cigarette size={14} className="text-amber-500" /> Smoking Preference
+          </label>
+          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1">
+            {[
+              { id: "no-preference", label: "Any" },
+              { id: "non-smoker", label: "Non-smoker" },
+              { id: "smoker", label: "Smoker" },
+              { id: "outside-only", label: "Outside only" },
+            ].map((opt) => {
+              const active = smokingFilter === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => onSmokingChange(opt.id)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all shrink-0 border ${
+                    active
+                      ? "bg-primary text-white border-primary shadow-sm"
+                      : "bg-surface text-slate-600 dark:text-slate-300 border-border hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Drinking */}
+        <div>
+          <label className="field-label flex items-center gap-1.5 mb-1.5">
+            <Wine size={14} className="text-purple-500" /> Drinking Preference
+          </label>
+          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1">
+            {[
+              { id: "no-preference", label: "Any" },
+              { id: "non-drinker", label: "Non-drinker" },
+              { id: "drinker", label: "Drinker" },
+              { id: "socially", label: "Socially" },
+            ].map((opt) => {
+              const active = drinkingFilter === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => onDrinkingChange(opt.id)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all shrink-0 border ${
+                    active
+                      ? "bg-primary text-white border-primary shadow-sm"
+                      : "bg-surface text-slate-600 dark:text-slate-300 border-border hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Study Habits */}
+        <div>
+          <label className="field-label flex items-center gap-1.5 mb-1.5">
+            <BookOpen size={14} className="text-blue-500" /> Study Atmosphere
+          </label>
+          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1">
+            {[
+              { id: "no-preference", label: "Any" },
+              { id: "quiet", label: "Quiet study" },
+              { id: "moderate", label: "Moderate" },
+              { id: "loud", label: "Group study" },
+            ].map((opt) => {
+              const active = studyFilter === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => onStudyChange(opt.id)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all shrink-0 border ${
+                    active
+                      ? "bg-primary text-white border-primary shadow-sm"
+                      : "bg-surface text-slate-600 dark:text-slate-300 border-border hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Going Out */}
+        <div>
+          <label className="field-label flex items-center gap-1.5 mb-1.5">
+            <Moon size={14} className="text-indigo-500" /> Going Out Habit
+          </label>
+          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1">
+            {[
+              { id: "no-preference", label: "Any" },
+              { id: "rarely", label: "Homebody / Rarely" },
+              { id: "weekends", label: "Weekends" },
+              { id: "often", label: "Social butterfly" },
+            ].map((opt) => {
+              const active = goingOutFilter === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => onGoingOutChange(opt.id)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all shrink-0 border ${
+                    active
+                      ? "bg-primary text-white border-primary shadow-sm"
+                      : "bg-surface text-slate-600 dark:text-slate-300 border-border hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Gender Preference */}
+        <div>
+          <label className="field-label flex items-center gap-1.5 mb-1.5">
+            <Users size={14} className="text-emerald-500" /> Gender Preference
+          </label>
+          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1">
+            {[
+              { id: "no-preference", label: "Any gender" },
+              { id: "male", label: "Male" },
+              { id: "female", label: "Female" },
+              { id: "mixed", label: "Mixed" },
+            ].map((opt) => {
+              const active = genderFilter === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => onGenderChange(opt.id)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all shrink-0 border ${
+                    active
+                      ? "bg-primary text-white border-primary shadow-sm"
+                      : "bg-surface text-slate-600 dark:text-slate-300 border-border hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Budget range */}
-      <div className="flex gap-2">
-        <input
-          type="number"
-          placeholder="Min budget (K)"
-          value={budgetMin}
-          onChange={(e) => onBudgetMinChange(e.target.value)}
-          className="input-field flex-1 text-xs"
-        />
-        <input
-          type="number"
-          placeholder="Max budget (K)"
-          value={budgetMax}
-          onChange={(e) => onBudgetMaxChange(e.target.value)}
-          className="input-field flex-1 text-xs"
-        />
+      <div>
+        <label className="field-label flex items-center gap-1.5 mb-1.5">
+          <DollarSign size={14} className="text-emerald-600" /> Monthly Budget (ZMW)
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            placeholder="Min budget"
+            value={budgetMin}
+            onChange={(e) => onBudgetMinChange(e.target.value)}
+            className="input-field flex-1 text-xs"
+          />
+          <input
+            type="number"
+            placeholder="Max budget"
+            value={budgetMax}
+            onChange={(e) => onBudgetMaxChange(e.target.value)}
+            className="input-field flex-1 text-xs"
+          />
+        </div>
       </div>
-    </>
+    </div>
   );
 }

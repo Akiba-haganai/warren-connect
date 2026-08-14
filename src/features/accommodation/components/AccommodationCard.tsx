@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MapPin, Building2, Zap, Users } from "lucide-react";
+import { MapPin, Building2, Zap, Users, CheckCircle2 } from "lucide-react";
 
 import type { Tables } from "@/types/database/database.types";
 import SaveButton from "@/components/ui/SaveButton";
@@ -10,6 +10,10 @@ interface Props {
   listing: Accommodation;
   onView?: (id: string) => void;
   landlord?: {
+    full_name?: string | null;
+    avatar_url?: string | null;
+    is_verified?: boolean | null;
+    is_landlord?: boolean | null;
     total_response_time_ms?: number | null;
     response_count?: number | null;
   };
@@ -41,8 +45,15 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
         </div>
       )}
 
+      {/* Verified Landlord Badge Overlay */}
+      {landlord?.is_verified && (
+        <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-blue-600 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md backdrop-blur-xs">
+          <CheckCircle2 size={12} className="text-emerald-300" /> Verified Landlord
+        </div>
+      )}
+
       {isFastResponder && (
-        <div className="absolute top-10 left-2 z-10 flex items-center gap-1 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+        <div className="absolute top-9 left-2 z-10 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
           <Zap size={10} /> Fast responder
         </div>
       )}

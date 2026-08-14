@@ -88,17 +88,41 @@ export default function HomeFeedPage() {
     }
   };
 
+  const profile = useAuthStore((s) => s.profile);
+
   return (
-    <div ref={containerRef} style={{ background: "var(--color-bg)", minHeight: "100%", overflowY: "auto" }}>
+    <div ref={containerRef} style={{ background: "var(--color-bg)", minHeight: "100%" }}>
       {/* Header */}
       <div className="sticky top-0 z-10 px-4 py-3 flex items-center justify-between" style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}>
         <h1 className="text-base font-bold" style={{ color: "var(--color-primary)" }}>Explore</h1>
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as any)} className="text-xs bg-transparent border-none outline-none" style={{ color: "var(--color-text-secondary)" }}>
-          <option value="all">All</option>
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as any)} className="glass-select text-xs py-1 px-3 rounded-full">
+          <option value="all">All Content</option>
           <option value="post">Posts</option>
           <option value="product">Marketplace</option>
           <option value="accommodation">Housing</option>
         </select>
+      </div>
+
+      {/* Interactive Feed Composer Trigger Box */}
+      <div className="px-4 pt-3 pb-1">
+        <div
+          onClick={() => setShowComposer(true)}
+          className="p-3 rounded-2xl bg-surface border border-border flex items-center gap-3 cursor-pointer shadow-2xs hover:border-slate-300 transition-colors"
+        >
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} className="w-9 h-9 rounded-full object-cover shrink-0" alt="" />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs shrink-0">
+              {(profile?.full_name?.[0] || user?.email?.[0] || "?").toUpperCase()}
+            </div>
+          )}
+          <span className="text-xs text-slate-400 font-medium flex-1 truncate">
+            What's happening on campus, {profile?.full_name?.split(" ")[0] || "student"}?
+          </span>
+          <span className="btn-primary text-xs px-3 py-1 rounded-full shrink-0">
+            Post
+          </span>
+        </div>
       </div>
 
       {/* Tag chips */}

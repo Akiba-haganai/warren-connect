@@ -59,6 +59,17 @@ export const productService = {
     return data;
   },
 
+  async getUserProducts(userId: string) {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("seller_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
   async getProductsByIds(ids: string[]) {
     if (!ids.length) return [];
     const { data, error } = await supabase

@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { MapPin, Plus, X, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { accommodationService } from "@/services/accommodation/accommodationService";
+import { locationService } from "@/services/locations/locationService";
 import { storageService } from "@/services/storage/storageService";
 import { compressImage } from "@/utils/compressImage";
+import { ZAMBIA_LOCATIONS } from "@/constants/locations";
 import toast from "react-hot-toast";
 
 const COMMON_AMENITIES = [
@@ -35,10 +37,22 @@ export default function AccommodationComposer({
   // Basic fields
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
+  const [dbLocations, setDbLocations] = useState<string[]>(Array.from(ZAMBIA_LOCATIONS));
+
+  useEffect(() => {
+    locationService.getLocations().then((locs: string[]) => setDbLocations(locs));
+  }, []);
+
+  const lusakaLocations = dbLocations.filter((l) => l.startsWith("Lusaka"));
+  const kitweLocations = dbLocations.filter((l) => l.startsWith("Kitwe"));
+  const ndolaLocations = dbLocations.filter((l) => l.startsWith("Ndola"));
+  const otherLocations = dbLocations.filter(
+    (l) => !l.startsWith("Lusaka") && !l.startsWith("Kitwe") && !l.startsWith("Ndola")
+  );
   const [monthly_rent, setRent] = useState("");
   const [description, setDescription] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
 
@@ -63,11 +77,21 @@ export default function AccommodationComposer({
   }, [user]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    if (imageFiles.length + files.length > 5) {
+      toast.error("You can upload up to 5 photos.");
+    }
+    const newFiles = [...imageFiles, ...files].slice(0, 5);
+    setImageFiles(newFiles);
+    setImagePreviews(newFiles.map((f) => URL.createObjectURL(f)));
     e.target.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    const newFiles = imageFiles.filter((_, i) => i !== index);
+    setImageFiles(newFiles);
+    setImagePreviews(newFiles.map((f) => URL.createObjectURL(f)));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,17 +100,19 @@ export default function AccommodationComposer({
 
     setPosting(true);
     try {
-      let image_url: string | undefined;
-      if (imageFile) {
-        const compressed = await compressImage(imageFile);
+      let primaryImageUrl: string | undefined;
+      const uploadedUrls: string[] = [];
+      for (let i = 0; i < imageFiles.length; i++) {
+        const compressed = await compressImage(imageFiles[i]);
         const { publicUrl } = await storageService.uploadFile(
           "accommodation-images",
           compressed,
           user.id,
-          true
+          i === 0
         );
-        image_url = publicUrl;
+        uploadedUrls.push(publicUrl);
       }
+      primaryImageUrl = uploadedUrls[0];
 
       const newAcc = await accommodationService.createAccommodation(
         user.id,
@@ -94,13 +120,17 @@ export default function AccommodationComposer({
         description.trim() || "",
         location.trim(),
         Number(monthly_rent),
-        image_url,
+        primaryImageUrl,
         listingType,
         listingType !== "property" ? parentPropertyId || undefined : undefined,
         listingType === "room" || listingType === "bedspace"
           ? Number(capacity) || undefined
           : undefined
       );
+
+      for (let i = 1; i < uploadedUrls.length; i++) {
+        await accommodationService.addImage(newAcc.id, uploadedUrls[i]);
+      }
 
       if (selectedAmenities.length > 0) {
         await accommodationService.setAmenities(newAcc.id, selectedAmenities);
@@ -163,7 +193,7 @@ export default function AccommodationComposer({
                 aria-label="Listing type"
                 value={listingType}
                 onChange={(e) => setListingType(e.target.value as any)}
-                className="input-field"
+                className="glass-select w-full"
               >
                 <option value="property">Property (house/plot)</option>
                 <option value="room">Room (inside a property)</option>
@@ -220,22 +250,50 @@ export default function AccommodationComposer({
           </div>
 
           <div>
-            <label className="field-label">Location</label>
-            <div className="relative">
+            <label className="field-label">Primary Area / Student Hub</label>
+            <div className="relative mb-2">
               <MapPin
                 size={15}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: "var(--color-text-muted)" }}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-blue-500"
               />
-              <input
+              <select
                 required
-                className="input-field"
-                style={{ paddingLeft: "2.5rem" }}
-                placeholder="Neighbourhood / area"
+                className="glass-select w-full pl-10 cursor-pointer text-xs max-h-48 overflow-y-auto"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-              />
+              >
+                <option value="">Select Primary Location / Campus Hub...</option>
+                {lusakaLocations.length > 0 && (
+                  <optgroup label="📍 Lusaka Province">
+                    {lusakaLocations.map((loc) => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {kitweLocations.length > 0 && (
+                  <optgroup label="📍 Copperbelt - Kitwe (CBU)">
+                    {kitweLocations.map((loc) => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {ndolaLocations.length > 0 && (
+                  <optgroup label="📍 Copperbelt - Ndola (Medicine)">
+                    {ndolaLocations.map((loc) => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {otherLocations.length > 0 && (
+                  <optgroup label="📍 Other Locations">
+                    {otherLocations.map((loc) => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
             </div>
+            <p className="text-[11px] text-slate-400">Select the main campus area or town for easy search filtering.</p>
           </div>
 
           <div>
@@ -297,47 +355,43 @@ export default function AccommodationComposer({
           </div>
 
           <div>
-            <label className="field-label">Photo (optional)</label>
-            {imagePreview ? (
-              <div className="relative">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full rounded-xl object-cover"
-                  style={{ maxHeight: 200 }}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImageFile(null);
-                    setImagePreview(null);
+            <label className="field-label">Photos (up to 5)</label>
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              {imagePreviews.map((preview, idx) => (
+                <div key={idx} className="relative rounded-xl overflow-hidden aspect-video border bg-slate-100 dark:bg-slate-800">
+                  <img src={preview} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center bg-black/60 text-white"
+                    aria-label="Remove image"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              {imageFiles.length < 5 && (
+                <label
+                  className="flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-medium cursor-pointer"
+                  style={{
+                    background: "var(--color-bg)",
+                    border: "1.5px dashed var(--color-border)",
+                    color: "var(--color-text-secondary)",
                   }}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
-                  style={{ background: "rgba(0,0,0,0.55)", color: "#fff" }}
-                  aria-label="Remove image"
                 >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <label
-                className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-sm font-medium cursor-pointer"
-                style={{
-                  background: "var(--color-bg)",
-                  border: "1.5px dashed var(--color-border)",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                <Plus size={16} /> Add photo
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageSelect}
-                  aria-label="Select accommodation image"
-                />
-              </label>
-            )}
+                  <Plus size={16} />
+                  <span>Add photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleImageSelect}
+                    aria-label="Select accommodation images"
+                  />
+                </label>
+              )}
+            </div>
           </div>
 
           <button type="submit" disabled={posting} className="btn-primary" aria-label="Publish listing">
