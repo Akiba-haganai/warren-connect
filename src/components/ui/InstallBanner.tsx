@@ -117,12 +117,12 @@ export default function InstallBanner() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-black shadow-md shadow-blue-500/20 text-base">
-                W
+                P
               </div>
               <div className="text-left min-w-0">
                 <div className="flex items-center gap-1.5">
                   <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                    Install Warren Connect
+                    Install PLAWZA
                   </p>
                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 shrink-0">
                     App
@@ -168,7 +168,7 @@ export default function InstallBanner() {
                   Install on iPhone / iPad
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Add Warren Connect to your home screen in 3 steps
+                  Add PLAWZA to your home screen in 3 steps
                 </p>
               </div>
               <button

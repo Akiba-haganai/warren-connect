@@ -44,9 +44,9 @@ export function RebrandBanner() {
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white p-4 shadow-xl border border-slate-800 flex items-start gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
       <div className="flex-1 text-sm text-left">
-        <p className="font-bold text-blue-400">We've renamed to Market! 🎉</p>
+        <p className="font-bold text-primary">Welcome to PLAWZA! 🎉</p>
         <p className="text-slate-300 text-xs mt-1 leading-relaxed">
-          Your installed home-screen app icon might still show the old "Campus" identity. Remove the old app and add "Market" again from your browser menu to get the latest icon and name.
+          Your campus marketplace &amp; community hub. Install PLAWZA to your home screen for instant updates and offline access!
         </p>
       </div>
       <button

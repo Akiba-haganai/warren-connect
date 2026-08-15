@@ -75,7 +75,7 @@ export function UpdatePrompt() {
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
           <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
-            A new version of Market is available, but loading is delayed.
+            A new version of PLAWZA is available, but loading is delayed.
           </span>
         </div>
         <button

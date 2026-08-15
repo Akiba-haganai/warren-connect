@@ -6,24 +6,30 @@ import { useSearchParams } from "react-router-dom";
 import { accommodationService } from "@/services/accommodation/accommodationService";
 import { locationService } from "@/services/locations/locationService";
 import { ZAMBIA_LOCATIONS } from "@/constants/locations";
-import { Plus, Building2, Loader2, MapPin } from "lucide-react";
+import { Plus, Building2, Loader2, MapPin, X } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import AccommodationCard from "@/features/accommodation/components/AccommodationCard";
 import AccommodationFilters from "@/features/accommodation/components/AccommodationFilters";
 import AccommodationComposer from "@/features/accommodation/components/AccomodationComposer";
-import MyAccommodations from "@/features/accommodation/components/MyAccommodations";
-import LandlordStats from "@/features/accommodation/components/LandlordStats";
+import LandlordPortal from "@/features/accommodation/components/LandlordPortal";
+import EditAccommodationModal from "@/features/accommodation/components/EditAccommodationModal";
+import RecentlyViewedSection from "@/components/ui/RecentlyViewedSection";
+import { useScrollHeader } from "@/hooks/useScrollHeader";
 import { supabase } from "@/lib/supabase/client";
 
 const PAGE_SIZE = 10;
 
 export default function AccommodationPage() {
+  const { subHeaderVisible } = useScrollHeader();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [searchParams] = useSearchParams();
   const parentIdFromUrl = searchParams.get("parentId");
 
   const [showComposer, setShowComposer] = useState(false);
+  const [showPortal, setShowPortal] = useState(false);
+  const [editingListing, setEditingListing] = useState<any>(null);
+  const [composerParentId, setComposerParentId] = useState<string | undefined>(undefined);
 
   // ---- Debounced search ----
   const [searchInput, setSearchInput] = useState("");
@@ -39,9 +45,7 @@ export default function AccommodationPage() {
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
-  const [showMyAccommodations, setShowMyAccommodations] = useState(false);
   const [listingTypeFilter, setListingTypeFilter] = useState<"all" | "property" | "room" | "bedspace">("all");
-  const [landlordStats, setLandlordStats] = useState<any>(null);
   const [landlordProfiles, setLandlordProfiles] = useState<Record<string, any>>({});
   const [allLocations, setAllLocations] = useState<string[]>(Array.from(ZAMBIA_LOCATIONS));
 
@@ -55,11 +59,16 @@ export default function AccommodationPage() {
 
   const [sortMode, setSortMode] = useState<"newest" | "oldest" | "price_asc" | "price_desc">("newest");
 
+  const [myListings, setMyListings] = useState<any[]>([]);
+
+  const fetchMyListings = () => {
+    if (!user) return;
+    accommodationService.getMyAccommodations(user.id).then(setMyListings).catch(() => {});
+  };
+
   useEffect(() => {
-    if (showMyAccommodations && user) {
-      accommodationService.getLandlordStats(user.id).then(setLandlordStats);
-    }
-  }, [showMyAccommodations, user]);
+    if (user) fetchMyListings();
+  }, [user]);
 
   const fetchAccommodations = async ({ pageParam = 0 }) => {
     const offset = pageParam * PAGE_SIZE;
@@ -124,34 +133,54 @@ export default function AccommodationPage() {
   }, [allListings]);
 
   const filtered = allListings;
+  const totalCount = data?.pages.reduce((acc, p) => acc + p.listings.length, 0) ?? 0;
   const noListings = status !== "pending" && filtered.length === 0;
 
   const handleCreated = () => {
+    fetchMyListings();
     queryClient.invalidateQueries({ queryKey: ["accommodations"] });
   };
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
+      {/* Glassmorphic Main Header (Hides on Scroll Down) */}
       <div
-        className="sticky top-0 z-10 px-4 py-3 flex items-center justify-between"
-        style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}
+        className={`sticky top-0 z-20 px-3 py-2 flex items-center justify-between backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs transition-all duration-300 transform origin-top ${
+          subHeaderVisible
+            ? "max-h-16 py-2 translate-y-0 opacity-100"
+            : "max-h-0 py-0 opacity-0 -translate-y-full pointer-events-none border-transparent overflow-hidden"
+        }`}
       >
-        <h1 className="text-base font-extrabold text-slate-900 dark:text-white">Housing & Boarding</h1>
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs font-black shadow-xs">
+            P
+          </div>
+          <div>
+            <h1 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">Housing &amp; Student Hubs</h1>
+            <p className="text-[10px] text-slate-400 font-medium">PLAWZA Campus Accommodations</p>
+          </div>
+        </div>
         <button
-          onClick={() => setShowComposer(true)}
-          className="btn-primary text-xs font-semibold px-4 py-1.5 rounded-full shadow-xs"
+          onClick={() => {
+            setComposerParentId(undefined);
+            setShowComposer(true);
+          }}
+          className="btn-primary text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-xs flex items-center gap-1.5"
         >
           <Plus size={14} /> List Property
         </button>
       </div>
 
       <div className="px-4 pt-4 pb-8 flex flex-col gap-3">
+        <RecentlyViewedSection filterType="accommodation" title="Recently Viewed Housing" />
+
         <div className="flex items-center justify-between">
           <button
-            onClick={() => setShowMyAccommodations(!showMyAccommodations)}
-            className="btn-ghost text-xs text-blue-600 dark:text-blue-400 font-semibold px-2 py-1"
+            onClick={() => setShowPortal(true)}
+            className="btn-ghost text-xs text-primary font-bold px-2 py-1 flex items-center gap-1"
           >
-            {showMyAccommodations ? "Hide My Listings" : "Manage My Listings"}
+            <Building2 size={13} />
+            Landlord Management Hub
           </button>
 
           {/* Active Filters Reset Pill */}
@@ -173,17 +202,55 @@ export default function AccommodationPage() {
           )}
         </div>
 
-        {showMyAccommodations && landlordStats && (
-          <LandlordStats accommodations={landlordStats.accommodations} totalConversations={landlordStats.totalEnquiries} />
+        {/* Active filter chips — individual removable tags */}
+        {(locationFilter || roommateFilter || genderFilter || priceMin || priceMax || selectedAmenities.length > 0 || debouncedSearch) && (
+          <div className="flex flex-wrap gap-1.5">
+            {debouncedSearch && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-border">
+                🔍 &ldquo;{debouncedSearch}&rdquo;
+                <button type="button" onClick={() => setSearchInput("")} className="hover:text-red-500 transition-colors"><X size={11} /></button>
+              </span>
+            )}
+            {locationFilter && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                <MapPin size={11} />{locationFilter.replace("Lusaka - ", "").replace("Kitwe - ", "").replace("Ndola - ", "")}
+                <button type="button" onClick={() => setLocationFilter("")} className="hover:text-red-500 transition-colors"><X size={11} /></button>
+              </span>
+            )}
+            {roommateFilter && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                Roommate
+                <button type="button" onClick={() => setRoommateFilter(false)} className="hover:text-red-500 transition-colors"><X size={11} /></button>
+              </span>
+            )}
+            {genderFilter && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                {genderFilter.charAt(0).toUpperCase() + genderFilter.slice(1)}
+                <button type="button" onClick={() => setGenderFilter("")} className="hover:text-red-500 transition-colors"><X size={11} /></button>
+              </span>
+            )}
+            {(priceMin || priceMax) && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                K{priceMin || "0"} – K{priceMax || "∞"}
+                <button type="button" onClick={() => { setPriceMin(""); setPriceMax(""); }} className="hover:text-red-500 transition-colors"><X size={11} /></button>
+              </span>
+            )}
+            {selectedAmenities.map((a) => (
+              <span key={a} className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-white dark:bg-white dark:text-slate-900 border border-transparent">
+                {a}
+                <button type="button" onClick={() => setSelectedAmenities((prev) => prev.filter((x) => x !== a))} className="hover:text-red-400 dark:hover:text-red-600 transition-colors"><X size={11} /></button>
+              </span>
+            ))}
+          </div>
         )}
-        {showMyAccommodations && <MyAccommodations />}
+
 
         {/* Side-Scrolling Campus Location Pill Track */}
-        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5 flex-nowrap">
+        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-1 flex-nowrap" style={{ WebkitOverflowScrolling: "touch" }}>
           <button
             type="button"
             onClick={() => setLocationFilter("")}
-            className={`text-xs px-3.5 py-1.5 rounded-full font-semibold transition-all shrink-0 border ${
+            className={`text-xs px-3.5 py-1.5 rounded-full font-bold transition-all shrink-0 border ${
               !locationFilter
                 ? "bg-primary text-white border-primary shadow-xs"
                 : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
@@ -191,7 +258,7 @@ export default function AccommodationPage() {
           >
             All Locations
           </button>
-          {locations.slice(0, 15).map((loc) => {
+          {locations.map((loc) => {
             const shortLoc = loc.replace("Lusaka - ", "").replace("Kitwe - ", "").replace("Ndola - ", "");
             const isActive = locationFilter === loc;
             return (
@@ -201,11 +268,11 @@ export default function AccommodationPage() {
                 onClick={() => setLocationFilter(isActive ? "" : loc)}
                 className={`text-xs px-3.5 py-1.5 rounded-full font-medium transition-all shrink-0 border flex items-center gap-1 ${
                   isActive
-                    ? "bg-primary text-white border-primary shadow-xs"
+                    ? "bg-primary text-white border-primary shadow-xs font-bold"
                     : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
                 }`}
               >
-                <MapPin size={12} />
+                <MapPin size={12} className={isActive ? "text-white" : "text-primary"} />
                 <span>{shortLoc}</span>
               </button>
             );
@@ -298,6 +365,11 @@ export default function AccommodationPage() {
           </div>
         ) : (
           <>
+            {status === "success" && totalCount > 0 && (
+              <p className="text-[11px] text-slate-400 font-medium px-1">
+                Showing {totalCount} listing{totalCount !== 1 ? "s" : ""}{hasNextPage ? "+" : ""}
+              </p>
+            )}
             {filtered.map((listing) => {
               const landlord = landlordProfiles[listing.owner_id];
               return <AccommodationCard key={listing.id} listing={listing} landlord={landlord} />;
@@ -310,10 +382,41 @@ export default function AccommodationPage() {
 
       {showComposer && (
         <AccommodationComposer
-          onClose={() => setShowComposer(false)}
+          onClose={() => {
+            setShowComposer(false);
+            setComposerParentId(undefined);
+          }}
           onCreated={handleCreated}
-          initialListingType={parentIdFromUrl ? "room" : undefined}
-          initialParentId={parentIdFromUrl ?? undefined}
+          initialListingType={composerParentId || parentIdFromUrl ? "room" : undefined}
+          initialParentId={composerParentId || parentIdFromUrl || undefined}
+        />
+      )}
+
+      {showPortal && (
+        <LandlordPortal
+          listings={myListings}
+          onClose={() => setShowPortal(false)}
+          onRefresh={handleCreated}
+          onAddProperty={() => {
+            setComposerParentId(undefined);
+            setShowComposer(true);
+          }}
+          onAddRoom={(parentId) => {
+            setComposerParentId(parentId);
+            setShowComposer(true);
+          }}
+          onEditListing={(listing) => setEditingListing(listing)}
+        />
+      )}
+
+      {editingListing && (
+        <EditAccommodationModal
+          accommodation={editingListing}
+          onClose={() => setEditingListing(null)}
+          onUpdated={() => {
+            setEditingListing(null);
+            handleCreated();
+          }}
         />
       )}
     </div>

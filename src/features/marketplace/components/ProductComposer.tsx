@@ -27,6 +27,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   const [posting, setPosting] = useState(false);
   const [shops, setShops] = useState<any[]>([]);
   const [selectedShopId, setSelectedShopId] = useState<string>(initialShopId ?? "");
+  const [category, setCategory] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -48,8 +49,6 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
       return prev.filter((_, i) => i !== index);
     });
   };
-
-  const [category, setCategory] = useState("");
 
   // Backward-safe: if products table doesn’t yet have category, we’ll just keep category empty.
 
@@ -109,17 +108,23 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
         category || undefined
       );
 
-      if (!newProduct) {
-        throw new Error("Failed to create product");
+      const createdProductId =
+        newProduct?.id ||
+        newProduct?.product?.id ||
+        newProduct?.data?.id ||
+        (typeof newProduct === "string" ? newProduct : null);
+
+      if (!createdProductId || createdProductId === "undefined") {
+        throw new Error("Failed to retrieve product ID");
       }
 
-      // 2. Upload images to pending-uploads
+      // 2. Upload images to pending-uploads & set primary image immediately
       if (imageFiles.length > 0) {
-        await Promise.all(
+        const uploadedPaths = await Promise.all(
           imageFiles.map(async (file) => {
             const compressed = await compressImage(file);
             const fileName = `${Date.now()}_${compressed.name}`;
-            const path = `products/${user.id}/${newProduct.id}/${fileName}`;
+            const path = `products/${user.id}/${createdProductId}/${fileName}`;
             
             await storageService.uploadFile(
               "pending-uploads",
@@ -128,30 +133,29 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
               true,
               path
             );
-            return path; // Edge function will handle moving it to public-images
+            return path;
           })
         );
-      }
 
-      // If multiple images, we'd normally store them in product_images, 
-      // but they are pending right now. For simplicity we only track the primary one pending.
-      // Additional images might need a separate moderation status in the product_images table in a full implementation,
-      // but for this scoped version we assume we only rely on the main image logic for now, or just let them all upload.
-      
-      // We will skip `addProductImage` for now until they are approved, or the webhook needs to handle it.
-      // (The webhook currently only updates the main `image_url` on the main table).
+        if (uploadedPaths.length > 0) {
+          const primaryPublicUrl = storageService.getPublicUrl("pending-uploads", uploadedPaths[0]);
+          await productService.updateProduct(createdProductId, {
+            image_url: primaryPublicUrl,
+          }).catch(() => {});
+        }
+      }
 
       if (tags.length > 0) {
         const tagRecords = await Promise.all(
           tags.map((name) => tagService.createTag(name))
         );
         await Promise.all(
-          tagRecords.map((tag) => tagService.addTagToProduct(newProduct.id, tag!.id))
+          tagRecords.map((tag) => tagService.addTagToProduct(createdProductId, tag!.id))
         );
       }
 
       if (selectedShopId) {
-        await shopService.addProductToShop(newProduct.id, selectedShopId);
+        await shopService.addProductToShop(createdProductId, selectedShopId);
       }
 
       onCreated();
@@ -164,16 +168,19 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end">
-      <div className="w-full rounded-t-3xl overflow-y-auto page-fade-in" style={{ background: "var(--color-surface)", maxHeight: "90dvh", paddingBottom: "calc(24px + env(safe-area-inset-bottom))" }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 pt-5 pb-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-          <h2 className="text-base font-bold" style={{ color: "var(--color-text)" }}>New listing</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "var(--color-bg)", color: "var(--color-text-secondary)" }} aria-label="Close composer">
-            <X size={16} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-surface border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-surface">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">New Listing</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Add your item to the campus marketplace</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors" aria-label="Close composer">
+            <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-5 py-4 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 flex-1">
           <div>
             <label className="field-label" htmlFor="product-title">Title</label>
             <input id="product-title" required className="input-field" placeholder="What are you selling?" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -188,28 +195,22 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
           </div>
           <div>
             <label className="field-label" htmlFor="product-category">Category</label>
-            <select
-              id="product-category"
-              className="glass-select w-full"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
+            <select id="product-category" className="glass-select w-full" value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="">Select category (optional)</option>
-              <option value="phones">Phones & Tablets</option>
-              <option value="laptops">Laptops & Computers</option>
-              <option value="electronics">Electronics & Gadgets</option>
-              <option value="clothing">Clothing & Fashion</option>
-              <option value="furniture">Furniture & Home</option>
-              <option value="books">Books & Stationery</option>
-              <option value="food">Food & Groceries</option>
-              <option value="vehicles">Vehicles & Transport</option>
+              <option value="phones">Phones &amp; Tablets</option>
+              <option value="laptops">Laptops &amp; Computers</option>
+              <option value="electronics">Electronics &amp; Gadgets</option>
+              <option value="clothing">Clothing &amp; Fashion</option>
+              <option value="furniture">Furniture &amp; Home</option>
+              <option value="books">Books &amp; Stationery</option>
+              <option value="food">Food &amp; Groceries</option>
+              <option value="vehicles">Vehicles &amp; Transport</option>
               <option value="services">Services</option>
               <option value="other">Other</option>
             </select>
           </div>
           <div>
             <label className="field-label" htmlFor="product-condition">Condition</label>
-
             <select id="product-condition" className="glass-select w-full" value={condition} onChange={(e) => setCondition(e.target.value)}>
               <option value="">Select condition (optional)</option>
               <option value="new">New</option>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
 import { supabase } from "@/lib/supabase/client";
 import { ArrowLeft, Lock, Loader2, ShieldCheck } from "lucide-react";
@@ -262,6 +262,27 @@ export default function SettingsPage() {
               {clearing ? <Loader2 size={12} className="animate-spin mr-1 inline" /> : null}
               {clearing ? "Clearing cache…" : "Force Refresh App"}
             </button>
+          </div>
+        </div>
+
+        {/* Legal & Support */}
+        <div className="card p-4">
+          <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>Legal &amp; Support</h2>
+          <div className="flex flex-col gap-2.5 text-xs">
+            <Link to="/terms" className="flex items-center justify-between py-1 text-slate-700 dark:text-slate-200 hover:text-primary transition-colors">
+              <span>Terms of Service</span>
+              <span className="text-slate-400">➔</span>
+            </Link>
+            <div className="h-px bg-border/50" />
+            <Link to="/privacy" className="flex items-center justify-between py-1 text-slate-700 dark:text-slate-200 hover:text-primary transition-colors">
+              <span>Privacy Policy</span>
+              <span className="text-slate-400">➔</span>
+            </Link>
+            <div className="h-px bg-border/50" />
+            <a href="mailto:support@plawza.com" className="flex items-center justify-between py-1 text-slate-700 dark:text-slate-200 hover:text-primary transition-colors">
+              <span>Contact Support</span>
+              <span className="text-slate-400">support@plawza.com</span>
+            </a>
           </div>
         </div>
 

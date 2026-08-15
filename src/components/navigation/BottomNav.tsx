@@ -77,7 +77,7 @@ export default function BottomNav() {
               : location.pathname.startsWith(tab.path);
           const Icon = tab.icon;
 
-          const showNotifBadge = tab.path === "/messages" && unreadCount > 0;
+          const showNotifBadge = (tab.path === "/feed" || tab.path === "/") && unreadCount > 0;
           const showMatchBadge = tab.path === "/roommates" && matchesCount > 0;
 
           return (

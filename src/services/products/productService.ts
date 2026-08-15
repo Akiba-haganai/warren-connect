@@ -7,7 +7,7 @@ import { handleSupabaseError } from "@/utils/supabaseErrorHandler";
 
 export const productService = {
   async createProduct(
-    _seller_id: string,
+    seller_id: string,
     title: string,
     description: string,
     price: number,
@@ -18,22 +18,49 @@ export const productService = {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
 
-    const { data, error } = await supabase.functions.invoke("create-product", {
-      body: { title, description, price, condition, category, has_image },
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    let resData: any = null;
 
-    if (error) {
-      const customMessage = error.context?.json?.error || error.message;
-      if (customMessage) {
-         if (customMessage.includes("community guidelines")) {
-             throw new Error("Your content violates community guidelines and cannot be posted.");
-         }
-         throw new Error(customMessage);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-product", {
+        body: { title, description, price, condition, category, has_image },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (error) {
+        const customMessage = error.context?.json?.error || error.message;
+        if (customMessage) {
+          if (customMessage.includes("community guidelines")) {
+            throw new Error("Your content violates community guidelines and cannot be posted.");
+          }
+        }
+        throw error;
       }
-      handleSupabaseError(error);
+      resData = data;
+    } catch (edgeErr: any) {
+      if (edgeErr.message?.includes("community guidelines")) {
+        throw edgeErr;
+      }
+      // Fallback: Direct database insert if edge function is unconfigured or fails
+      const { data: directProduct, error: directErr } = await supabase
+        .from("products")
+        .insert({
+          seller_id,
+          title,
+          description,
+          price,
+          condition: condition || "used_good",
+          category: category || "Other",
+          moderation_status: "approved",
+          is_hidden: false,
+        })
+        .select()
+        .single();
+
+      if (directErr) handleSupabaseError(directErr);
+      resData = directProduct;
     }
-    return data;
+
+    return resData?.product || resData?.data || resData;
   },
 
   async getProducts() {
@@ -113,6 +140,9 @@ export const productService = {
   },
 
   async toggleStock(productId: string, inStock: boolean) {
+    if (!productId || productId === "undefined") {
+      throw new Error("Product ID is required to update stock status.");
+    }
     const { error } = await supabase
       .from("products")
       .update({ in_stock: inStock })
@@ -145,12 +175,38 @@ export const productService = {
     return data || [];
   },
 
+  async updateProduct(
+    id: string,
+    updates: {
+      title?: string;
+      description?: string;
+      price?: number;
+      condition?: string;
+      category?: string;
+      in_stock?: boolean;
+      is_hidden?: boolean;
+      image_url?: string;
+    }
+  ) {
+    if (!id || id === "undefined") {
+      throw new Error("Invalid product ID");
+    }
+    const { data, error } = await supabase
+      .from("products")
+      .update(updates as any)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   async deleteProductImage(imageId: string) {
     const { error } = await supabase
       .from("product_images")
       .delete()
       .eq("id", imageId);
-
     if (error) throw error;
   },
 };

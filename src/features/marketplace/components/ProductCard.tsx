@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { Tables } from "@/types/database/database.types";
 import SaveButton from "@/components/ui/SaveButton";
-import { Share2, Star, Loader2 } from "lucide-react";
+import { Share2, Star, Loader2, Package } from "lucide-react";
 import { VerificationBadge } from "@/features/verification/components/VerificationBadge";
-
+import { storageService } from "@/services/storage/storageService";
 
 type Product = Tables<"products">;
 
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export default function ProductCard({ product, onView }: Props) {
+  const [imgError, setImgError] = useState(false);
+
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -29,6 +32,10 @@ export default function ProductCard({ product, onView }: Props) {
   };
 
   const showRating = product.seller_avg_rating && product.seller_review_count;
+
+  const isEdited = (product as any).updated_at && product.created_at && (
+    new Date((product as any).updated_at).getTime() - new Date(product.created_at).getTime() > 60000
+  );
 
   return (
     <Link
@@ -52,37 +59,55 @@ export default function ProductCard({ product, onView }: Props) {
         <Share2 size={14} style={{ color: "var(--color-text-secondary)" }} />
       </button>
 
-      {(product as any).moderation_status === "pending" ? (
-        <div
-          className="flex flex-col items-center justify-center text-center"
-          style={{
-            height: 160,
-            background: "var(--color-bg)",
-            borderBottom: "1px dashed var(--color-border)",
-          }}
-        >
-          <Loader2 className="animate-spin mb-2" size={24} style={{ color: "var(--color-text-muted)" }} />
-          <span className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Scanning image...</span>
-        </div>
-      ) : product.image_url ? (
-        <img
-          src={product.image_url}
-          alt={product.title}
-          className="w-full object-cover"
-          style={{ height: 160 }}
-          loading="lazy"
-        />
-      ) : (
-        <div
-          className="flex items-center justify-center"
-          style={{
-            height: 160,
-            background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))",
-          }}
-        >
-          <span className="text-3xl opacity-30" style={{ color: "white" }}>K</span>
-        </div>
-      )}
+      {(() => {
+        const displayUrl = product.image_url
+          ? product.image_url.startsWith("http")
+            ? product.image_url
+            : storageService.getPublicUrl("product-images", product.image_url)
+          : null;
+
+        if (displayUrl && !imgError) {
+          return (
+            <img
+              src={displayUrl}
+              alt={product.title}
+              className="w-full object-cover"
+              style={{ height: 160 }}
+              loading="lazy"
+              onError={() => setImgError(true)}
+            />
+          );
+        }
+
+        if ((product as any).moderation_status === "pending") {
+          return (
+            <div
+              className="flex flex-col items-center justify-center text-center"
+              style={{
+                height: 160,
+                background: "var(--color-bg)",
+                borderBottom: "1px dashed var(--color-border)",
+              }}
+            >
+              <Loader2 className="animate-spin mb-2" size={24} style={{ color: "var(--color-text-muted)" }} />
+              <span className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Scanning image...</span>
+            </div>
+          );
+        }
+
+        return (
+          <div
+            className="flex flex-col items-center justify-center gap-1"
+            style={{
+              height: 160,
+              background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))",
+            }}
+          >
+            <Package size={32} color="rgba(255,255,255,0.4)" />
+            <span className="text-sm font-bold text-white/80">K{(product.price ?? 0).toLocaleString()}</span>
+          </div>
+        );
+      })()}
 
       {/* Condition badge */}
       {product.condition && product.condition !== "used" && (
@@ -92,9 +117,16 @@ export default function ProductCard({ product, onView }: Props) {
       )}
 
       <div className="p-4">
-        <h3 className="font-semibold text-sm line-clamp-2" style={{ color: "var(--color-text)" }}>
-          {product.title}
-        </h3>
+        <div className="flex items-start justify-between gap-1">
+          <h3 className="font-semibold text-sm line-clamp-2" style={{ color: "var(--color-text)" }}>
+            {product.title}
+          </h3>
+          {isEdited && (
+            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 shrink-0 italic">
+              Edited
+            </span>
+          )}
+        </div>
         {product.description && (
           <p
             className="text-xs mt-1 line-clamp-2"

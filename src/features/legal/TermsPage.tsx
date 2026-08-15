@@ -9,14 +9,14 @@ export default function TermsPage() {
       <section>
         <h2 className="text-base font-bold mb-2">1. Acceptance of Terms</h2>
         <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-          By creating an account or accessing Warren Connect, you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree, you must immediately cease using the platform.
+          By creating an account or accessing PLAWZA, you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree, you must immediately cease using the platform.
         </p>
       </section>
 
       <section>
         <h2 className="text-base font-bold mb-2">2. Eligibility & Age Restriction</h2>
         <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-          You must be at least 18 years of age or an enrolled tertiary student to register and use Warren Connect. By registering, you warrant that you meet these eligibility criteria.
+          You must be at least 18 years of age or an enrolled tertiary student to register and use PLAWZA. By registering, you warrant that you meet these eligibility criteria.
         </p>
       </section>
 
@@ -30,21 +30,21 @@ export default function TermsPage() {
       <section>
         <h2 className="text-base font-bold mb-2">4. Marketplace & Housing Disclaimer</h2>
         <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-          Warren Connect is a communications platform facilitating peer-to-peer listings. We do not own, inspect, guarantee, or warrant any products, goods, or accommodation listings offered by users. All peer-to-peer transactions, sublets, and agreements are conducted entirely at your own risk. Users are advised to inspect items and premises in person before sending payments.
+          PLAWZA is a communications platform facilitating peer-to-peer listings. We do not own, inspect, guarantee, or warrant any products, goods, or accommodation listings offered by users. All peer-to-peer transactions, sublets, and agreements are conducted entirely at your own risk. Users are advised to inspect items and premises in person before sending payments.
         </p>
       </section>
 
       <section>
         <h2 className="text-base font-bold mb-2">5. User-Generated Content & Licensing</h2>
         <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-          You retain ownership of all photos, text, and data you submit. By uploading content to Warren Connect, you grant us a worldwide, non-exclusive, royalty-free licence to store, display, and distribute your content solely for operating and promoting the platform.
+          You retain ownership of all photos, text, and data you submit. By uploading content to PLAWZA, you grant us a worldwide, non-exclusive, royalty-free licence to store, display, and distribute your content solely for operating and promoting the platform.
         </p>
       </section>
 
       <section>
         <h2 className="text-base font-bold mb-2">6. Limitation of Liability</h2>
         <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-          Warren Connect is provided on an "as is" and "as available" basis without warranties of any kind. To the maximum extent permitted by law, Warren Connect shall not be liable for any direct, indirect, incidental, or consequential damages resulting from your use of the platform.
+          PLAWZA is provided on an "as is" and "as available" basis without warranties of any kind. To the maximum extent permitted by law, PLAWZA shall not be liable for any direct, indirect, incidental, or consequential damages resulting from your use of the platform.
         </p>
       </section>
 
@@ -58,7 +58,7 @@ export default function TermsPage() {
       <section>
         <h2 className="text-base font-bold mb-2">8. Contact Us</h2>
         <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-          If you have questions regarding these Terms of Service, please contact us at support@warrenconnect.app
+          If you have questions regarding these Terms of Service, please contact us at support@plawza.com
         </p>
       </section>
     </div>

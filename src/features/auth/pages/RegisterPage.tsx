@@ -51,10 +51,10 @@ export default function RegisterPage() {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold tracking-tight" style={{ color: "var(--color-text)" }}>
-          Join Market
+          Join PLAWZA
         </h2>
         <p className="text-sm mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
-          Your Market community is waiting
+          Your campus community is waiting
         </p>
       </div>
 

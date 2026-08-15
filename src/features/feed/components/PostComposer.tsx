@@ -23,6 +23,7 @@ export default function PostComposer({ onClose, onCreated }: Props) {
   const [tags, setTags] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const lastPostTime = useRef<number>(0);
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -35,6 +36,13 @@ export default function PostComposer({ onClose, onCreated }: Props) {
 
   const handleSubmit = async () => {
     if (!user || !content.trim()) return;
+
+    if (Date.now() - lastPostTime.current < 5000) {
+      toast.error("Please wait a few seconds before posting again.");
+      return;
+    }
+    lastPostTime.current = Date.now();
+
     setPosting(true);
     try {
       // 1. Create post (Synchronous text moderation happens here)

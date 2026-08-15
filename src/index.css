@@ -14,6 +14,12 @@
   --color-accent: #F97316;
   --color-accent-light: #FFF7ED;
 
+  /* PLAWZA Icon & Brand Layer Palette */
+  --plawza-primary: #00897B;
+  --plawza-primary-dark: #00594E;
+  --plawza-accent-needle: #FF6D00;
+  --plawza-mark-fill: #FFFFFF;
+
   --color-bg: #F8FAFC;
   --color-surface: #FFFFFF;
 
@@ -228,13 +234,15 @@ img {
   padding: 0.625rem 0.875rem;
   border-radius: var(--radius-md);
   font-size: 0.875rem;
+  font-weight: 500;
   outline: none;
   transition: all 0.2s ease;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text);
 }
-.input-field::placeholder { color: var(--color-text-muted); font-size: 0.8125rem; }
+.input-field::placeholder { color: #64748B; font-size: 0.8125rem; font-weight: 400; }
+.dark .input-field::placeholder { color: #94A3B8; }
 .input-field:focus {
   border-color: var(--color-primary);
   background: var(--color-surface);
@@ -245,61 +253,60 @@ img {
 .glass-select {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background-color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  background-color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
   border-radius: var(--radius-md);
   padding: 0.5rem 0.875rem;
   font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-text);
+  font-weight: 700;
+  color: #0F172A;
   outline: none;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .dark .glass-select {
-  background-color: rgba(15, 23, 42, 0.85);
-  border-color: rgba(51, 65, 85, 0.8);
-  color: #F8FAFC;
+  background-color: rgba(15, 23, 42, 0.92);
+  border-color: rgba(51, 65, 85, 0.9);
+  color: #FFFFFF;
+}
+
+.glass-select option, .input-field option {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  font-weight: 600;
+  padding: 8px;
+}
+
+.dark .glass-select option, .dark .input-field option {
+  background-color: #0F172A;
+  color: #FFFFFF;
 }
 
 .glass-select:focus, .glass-select:hover {
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: #FFFFFF;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .dark .glass-select:focus, .dark .glass-select:hover {
-  background-color: rgba(15, 23, 42, 0.95);
-}
-
-/* ===== CARDS ===== */
-.card {
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow);
-  border: 1px solid var(--color-border);
-}
-
-/* ===== AVATAR ===== */
-.avatar {
-  border-radius: 9999px;
-  object-fit: cover;
-  flex-shrink: 0;
-  background: var(--color-bg);
-  border: 2px solid var(--color-surface);
+  background-color: #0F172A;
 }
 
 /* ===== LABELS ===== */
 .field-label {
   display: block;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 0.375rem;
-  color: var(--color-text-secondary);
+  color: #1E293B;
+}
+
+.dark .field-label {
+  color: #F1F5F9;
 }
 
 /* ===== DIVIDER ===== */

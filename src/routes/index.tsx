@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet } from "react-router-dom";
+import { createBrowserRouter, Outlet, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 
 import AuthLayout from "@/layouts/auth/AuthLayout";
@@ -52,6 +52,7 @@ const ShopJoinPage = lazy(() => import("@/features/marketplace/pages/ShopJoinPag
 // Legal pages (unprotected)
 const TermsPage = lazy(() => import("@/features/legal/TermsPage"));
 const PrivacyPage = lazy(() => import("@/features/legal/PrivacyPage"));
+const OfflinePage = lazy(() => import("@/pages/OfflinePage"));
 
 // Landing page (public)
 const LandingPage = lazy(() => import("@/features/landing/LandingPage"));
@@ -165,6 +166,14 @@ export const router = createBrowserRouter([
           </Suspense>
         ),
       },
+      {
+        path: "/offline",
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <OfflinePage />
+          </Suspense>
+        ),
+      },
 
       // =========================
       // ADMIN ROUTES (single entry point, uses ?tab=)
@@ -187,6 +196,12 @@ export const router = createBrowserRouter([
             element: withBoundary(AdminLegacyRedirect),
           },
         ],
+      },
+
+      // Root Catch-All Route for 404s
+      {
+        path: "*",
+        element: <Navigate to="/" replace />,
       },
     ],
   },

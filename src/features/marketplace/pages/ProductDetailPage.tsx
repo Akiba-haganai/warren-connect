@@ -1,4 +1,5 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useProduct } from "@/hooks/useProduct";
 import { useToggleProductStock } from "@/hooks/useToggleProductStock";
 import { useDeleteProduct } from "@/hooks/useDeleteProduct";
@@ -7,16 +8,19 @@ import { useAuthStore } from "@/store/auth/authStore";
 import { triggerNotification } from "@/services/notifications/triggerService";
 import { reportService } from "@/services/reports/reportService";
 import { useRecentlyViewed } from "@/hooks/useRecentlyviewed";
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { productService } from "@/services/products/productService";
+import { storageService } from "@/services/storage/storageService";
+import { timeAgo } from "@/utils/timeAgo";
 import {
-  ArrowLeft, MessageCircle, Share2, Loader2, ShieldCheck, Flag, ShoppingBag, ChevronLeft, ChevronRight, Lock
+  ArrowLeft, MessageCircle, Share2, Loader2, ShieldCheck, Flag, ShoppingBag, ChevronLeft, ChevronRight, Lock, Pencil
 } from "lucide-react";
+import EditProductModal from "@/features/marketplace/components/EditProductModal";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
   const { data: product, isLoading } = useProduct(id);
@@ -26,6 +30,7 @@ export default function ProductDetailPage() {
   const { addToRecent } = useRecentlyViewed();
   const [images, setImages] = useState<{ id: string; image_url: string }[]>([]);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     if (product) {
@@ -34,11 +39,19 @@ export default function ProductDetailPage() {
         type: "product",
         title: product.title,
         imageUrl: product.image_url,
+        price: product.price,
       });
       productService.getProductImages(product.id).then((imgs) => {
-        const allImages = product.image_url
-          ? [{ id: "primary", image_url: product.image_url }, ...imgs]
-          : imgs;
+        const resolvedImgs = imgs.map((img) => ({
+          ...img,
+          image_url: storageService.getPublicUrl("product-images", img.image_url),
+        }));
+        const primaryUrl = product.image_url
+          ? storageService.getPublicUrl("product-images", product.image_url)
+          : null;
+        const allImages = primaryUrl
+          ? [{ id: "primary", image_url: primaryUrl }, ...resolvedImgs]
+          : resolvedImgs;
         setImages(allImages);
       });
     }
@@ -116,16 +129,27 @@ export default function ProductDetailPage() {
   );
 
   const isOwner = user?.id === product.seller_id;
+  const isEdited = (product as any).updated_at && product.created_at && (
+    new Date((product as any).updated_at).getTime() - new Date(product.created_at).getTime() > 60000
+  );
+
+  const primaryDisplayUrl = product.image_url
+    ? storageService.getPublicUrl("product-images", product.image_url)
+    : null;
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
-      <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
-           style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}>
+      <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-border bg-surface/90 backdrop-blur-md">
         <button onClick={() => navigate(-1)} aria-label="Go back">
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-sm font-bold" style={{ color: "var(--color-primary)" }}>Detail</h1>
+        <h1 className="text-sm font-bold text-primary">Listing Detail</h1>
         <div className="flex items-center gap-2">
+          {isOwner && (
+            <button onClick={() => setShowEditModal(true)} className="p-1 text-primary hover:opacity-80" aria-label="Edit listing" title="Edit Listing">
+              <Pencil size={18} />
+            </button>
+          )}
           {!isOwner && (
             <button onClick={handleReport} aria-label="Report listing">
               <Flag size={18} style={{ color: "var(--color-text-muted)" }} />
@@ -138,7 +162,7 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* Image Gallery – Amazon style */}
+      {/* Image Gallery */}
       {images.length > 0 ? (
         <div className="relative bg-black">
           <img
@@ -161,8 +185,8 @@ export default function ProductDetailPage() {
             </>
           )}
         </div>
-      ) : product.image_url ? (
-        <img src={product.image_url} alt={product.title} className="w-full h-72 object-cover" />
+      ) : primaryDisplayUrl ? (
+        <img src={primaryDisplayUrl} alt={product.title} className="w-full h-72 object-cover" />
       ) : (
         <div className="w-full h-72 flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))" }}>
           <ShoppingBag size={48} color="rgba(255,255,255,0.3)" />
@@ -188,18 +212,27 @@ export default function ProductDetailPage() {
       )}
 
       <div className="px-4 pt-4 pb-8 space-y-4">
-        <h2 className="text-xl font-bold" style={{ color: "var(--color-text)" }}>{product.title}</h2>
-        <p className="text-2xl font-extrabold" style={{ color: "var(--color-primary)" }}>K{(product.price ?? 0).toLocaleString()}</p>
+        <div>
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="text-xl font-bold" style={{ color: "var(--color-text)" }}>{product.title}</h2>
+            {isEdited && (
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-medium shrink-0">
+                Edited {timeAgo((product as any).updated_at)}
+              </span>
+            )}
+          </div>
+          <p className="text-2xl font-extrabold mt-1" style={{ color: "var(--color-primary)" }}>K{(product.price ?? 0).toLocaleString()}</p>
+        </div>
 
         {/* Stock toggle for owner */}
         {isOwner && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium" style={{ color: "var(--color-text-secondary)" }}>Status:</span>
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border">
+            <span className="text-xs font-semibold" style={{ color: "var(--color-text-secondary)" }}>Stock Availability</span>
             <button
               onClick={handleToggleStock}
               disabled={toggleStock.isPending}
-              className={`px-3 py-1 rounded-full text-xs font-bold ${
-                product.in_stock !== false ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                product.in_stock !== false ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
               } disabled:opacity-50`}
             >
               {toggleStock.isPending && toggleStock.variables?.productId === product.id ? (
@@ -220,16 +253,16 @@ export default function ProductDetailPage() {
           </span>
         )}
 
-        {product.description && <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">{product.description}</p>}
+        {product.description && <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-line">{product.description}</p>}
 
         {/* Student Buyer Protection & Escrow Trust Card */}
         <div className="p-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10 space-y-2">
           <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-xs">
             <ShieldCheck size={16} />
-            <span>Student Buyer Guarantee & Escrow Safety</span>
+            <span>Student Buyer Guarantee &amp; Escrow Safety</span>
           </div>
           <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-normal">
-            Transactions are protected. Always inspect items in public campus areas before finalizing payment. Instant report & dispute protection included.
+            Transactions are protected. Always inspect items in public campus areas before finalizing payment. Instant report &amp; dispute protection included.
           </p>
           <div className="flex items-center gap-3 pt-1 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
             <span className="flex items-center gap-1"><Lock size={11} className="text-emerald-500" /> Verified Seller ID</span>
@@ -242,7 +275,7 @@ export default function ProductDetailPage() {
           <div className="card p-4 flex items-center gap-4">
             <Link to={`/user/${product.seller.id}`} className="flex-shrink-0">
               {product.seller.avatar_url ? (
-                <img src={product.seller.avatar_url} alt="" className="w-10 h-10 rounded-full" />
+                <img src={product.seller.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
                   {(product.seller.full_name?.[0] ?? "?")}
@@ -263,14 +296,36 @@ export default function ProductDetailPage() {
             )}
           </div>
         )}
+
         {isOwner && (
-          <button onClick={handleDelete}
-                  className="w-full py-2 rounded-lg text-sm font-semibold bg-red-100 text-red-600"
-                  aria-label="Delete listing">
-            Delete Listing
-          </button>
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Pencil size={14} /> Edit Listing
+            </button>
+            <button
+              onClick={handleDelete}
+              className="py-2.5 px-4 rounded-xl text-xs font-bold bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900 hover:bg-red-200 transition-colors"
+              aria-label="Delete listing"
+            >
+              Delete
+            </button>
+          </div>
         )}
       </div>
+
+      {showEditModal && (
+        <EditProductModal
+          product={product}
+          onClose={() => setShowEditModal(false)}
+          onUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: ["product", product.id] });
+            queryClient.invalidateQueries({ queryKey: ["products"] });
+          }}
+        />
+      )}
     </div>
   );
 }

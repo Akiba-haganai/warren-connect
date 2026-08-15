@@ -18,6 +18,10 @@ import {
 import toast from "react-hot-toast";
 import { useConfirm } from "@/hooks/useConfirm";
 import InterestQueue from "@/features/accommodation/components/InterestQueue";
+import { ALL_AMENITIES } from "@/constants/amenities";
+import EditAccommodationModal from "@/features/accommodation/components/EditAccommodationModal";
+import { timeAgo } from "@/utils/timeAgo";
+import { Pencil } from "lucide-react";
 
 type Accommodation = Tables<"accommodations">;
 type Profile = Tables<"profiles">;
@@ -26,18 +30,18 @@ type AccommodationWithLandlord = Accommodation & {
   landlord?: Pick<Profile, "id" | "full_name" | "avatar_url" | "is_verified" | "is_landlord">;
 };
 
-const COMMON_AMENITIES = [
-  "WiFi", "Water included", "Electricity included", "Furnished",
-  "Parking", "Security", "Study desk", "Private bathroom",
-];
+
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
   WiFi: <Wifi size={14} />,
   "Water included": <Droplet size={14} />,
   "Electricity included": <Zap size={14} />,
   Furnished: <Sofa size={14} />,
+  "Parking (car)": <Car size={14} />,
   Parking: <Car size={14} />,
   Security: <Shield size={14} />,
+  "24/7 security guard": <Shield size={14} />,
+  "Study desk & chair": <BookOpen size={14} />,
   "Study desk": <BookOpen size={14} />,
   "Private bathroom": <Bath size={14} />,
 };
@@ -71,6 +75,7 @@ export default function AccommodationDetailPage() {
   const [myAccommodations, setMyAccommodations] = useState<Accommodation[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const loadAccommodation = async () => {
     if (!id) return;
@@ -85,7 +90,14 @@ export default function AccommodationDetailPage() {
     const ams = await accommodationService.getAmenities(id);
     setAmenities(ams);
     setSelectedAmenities(ams);
-    addToRecent({ id: data.id, type: "accommodation", title: data.title, imageUrl: data.image_url });
+    addToRecent({
+      id: data.id,
+      type: "accommodation",
+      title: data.title,
+      imageUrl: data.image_url,
+      price: data.monthly_rent,
+      location: data.location,
+    });
 
     if (data.listing_type === "property") {
       setLoadingRooms(true);
@@ -167,12 +179,13 @@ export default function AccommodationDetailPage() {
       if (!convId) {
         const newConv = await messageService.createConversation(user.id, accommodation.owner_id);
         convId = newConv.id;
-        await messageService.sendMessage(
-          convId,
-          user.id,
-          `Hi, I'm interested in booking "${accommodation.title}". Is it still available?`
-        );
       }
+      // Always send booking message (whether new or existing conversation)
+      await messageService.sendMessage(
+        convId,
+        user.id,
+        `Hi, I'm interested in booking "${accommodation.title}". Is it still available?`
+      );
       navigate(`/messages?conversation=${convId}`);
     } catch (err) {
       console.error(err);
@@ -336,6 +349,11 @@ export default function AccommodationDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {(isOwner || isCollaborator) && (
+            <button onClick={() => setShowEditModal(true)} className="p-1 text-primary hover:opacity-80" aria-label="Edit listing" title="Edit Listing">
+              <Pencil size={18} />
+            </button>
+          )}
           {!isOwner && (
             <button onClick={handleReport} className="p-1" aria-label="Report listing" title="Report">
               <Flag size={18} style={{ color: "var(--color-text-muted)" }} />
@@ -387,12 +405,19 @@ export default function AccommodationDetailPage() {
       <div className="px-4 pt-4 pb-8 space-y-4">
         {/* Title & location */}
         <div>
-          <h2 className="text-xl font-bold" style={{ color: "var(--color-text)" }}>{accommodation.title}</h2>
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="text-xl font-bold" style={{ color: "var(--color-text)" }}>{accommodation.title}</h2>
+            {(accommodation as any).updated_at && accommodation.created_at && (new Date((accommodation as any).updated_at).getTime() - new Date(accommodation.created_at).getTime() > 60000) && (
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-medium shrink-0">
+                Edited {timeAgo((accommodation as any).updated_at)}
+              </span>
+            )}
+          </div>
           <p className="flex items-center gap-1 text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
             <MapPin size={14} /> {accommodation.location}
           </p>
           {isCollaborator && (
-            <span className="inline-flex items-center gap-1 text-xs mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+            <span className="inline-flex items-center gap-1 text-xs mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
               You are a co‑landlord
             </span>
           )}
@@ -404,7 +429,7 @@ export default function AccommodationDetailPage() {
             <span className="text-2xl font-extrabold" style={{ color: "var(--color-primary)" }}>K{accommodation.monthly_rent.toLocaleString()}</span>
             <span className="text-sm ml-1" style={{ color: "var(--color-text-muted)" }}>/month</span>
           </div>
-          <span className={`badge ${accommodation.status === "available" ? "badge-amber" : "badge-green"}`}>
+          <span className={`badge ${accommodation.status === "available" ? "badge-green" : "badge-amber"}`}>
             {accommodation.status || "available"}
           </span>
         </div>
@@ -453,7 +478,7 @@ export default function AccommodationDetailPage() {
                       <p className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
                         {room.capacity ? `${room.capacity} tenants` : "Shared"}
                       </p>
-                      <span className={`badge text-[10px] ${room.status === "available" ? "badge-amber" : "badge-green"}`}>
+                      <span className={`badge text-[10px] ${room.status === "available" ? "badge-green" : "badge-amber"}`}>
                         {room.status || "available"}
                       </span>
                     </Link>
@@ -548,7 +573,7 @@ export default function AccommodationDetailPage() {
           </div>
           {editingAmenities ? (
             <div className="flex flex-wrap gap-2 mb-2">
-              {COMMON_AMENITIES.map((a) => (
+              {ALL_AMENITIES.map((a) => (
                 <button
                   key={a}
                   onClick={() => toggleAmenity(a)}
@@ -613,7 +638,7 @@ export default function AccommodationDetailPage() {
               </Link>
               <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{accommodation.landlord.is_verified ? "Verified" : "Unverified"} profile</p>
             </div>
-            {!isOwner && (
+            {!isOwner && !isCollaborator && (
               <div className="flex flex-col gap-2">
                 <button onClick={handleRequestBooking} className="btn-accent w-auto px-4 py-2 text-sm flex items-center gap-2">
                   <Calendar size={14} /> Request to Book
@@ -704,6 +729,16 @@ export default function AccommodationDetailPage() {
       )}
 
       {ConfirmDialog}
+
+      {showEditModal && (
+        <EditAccommodationModal
+          accommodation={accommodation}
+          onClose={() => setShowEditModal(false)}
+          onUpdated={() => {
+            loadAccommodation();
+          }}
+        />
+      )}
     </div>
   );
 }

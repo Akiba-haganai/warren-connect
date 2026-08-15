@@ -10,7 +10,7 @@ import { useProfileCompletion } from "@/hooks/useProfileCompletion";
 import { supabase } from "@/lib/supabase/client";
 import type { Tables } from "@/types/database/database.types";
 import {
-  ArrowLeft, BadgeCheck, GraduationCap, BookOpen, MessageCircle,
+  ArrowLeft, BadgeCheck, GraduationCap, BookOpen, MessageCircle, MessageSquare,
   Loader2, Flag, Star, ShieldOff, Shield, Clock, AlertTriangle, Bell, BellOff
 } from "lucide-react";
 import { useBlockUser, useBlockStatus } from "@/hooks/safety/useBlockUser";
@@ -235,8 +235,9 @@ export default function PublicProfilePage() {
           <p className="text-sm mt-3" style={{ color: "var(--color-text)" }}>{profile.bio}</p>
         )}
         {!isOwnProfile && (
-          <button onClick={() => navigate(`/review/${profile.id}`)} className="btn-primary mt-4 flex items-center gap-2">
-            <Star size={14} /> Rate & Review
+          <button onClick={handleMessage} className="btn-primary mt-4 flex items-center gap-2">
+            <MessageSquare size={14} />
+            <span>Message Student</span>
           </button>
         )}
         <div className="flex flex-col gap-1 mt-3">

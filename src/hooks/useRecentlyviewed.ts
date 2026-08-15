@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
+import { storageService } from "@/services/storage/storageService";
 
-interface RecentItem {
+export interface RecentItem {
   id: string;
   type: "product" | "accommodation";
   title: string;
   imageUrl?: string | null;
+  price?: number | null;
+  location?: string | null;
   timestamp: number;
 }
 
@@ -20,22 +23,43 @@ export function useRecentlyViewed() {
         setItems(parsed);
       } catch {}
     }
-  }, []); // ✅ runs only once
+  }, []);
 
-  // Stabilize the callback so it never changes
   const addToRecent = useCallback(
     (item: Omit<RecentItem, "timestamp">) => {
       setItems((prev) => {
         const filtered = prev.filter(
           (i) => !(i.id === item.id && i.type === item.type)
         );
-        const updated = [{ ...item, timestamp: Date.now() }, ...filtered].slice(0, 5);
+        const resolvedUrl = item.imageUrl
+          ? storageService.getPublicUrl(
+              item.type === "product" ? "product-images" : "accommodation-images",
+              item.imageUrl
+            )
+          : null;
+        const updated = [
+          { ...item, imageUrl: resolvedUrl, timestamp: Date.now() },
+          ...filtered,
+        ].slice(0, 10);
         localStorage.setItem("recentlyViewed", JSON.stringify(updated));
         return updated;
       });
     },
-    [] // ✅ no dependencies → stable reference forever
+    []
   );
 
-  return { recentItems: items, addToRecent };
-}
+  const removeRecent = useCallback((id: string, type: "product" | "accommodation") => {
+    setItems((prev) => {
+      const updated = prev.filter((i) => !(i.id === id && i.type === type));
+      localStorage.setItem("recentlyViewed", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const clearRecent = useCallback(() => {
+    setItems([]);
+    localStorage.removeItem("recentlyViewed");
+  }, []);
+
+  return { recentItems: items, addToRecent, removeRecent, clearRecent };
+}

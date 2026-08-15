@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { unifiedFeedService, type UnifiedFeedItem } from "@/services/feed/unifiedFeedService";
 import { tagService } from "@/services/tags/tagService";
@@ -11,7 +10,8 @@ import ProductCard from "@/features/marketplace/components/ProductCard";
 import AccommodationCard from "@/features/accommodation/components/AccommodationCard";
 import PostComposer from "@/features/feed/components/PostComposer";
 import TrendingRow from "@/features/feed/components/TrendingRow";
-import { useRecentlyViewed } from "@/hooks/useRecentlyviewed";
+import RecentlyViewedSection from "@/components/ui/RecentlyViewedSection";
+import { useScrollHeader } from "@/hooks/useScrollHeader";
 import type { FeedPost } from "@/services/posts/postService";
 import type { Tables } from "@/types/database/database.types";
 
@@ -19,12 +19,12 @@ import { useAuthStore } from "@/store/auth/authStore";
 import { useMutedUsers } from "@/hooks/safety/useMuteUser";
 
 export default function HomeFeedPage() {
+  const { subHeaderVisible } = useScrollHeader();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [showComposer, setShowComposer] = useState(false);
   const [typeFilter, setTypeFilter] = useState<"all" | "post" | "product" | "accommodation">("all");
   const [selectedTag, setSelectedTag] = useState("");
-  const { recentItems } = useRecentlyViewed();
 
   const { data: mutedUsers } = useMutedUsers(user?.id);
 
@@ -92,9 +92,23 @@ export default function HomeFeedPage() {
 
   return (
     <div ref={containerRef} style={{ background: "var(--color-bg)", minHeight: "100%" }}>
-      {/* Header */}
-      <div className="sticky top-0 z-10 px-4 py-3 flex items-center justify-between" style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}>
-        <h1 className="text-base font-bold" style={{ color: "var(--color-primary)" }}>Explore</h1>
+      {/* Glassmorphic Main Header (Hides on Scroll Down) */}
+      <div
+        className={`sticky top-0 z-20 px-3 py-2 flex items-center justify-between backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs transition-all duration-300 transform origin-top ${
+          subHeaderVisible
+            ? "max-h-16 py-2 translate-y-0 opacity-100"
+            : "max-h-0 py-0 opacity-0 -translate-y-full pointer-events-none border-transparent overflow-hidden"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs font-black shadow-xs">
+            P
+          </div>
+          <div>
+            <h1 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">Campus Feed</h1>
+            <p className="text-[10px] text-slate-400 font-medium">PLAWZA Student Community</p>
+          </div>
+        </div>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as any)} className="glass-select text-xs py-1 px-3 rounded-full">
           <option value="all">All Content</option>
           <option value="post">Posts</option>
@@ -102,6 +116,47 @@ export default function HomeFeedPage() {
           <option value="accommodation">Housing</option>
         </select>
       </div>
+
+      {/* Side-Scrolling Feed Topic Sub-Header Pill Track (Hides on Scroll Down) */}
+      {allTags && allTags.length > 0 && (
+        <div
+          className={`sticky top-[49px] z-10 px-3 flex items-center gap-1.5 overflow-x-auto hide-scrollbar backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs transition-all duration-300 transform origin-top flex-nowrap ${
+            subHeaderVisible
+              ? "max-h-12 py-1.5 translate-y-0 opacity-100"
+              : "max-h-0 py-0 opacity-0 -translate-y-full pointer-events-none border-transparent overflow-hidden"
+          }`}
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          <button
+            type="button"
+            onClick={() => setSelectedTag("")}
+            className={`text-xs px-3.5 py-1 rounded-full font-bold transition-all shrink-0 border ${
+              !selectedTag
+                ? "bg-primary text-white border-primary shadow-xs"
+                : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
+            }`}
+          >
+            All Topics
+          </button>
+          {allTags.map((tag: any) => {
+            const isActive = selectedTag === tag.name;
+            return (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => setSelectedTag(isActive ? "" : tag.name)}
+                className={`text-xs px-3.5 py-1 rounded-full font-medium transition-all shrink-0 border flex items-center gap-1 ${
+                  isActive
+                    ? "bg-primary text-white border-primary shadow-xs font-bold"
+                    : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
+                }`}
+              >
+                <span>#{tag.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Interactive Feed Composer Trigger Box */}
       <div className="px-4 pt-3 pb-1">
@@ -125,43 +180,13 @@ export default function HomeFeedPage() {
         </div>
       </div>
 
-      {/* Tag chips */}
-      {allTags && allTags.length > 0 && (
-        <div className="px-4 pt-2 pb-2 flex gap-2 overflow-x-auto">
-          <button onClick={() => setSelectedTag("")} className={`text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap ${!selectedTag ? "bg-primary text-white" : "bg-gray-100 text-gray-600"}`}
-            style={!selectedTag ? { background: "var(--color-primary)", color: "#fff" } : { background: "var(--color-bg)", color: "var(--color-text-secondary)" }}>
-            All
-          </button>
-          {allTags.map((tag: any) => (
-            <button key={tag.id} onClick={() => setSelectedTag(tag.name)} className={`text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap ${selectedTag === tag.name ? "bg-primary text-white" : "bg-gray-100 text-gray-600"}`}
-              style={selectedTag === tag.name ? { background: "var(--color-primary)", color: "#fff" } : { background: "var(--color-bg)", color: "var(--color-text-secondary)" }}>
-              {tag.name}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Trending */}
       <TrendingRow />
 
       {/* Recently Viewed */}
-      {recentItems.length > 0 && (
-        <div className="px-4 pt-3 pb-2">
-          <h3 className="section-title">Recently Viewed</h3>
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {recentItems.map((item) => (
-              <Link key={`${item.type}-${item.id}`} to={`/${item.type === "product" ? "marketplace" : "accommodation"}/${item.id}`} className="flex-shrink-0 w-24 text-center" style={{ textDecoration: "none", color: "inherit" }}>
-                {item.imageUrl ? (
-                  <img src={item.imageUrl} alt="" className="w-16 h-16 rounded-lg object-cover mx-auto" />
-                ) : (
-                  <div className="w-16 h-16 rounded-lg mx-auto" style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))" }} />
-                )}
-                <p className="text-[10px] mt-1 line-clamp-2" style={{ color: "var(--color-text)" }}>{item.title}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="px-4">
+        <RecentlyViewedSection title="Pick Up Where You Left Off" />
+      </div>
 
       {/* Feed items */}
       <div className="px-4 pt-2 pb-8">

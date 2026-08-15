@@ -54,14 +54,14 @@ export default function PrivacyPage() {
       <section>
         <h2 className="text-base font-bold mb-2">6. Your Data Rights</h2>
         <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-          Under applicable data protection laws, you have the right to access, rectify, port, or request erasure of your personal data, as well as the right to object to or restrict certain processing activities. To exercise any of these rights, please contact our Data Protection Officer at privacy@warrenconnect.app.
+          Under applicable data protection laws, you have the right to access, rectify, port, or request erasure of your personal data, as well as the right to object to or restrict certain processing activities. To exercise any of these rights, please contact our Data Protection Officer at privacy@plawza.com.
         </p>
       </section>
 
       <section>
         <h2 className="text-base font-bold mb-2">7. Contact & Complaints</h2>
         <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-          If you have questions or concerns regarding this Privacy Policy, email us at privacy@warrenconnect.app.
+          If you have questions or concerns regarding this Privacy Policy, email us at privacy@plawza.com.
         </p>
       </section>
     </div>

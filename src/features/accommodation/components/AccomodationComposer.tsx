@@ -1,23 +1,15 @@
 import { useEffect, useState } from "react";
-import { MapPin, Plus, X, Loader2 } from "lucide-react";
+import { MapPin, Plus, X, Loader2, Building2, DoorClosed, BedDouble } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { accommodationService } from "@/services/accommodation/accommodationService";
 import { locationService } from "@/services/locations/locationService";
 import { storageService } from "@/services/storage/storageService";
 import { compressImage } from "@/utils/compressImage";
 import { ZAMBIA_LOCATIONS } from "@/constants/locations";
+import { ALL_AMENITIES } from "@/constants/amenities";
 import toast from "react-hot-toast";
 
-const COMMON_AMENITIES = [
-  "WiFi",
-  "Water included",
-  "Electricity included",
-  "Furnished",
-  "Parking",
-  "Security",
-  "Study desk",
-  "Private bathroom",
-];
+
 
 interface Props {
   onClose: () => void;
@@ -38,6 +30,7 @@ export default function AccommodationComposer({
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
   const [dbLocations, setDbLocations] = useState<string[]>(Array.from(ZAMBIA_LOCATIONS));
+
 
   useEffect(() => {
     locationService.getLocations().then((locs: string[]) => setDbLocations(locs));
@@ -150,55 +143,67 @@ export default function AccommodationComposer({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end"
-      style={{ background: "rgba(0,0,0,0.4)" }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label="Create accommodation listing"
     >
       <div
-        className="w-full rounded-t-3xl overflow-y-auto page-fade-in"
-        style={{
-          background: "var(--color-surface)",
-          maxHeight: "90dvh",
-          paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
-        }}
+        className="bg-surface border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="flex items-center justify-between px-5 pt-5 pb-4"
-          style={{ borderBottom: "1px solid var(--color-border)" }}
-        >
-          <h2 className="text-base font-bold" style={{ color: "var(--color-text)" }}>
-            {isAddingRoom ? "Add Room" : "New listing"}
-          </h2>
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-surface">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              {isAddingRoom ? "Add Room" : "New Housing Listing"}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {isAddingRoom ? "Add a room to your property" : "List your student accommodation"}
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center"
-            style={{ background: "var(--color-bg)", color: "var(--color-text-secondary)" }}
+            className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
             aria-label="Close composer"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-5 py-4 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 flex-1">
           {/* Listing type – hidden when adding a room */}
           {!isAddingRoom && (
-            <div>
-              <label className="field-label">Listing type</label>
-              <label className="sr-only">Listing type</label>
-              <select
-                aria-label="Listing type"
-                value={listingType}
-                onChange={(e) => setListingType(e.target.value as any)}
-                className="glass-select w-full"
-              >
-                <option value="property">Property (house/plot)</option>
-                <option value="room">Room (inside a property)</option>
-                <option value="bedspace">Bedspace (squatting)</option>
-              </select>
+            <div className="space-y-2">
+              <label className="field-label">Select Housing Type</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "property", label: "Property", desc: "Whole House", icon: Building2 },
+                  { id: "room", label: "Room", desc: "Private / Shared", icon: DoorClosed },
+                  { id: "bedspace", label: "Bedspace", desc: "Hostel Bed", icon: BedDouble },
+                ].map((item) => {
+                  const IconComponent = item.icon;
+                  const isSelected = listingType === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setListingType(item.id as any)}
+                      className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between gap-1.5 ${
+                        isSelected
+                          ? "bg-primary/10 dark:bg-primary/20 border-primary shadow-xs ring-1 ring-primary"
+                          : "bg-surface border-slate-200 dark:border-slate-800 hover:border-slate-300"
+                      }`}
+                    >
+                      <IconComponent size={20} className={isSelected ? "text-primary" : "text-slate-400"} />
+                      <div>
+                        <p className={`text-xs font-bold ${isSelected ? "text-primary" : "text-slate-900 dark:text-white"}`}>{item.label}</p>
+                        <p className="text-[10px] text-slate-500 truncate">{item.desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -248,52 +253,48 @@ export default function AccommodationComposer({
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-
           <div>
-            <label className="field-label">Primary Area / Student Hub</label>
-            <div className="relative mb-2">
-              <MapPin
-                size={15}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-blue-500"
-              />
-              <select
-                required
-                className="glass-select w-full pl-10 cursor-pointer text-xs max-h-48 overflow-y-auto"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-              >
-                <option value="">Select Primary Location / Campus Hub...</option>
-                {lusakaLocations.length > 0 && (
-                  <optgroup label="📍 Lusaka Province">
-                    {lusakaLocations.map((loc) => (
-                      <option key={loc} value={loc}>{loc}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {kitweLocations.length > 0 && (
-                  <optgroup label="📍 Copperbelt - Kitwe (CBU)">
-                    {kitweLocations.map((loc) => (
-                      <option key={loc} value={loc}>{loc}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {ndolaLocations.length > 0 && (
-                  <optgroup label="📍 Copperbelt - Ndola (Medicine)">
-                    {ndolaLocations.map((loc) => (
-                      <option key={loc} value={loc}>{loc}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {otherLocations.length > 0 && (
-                  <optgroup label="📍 Other Locations">
-                    {otherLocations.map((loc) => (
-                      <option key={loc} value={loc}>{loc}</option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            </div>
-            <p className="text-[11px] text-slate-400">Select the main campus area or town for easy search filtering.</p>
+            <label className="field-label" htmlFor="accom-location">
+              <span className="flex items-center gap-1.5"><MapPin size={13} className="text-primary" /> Primary Area / Student Hub</span>
+            </label>
+            <select
+              id="accom-location"
+              required
+              className="glass-select w-full"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            >
+              <option value="">Select Primary Location / Campus Hub...</option>
+              {lusakaLocations.length > 0 && (
+                <optgroup label="📍 Lusaka Province">
+                  {lusakaLocations.map((loc) => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </optgroup>
+              )}
+              {kitweLocations.length > 0 && (
+                <optgroup label="📍 Copperbelt - Kitwe (CBU)">
+                  {kitweLocations.map((loc) => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </optgroup>
+              )}
+              {ndolaLocations.length > 0 && (
+                <optgroup label="📍 Copperbelt - Ndola (Medicine)">
+                  {ndolaLocations.map((loc) => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </optgroup>
+              )}
+              {otherLocations.length > 0 && (
+                <optgroup label="📍 Other Locations">
+                  {otherLocations.map((loc) => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            <p className="text-[11px] text-slate-400 mt-1">Select the main campus area or town for easy search filtering.</p>
           </div>
 
           <div>
@@ -324,7 +325,7 @@ export default function AccommodationComposer({
           <div>
             <label className="field-label">Amenities</label>
             <div className="flex flex-wrap gap-2">
-              {COMMON_AMENITIES.map((a) => (
+              {ALL_AMENITIES.map((a) => (
                 <button
                   key={a}
                   type="button"

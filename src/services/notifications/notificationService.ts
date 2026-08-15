@@ -80,6 +80,23 @@ export const notificationService = {
     if (error) throw error;
   },
 
+  async clearAllNotifications(userId: string) {
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("user_id", userId);
+    if (error) throw error;
+  },
+
+  async clearReadNotifications(userId: string) {
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("user_id", userId)
+      .eq("is_read", true);
+    if (error) throw error;
+  },
+
   async getUnreadCount(userId: string): Promise<number> {
     const { count, error } = await supabase
       .from("notifications")

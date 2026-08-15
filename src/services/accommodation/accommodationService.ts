@@ -160,10 +160,38 @@ export const accommodationService = {
     return data || [];
   },
 
+  async updateAccommodation(
+    id: string,
+    updates: {
+      title?: string;
+      location?: string;
+      monthly_rent?: number;
+      description?: string;
+      capacity?: number | null;
+      listing_type?: "property" | "room" | "bedspace";
+      status?: "available" | "rented" | "hidden";
+      looking_for_roommate?: boolean;
+      image_url?: string;
+    }
+  ) {
+    if (!id || id === "undefined") {
+      throw new Error("Invalid accommodation ID");
+    }
+    const { data, error } = await supabase
+      .from("accommodations")
+      .update(updates as any)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   async updateAccommodationStatus(id: string, status: "available" | "rented" | "hidden") {
     const { error } = await supabase
       .from("accommodations")
-      .update({ status })
+      .update({ status } as any)
       .eq("id", id);
     if (error) throw error;
   },
@@ -282,6 +310,15 @@ export const accommodationService = {
       .eq("accommodation_id", accommodationId);
     if (error) throw error;
     return data || [];
+  },
+
+  async bulkUpdateStatus(ids: string[], status: "available" | "rented") {
+    if (!ids.length) return;
+    const { error } = await supabase
+      .from("accommodations")
+      .update({ status })
+      .in("id", ids);
+    if (error) throw error;
   },
 };
 

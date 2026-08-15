@@ -105,6 +105,12 @@ export const shopService = {
   },
 
   async addProductToShop(productId: string, shopId: string) {
+    if (!productId || productId === "undefined") {
+      throw new Error("Cannot add product: invalid product ID");
+    }
+    if (!shopId || shopId === "undefined") {
+      throw new Error("Cannot add product: invalid shop ID");
+    }
     const { error } = await supabase
       .from("products")
       .update({ shop_id: shopId })
@@ -113,6 +119,9 @@ export const shopService = {
   },
 
   async removeProductFromShop(productId: string) {
+    if (!productId || productId === "undefined") {
+      throw new Error("Cannot remove product: invalid product ID");
+    }
     const { error } = await supabase
       .from("products")
       .update({ shop_id: null })

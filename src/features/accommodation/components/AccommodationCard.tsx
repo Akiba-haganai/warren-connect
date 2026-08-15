@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MapPin, Building2, Zap, Users, CheckCircle2 } from "lucide-react";
+import { MapPin, Building2, Zap, Users, CheckCircle2, DoorClosed, BedDouble } from "lucide-react";
 
 import type { Tables } from "@/types/database/database.types";
 import SaveButton from "@/components/ui/SaveButton";
@@ -23,7 +23,7 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
   const avgResponseMs = landlord && landlord.response_count && landlord.total_response_time_ms
     ? landlord.total_response_time_ms / landlord.response_count
     : null;
-  const isFastResponder = avgResponseMs !== null && avgResponseMs < 60000;
+  const isFastResponder = avgResponseMs !== null && avgResponseMs < 1800000; // < 30 minutes
 
   return (
     <Link
@@ -45,21 +45,29 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
         </div>
       )}
 
-      {/* Verified Landlord Badge Overlay */}
-      {landlord?.is_verified && (
-        <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-blue-600 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md backdrop-blur-xs">
-          <CheckCircle2 size={12} className="text-emerald-300" /> Verified Landlord
-        </div>
-      )}
-
-      {isFastResponder && (
-        <div className="absolute top-9 left-2 z-10 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
-          <Zap size={10} /> Fast responder
-        </div>
-      )}
+      {/* Overlay badge stack — both anchored top-left, stacked vertically */}
+      <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+        {landlord?.is_verified && (
+          <div className="flex items-center gap-1 bg-blue-600 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md backdrop-blur-xs">
+            <CheckCircle2 size={12} className="text-emerald-300" /> Verified Landlord
+          </div>
+        )}
+        {isFastResponder && (
+          <div className="flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+            <Zap size={10} /> Fast responder
+          </div>
+        )}
+      </div>
 
       <div className="p-4">
-        <h3 className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>{listing.title}</h3>
+        <div className="flex items-start justify-between gap-1">
+          <h3 className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>{listing.title}</h3>
+          {(listing as any).updated_at && listing.created_at && (new Date((listing as any).updated_at).getTime() - new Date(listing.created_at).getTime() > 60000) && (
+            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 shrink-0 italic">
+              Edited
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1.5 mt-1">
           <MapPin size={12} style={{ color: "var(--color-text-muted)" }} />
           <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{listing.location}</p>
@@ -71,9 +79,22 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
             </span>
           ) : null}
 
-          {listing.listing_type && listing.listing_type !== "property" ? (
-            <span className="badge text-[10px] capitalize bg-purple-100 text-purple-700">
-              {listing.listing_type}
+          {listing.listing_type ? (
+            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+              listing.listing_type === "room"
+                ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                : listing.listing_type === "bedspace"
+                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+            }`}>
+              {listing.listing_type === "room" ? (
+                <DoorClosed size={11} />
+              ) : listing.listing_type === "bedspace" ? (
+                <BedDouble size={11} />
+              ) : (
+                <Building2 size={11} />
+              )}
+              <span>{listing.listing_type}</span>
             </span>
           ) : null}
         </div>
@@ -87,7 +108,7 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
             K{listing.monthly_rent.toLocaleString()}<span className="text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>/mo</span>
           </span>
           {listing.looking_for_roommate && <span className="badge badge-amber ml-1">🧑‍🤝‍🧑 Roommate</span>}
-          <span className={`badge ${listing.status === "available" ? "badge-amber" : "badge-green"}`}>{listing.status || "available"}</span>
+          <span className={`badge ${listing.status === "available" ? "badge-green" : "badge-amber"}`}>{listing.status || "available"}</span>
         </div>
 
       </div>

@@ -81,4 +81,24 @@ export const storageService = {
     if (error) throw error;
     return data.signedUrl;
   },
+
+  getPublicUrl(bucket: string, path: string): string {
+    if (!path) return "";
+    if (path.startsWith("http://") || path.startsWith("https://")) return path;
+
+    let targetBucket = bucket;
+    let cleanPath = path;
+
+    const knownBuckets = ["public-images", "pending-uploads", "product-images", "accommodation-images", "avatars", "posts"];
+    for (const b of knownBuckets) {
+      if (cleanPath.startsWith(`${b}/`)) {
+        targetBucket = b;
+        cleanPath = cleanPath.slice(b.length + 1);
+        break;
+      }
+    }
+
+    const { data } = supabase.storage.from(targetBucket).getPublicUrl(cleanPath);
+    return data.publicUrl;
+  },
 };

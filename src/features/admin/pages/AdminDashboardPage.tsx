@@ -1038,7 +1038,7 @@ export default function AdminDashboardPage() {
                 type="text"
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
-                placeholder="Enter new tag name (e.g. electronics, housing, books)..."
+                placeholder="Enter new tag name (e.g. thrifted, vintage, clearance, laptop-deals)..."
                 className="input-field text-xs flex-1"
               />
               <button
@@ -1049,6 +1049,53 @@ export default function AdminDashboardPage() {
                 + Add Tag
               </button>
             </form>
+
+            {/* Quick Add Presets Section */}
+            <div className="p-3 rounded-2xl bg-surface border border-border space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                  ✨ Recommended Tags (Click to quick-add):
+                </span>
+                <span className="text-[10px] text-slate-400">Thrift, Amazon/eBay &amp; Campus Presets</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  // Thrift / Vintage / Depop
+                  "thrifted", "vintage", "y2k", "pre-loved", "streetwear", "retro", "gently-used", "sneakerhead",
+                  // Amazon / eBay / E-Commerce
+                  "clearance", "hot-deal", "unboxed", "refurbished", "dealoftheday", "bundle", "like-new",
+                  // Campus Essentials
+                  "hostel-essential", "moving-out-sale", "laptop-deals", "student-deal", "cookware", "quick-sale"
+                ].map((preset) => {
+                  const alreadyAdded = tags.some((t) => t.name.toLowerCase() === preset.toLowerCase());
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      disabled={alreadyAdded}
+                      onClick={async () => {
+                        try {
+                          await adminService.createTag(preset);
+                          toast.success(`Added #${preset}`);
+                          const updated = await adminService.getAllTags();
+                          setTags(updated);
+                        } catch (err: any) {
+                          toast.error(err?.message || "Failed to add tag");
+                        }
+                      }}
+                      className={`text-[11px] px-2.5 py-1 rounded-full font-semibold transition-all border ${
+                        alreadyAdded
+                          ? "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-800 cursor-default"
+                          : "bg-primary/10 text-primary border-primary/20 hover:bg-primary hover:text-white"
+                      }`}
+                    >
+                      {alreadyAdded ? `✓ #${preset}` : `+ #${preset}`}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {tags.map((tag) => (
                 <div key={tag.id} className="card p-2.5 flex items-center justify-between gap-2 border border-border bg-surface">

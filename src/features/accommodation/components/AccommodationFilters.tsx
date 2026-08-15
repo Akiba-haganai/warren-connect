@@ -1,9 +1,5 @@
 import { Search, Users, Filter, X } from "lucide-react";
-
-const COMMON_AMENITIES = [
-  "WiFi", "Water included", "Electricity included", "Furnished",
-  "Parking", "Security", "Study desk", "Private bathroom",
-];
+import { FILTER_AMENITIES } from "@/constants/amenities";
 
 interface Props {
   search: string;
@@ -130,7 +126,7 @@ export default function AccommodationFilters({
       {/* Amenities horizontal chip scroll */}
       <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5 flex-nowrap">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 shrink-0 pr-1">Amenities:</span>
-        {COMMON_AMENITIES.map((amenity) => {
+        {FILTER_AMENITIES.map((amenity) => {
           const selected = selectedAmenities.includes(amenity);
           return (
             <button

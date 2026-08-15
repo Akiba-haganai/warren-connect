@@ -25,6 +25,7 @@ import {
 import ProductCard from "@/features/marketplace/components/ProductCard";
 import ShopSettingsModal from "@/features/marketplace/components/ShopSettingsModal";
 import CreateShopModal from "@/features/marketplace/components/CreateShopModal";
+import ProductComposer from "@/features/marketplace/components/ProductComposer";
 import type { Tables } from "@/types/database/database.types";
 import toast from "react-hot-toast";
 import { useConfirm } from "@/hooks/useConfirm";
@@ -67,6 +68,7 @@ export default function ShopPage() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateShop, setShowCreateShop] = useState(false);
+  const [showComposer, setShowComposer] = useState(false);
 
   // ---- Shop switcher ----
   const [myShops, setMyShops] = useState<any[]>([]);
@@ -141,7 +143,7 @@ export default function ShopPage() {
   const handleAddProduct = () => {
     // Trigger B: when user clicks “Add Product” but has no shop => open CreateShopModal
     if (shop) {
-      navigate(`/shop/${shop.id}/add-product`);
+      setShowComposer(true);
       return;
     }
     setShowCreateShop(true);
@@ -149,7 +151,7 @@ export default function ShopPage() {
 
   // ---- Stock toggle ----
   const handleToggleStock = async (product: Product) => {
-    if (togglingProductId) return;
+    if (!product || !product.id || togglingProductId) return;
 
     const previousStatus = product.in_stock;
     const newStatus = previousStatus === false;
@@ -677,6 +679,16 @@ export default function ShopPage() {
       )}
       {showSettings && (
         <ShopSettingsModal shop={shop} onClose={() => setShowSettings(false)} onSaved={refreshAll} />
+      )}
+      {showComposer && shop && (
+        <ProductComposer
+          onClose={() => setShowComposer(false)}
+          onCreated={() => {
+            setShowComposer(false);
+            refreshAll();
+          }}
+          initialShopId={shop.id}
+        />
       )}
       {ConfirmDialog}
     </div>

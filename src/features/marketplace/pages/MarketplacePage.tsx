@@ -16,13 +16,14 @@ import BulkUpload from "@/features/marketplace/components/BulkUpload";
 import MyProducts from "@/features/marketplace/components/MyProducts";
 import CreateShopModal from "@/features/marketplace/components/CreateShopModal";
 import ShopList from "@/features/marketplace/components/ShopList";
-import { useRecentlyViewed } from "@/hooks/useRecentlyviewed";
+import RecentlyViewedSection from "@/components/ui/RecentlyViewedSection";
 import { useConfirm } from "@/hooks/useConfirm";
-import { Link } from "react-router-dom";
+import { useScrollHeader } from "@/hooks/useScrollHeader";
 
 type SortMode = "newest" | "oldest" | "price_asc" | "price_desc";
 
 export default function MarketplacePage() {
+  const { subHeaderVisible } = useScrollHeader();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
@@ -37,7 +38,6 @@ export default function MarketplacePage() {
   const [viewMode, setViewMode] = useState<"products" | "shops">("products");
   const [sortMode, setSortMode] = useState<SortMode>("newest");
   const [conditionFilter, setConditionFilter] = useState<string>("all");
-  const { recentItems } = useRecentlyViewed();
   const { ConfirmDialog } = useConfirm();
 
   // ---- Shop pre-selection from URL ----
@@ -160,81 +160,81 @@ export default function MarketplacePage() {
         </div>
       )}
 
+      {/* Glassmorphic Main Header (Hides on Scroll Down) */}
       <div
-        className="sticky top-0 z-10 px-4 py-3 flex items-center justify-between"
-        style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}
+        className={`sticky top-0 z-20 px-3 py-2 flex items-center justify-between backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs transition-all duration-300 transform origin-top ${
+          subHeaderVisible
+            ? "max-h-16 py-2 translate-y-0 opacity-100"
+            : "max-h-0 py-0 opacity-0 -translate-y-full pointer-events-none border-transparent overflow-hidden"
+        }`}
       >
-        <h1 className="text-base font-bold" style={{ color: "var(--color-primary)" }}>Marketplace</h1>
         <div className="flex items-center gap-2">
-          <button onClick={handleRefresh} disabled={refreshing} className="p-1">
-            <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} style={{ color: "var(--color-text-muted)" }} />
+          <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs font-black shadow-xs">
+            P
+          </div>
+          <div>
+            <h1 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">Campus Marketplace</h1>
+            <p className="text-[10px] text-slate-400 font-medium">Buy &amp; Sell Items on Campus</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={handleRefresh} disabled={refreshing} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Refresh">
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} style={{ color: "var(--color-text-muted)" }} />
           </button>
-          <button onClick={() => setShowBulkUpload(true)} className="btn-ghost text-xs">📦 Bulk</button>
+          <button onClick={() => setShowBulkUpload(true)} className="btn-ghost text-xs py-1 px-2.5">📦 Bulk</button>
           <button
             onClick={() => setShowComposer(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--color-primary)", color: "#fff" }}
+            className="btn-primary text-xs font-bold px-3 py-1.5 rounded-full shadow-xs flex items-center gap-1"
           >
-            <Plus size={15} /> Sell
+            <Plus size={14} /> Sell
           </button>
         </div>
       </div>
 
-      <div className="px-4 pt-4 pb-8">
-        <div className="flex items-center gap-2 mb-3">
+      {/* Glassmorphic Sub-Header (Tab Bar) */}
+      <div
+        className={`sticky top-[49px] z-10 px-3 flex items-center justify-between gap-2 backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs transition-all duration-300 transform origin-top ${
+          subHeaderVisible
+            ? "max-h-12 py-1 translate-y-0 opacity-100"
+            : "max-h-0 py-0 opacity-0 -translate-y-full pointer-events-none border-transparent overflow-hidden"
+        }`}
+      >
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setViewMode("products")}
-            className={`text-xs px-3 py-1 rounded-full font-medium ${viewMode === "products" ? "bg-primary text-white" : "bg-gray-100 text-gray-600"}`}
-            style={viewMode === "products" ? { background: "var(--color-primary)", color: "#fff" } : { background: "var(--color-bg)", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}
+            className={`text-[10px] px-3 py-0.5 rounded-full font-extrabold transition-all ${
+              viewMode === "products" ? "bg-primary text-white shadow-xs" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+            }`}
           >
             Products
           </button>
           <button
             onClick={() => setViewMode("shops")}
-            className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${viewMode === "shops" ? "bg-primary text-white" : "bg-gray-100 text-gray-600"}`}
-            style={viewMode === "shops" ? { background: "var(--color-primary)", color: "#fff" } : { background: "var(--color-bg)", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}
+            className={`text-[10px] px-3 py-0.5 rounded-full font-extrabold flex items-center gap-1 transition-all ${
+              viewMode === "shops" ? "bg-primary text-white shadow-xs" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+            }`}
           >
             <Store size={12} /> Shops
           </button>
-          {viewMode === "products" && (
-            <>
-              <button onClick={() => setShowMyProducts(!showMyProducts)} className="btn-ghost text-xs">{showMyProducts ? "Hide" : "My Products"}</button>
-              <button onClick={handleShopClick} className="btn-ghost text-xs flex items-center gap-1">
-                <Store size={14} /> {shopCount > 0 ? "My Shop" : "Create Shop"}
-              </button>
-              {shopCount > 0 && shopCount < 2 && (
-                <button onClick={() => setShowCreateShop(true)} className="btn-ghost text-xs">+ New Shop</button>
-              )}
-            </>
-          )}
         </div>
+
+        {viewMode === "products" && (
+          <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
+            <button onClick={() => setShowMyProducts(!showMyProducts)} className="btn-ghost text-[10px] text-primary font-bold py-0.5 px-1.5">
+              {showMyProducts ? "Hide Mine" : "My Listings"}
+            </button>
+            <button onClick={handleShopClick} className="btn-ghost text-[10px] flex items-center gap-1 font-semibold py-0.5 px-1.5">
+              <Store size={12} /> {shopCount > 0 ? "My Shop" : "Create Shop"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="px-4 pt-4 pb-8">
 
         {showMyProducts && viewMode === "products" && <MyProducts />}
 
-        {recentItems.length > 0 && viewMode === "products" && (
-          <div className="mb-4">
-            <h3 className="text-xs font-semibold mb-2" style={{ color: "var(--color-text-secondary)" }}>Recently Viewed</h3>
-            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2">
-              {recentItems.map((item) => (
-                <Link
-                  key={`${item.type}-${item.id}`}
-                  to={`/${item.type === "product" ? "marketplace" : "accommodation"}/${item.id}`}
-                  className="flex-shrink-0 w-20 text-center"
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  {item.imageUrl ? (
-                    <img src={item.imageUrl} alt="" className="w-16 h-16 rounded-lg object-cover mx-auto" />
-                  ) : (
-                    <div className="w-16 h-16 rounded-lg mx-auto bg-gray-200 flex items-center justify-center">
-                      <ShoppingBag size={16} style={{ color: "var(--color-text-muted)" }} />
-                    </div>
-                  )}
-                  <p className="text-[10px] mt-1 line-clamp-2" style={{ color: "var(--color-text)" }}>{item.title}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+        {viewMode === "products" && <RecentlyViewedSection filterType="product" title="Recently Viewed Items" />}
 
         {viewMode === "products" && (
           <>
