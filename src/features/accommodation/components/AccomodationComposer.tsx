@@ -9,11 +9,18 @@ import { ZAMBIA_LOCATIONS } from "@/constants/locations";
 import { ALL_AMENITIES } from "@/constants/amenities";
 import toast from "react-hot-toast";
 
+import { useDraftPersistence } from "@/hooks/useDraftPersistence";
+
 interface Props {
   onClose: () => void;
   onCreated: () => void;
   initialListingType?: "property" | "room" | "bedspace";
   initialParentId?: string;
+}
+
+interface UploadedImageItem {
+  path: string;
+  previewUrl: string;
 }
 
 export default function AccommodationComposer({
@@ -30,7 +37,6 @@ export default function AccommodationComposer({
   const [location, setLocation] = useState("");
   const [dbLocations, setDbLocations] = useState<string[]>(Array.from(ZAMBIA_LOCATIONS));
 
-
   useEffect(() => {
     locationService.getLocations().then((locs: string[]) => setDbLocations(locs));
   }, []);
@@ -43,8 +49,8 @@ export default function AccommodationComposer({
   );
   const [monthly_rent, setRent] = useState("");
   const [description, setDescription] = useState("");
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<UploadedImageItem[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
 
@@ -58,6 +64,43 @@ export default function AccommodationComposer({
   // My properties (for parent selector)
   const [myProperties, setMyProperties] = useState<any[]>([]);
 
+  const draftKey = user ? `draft:accommodation-composer:${user.id}` : "draft:accommodation-composer";
+
+  // Draft persistence (survives OS WebView memory reclaims during file picker switch)
+  const { clearDraft } = useDraftPersistence(
+    draftKey,
+    {
+      title,
+      location,
+      monthly_rent,
+      description,
+      selectedAmenities,
+      listingType,
+      parentPropertyId,
+      capacity,
+      uploadedImages,
+    },
+    (draft: any) => {
+      if (draft.title !== undefined) setTitle(draft.title);
+      if (draft.location !== undefined) setLocation(draft.location);
+      if (draft.monthly_rent !== undefined) setRent(draft.monthly_rent);
+      if (draft.description !== undefined) setDescription(draft.description);
+      if (draft.selectedAmenities !== undefined) setSelectedAmenities(draft.selectedAmenities);
+      if (draft.listingType !== undefined) setListingType(draft.listingType);
+      if (draft.parentPropertyId !== undefined) setParentPropertyId(draft.parentPropertyId);
+      if (draft.capacity !== undefined) setCapacity(draft.capacity);
+      if (draft.uploadedImages !== undefined) {
+        const restored = (draft.uploadedImages || []).map((item: any) => ({
+          path: item.path,
+          previewUrl: item.path
+            ? storageService.getPublicUrl("accommodation-images", item.path)
+            : item.previewUrl,
+        }));
+        setUploadedImages(restored);
+      }
+    }
+  );
+
   useEffect(() => {
     if (!user) return;
     accommodationService
@@ -68,22 +111,44 @@ export default function AccommodationComposer({
       .catch(() => {});
   }, [user]);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    if (imageFiles.length + files.length > 5) {
+    if (!files.length || !user) return;
+
+    if (uploadedImages.length + files.length > 5) {
       toast.error("You can upload up to 5 photos.");
     }
-    const newFiles = [...imageFiles, ...files].slice(0, 5);
-    setImageFiles(newFiles);
-    setImagePreviews(newFiles.map((f) => URL.createObjectURL(f)));
-    e.target.value = "";
+    const filesToUpload = files.slice(0, 5 - uploadedImages.length);
+    if (filesToUpload.length === 0) return;
+
+    setUploadingImage(true);
+    try {
+      const newItems = await Promise.all(
+        filesToUpload.map(async (file, index) => {
+          const compressed = await compressImage(file);
+          const extension = file.name.split(".").pop() ?? "jpg";
+          const customPath = `${user.id}/${Date.now()}_${crypto.randomUUID()}.${extension}`;
+          const { publicUrl } = await storageService.uploadFile(
+            "accommodation-images",
+            compressed,
+            user.id,
+            uploadedImages.length === 0 && index === 0,
+            customPath
+          );
+          return { path: customPath, previewUrl: publicUrl };
+        })
+      );
+      setUploadedImages((prev) => [...prev, ...newItems]);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload photo");
+    } finally {
+      setUploadingImage(false);
+      e.target.value = "";
+    }
   };
 
   const removeImage = (index: number) => {
-    const newFiles = imageFiles.filter((_, i) => i !== index);
-    setImageFiles(newFiles);
-    setImagePreviews(newFiles.map((f) => URL.createObjectURL(f)));
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,19 +157,7 @@ export default function AccommodationComposer({
 
     setPosting(true);
     try {
-      let primaryImageUrl: string | undefined;
-      const uploadedUrls: string[] = [];
-      for (let i = 0; i < imageFiles.length; i++) {
-        const compressed = await compressImage(imageFiles[i]);
-        const { publicUrl } = await storageService.uploadFile(
-          "accommodation-images",
-          compressed,
-          user.id,
-          i === 0
-        );
-        uploadedUrls.push(publicUrl);
-      }
-      primaryImageUrl = uploadedUrls[0];
+      const primaryImageUrl = uploadedImages.length > 0 ? uploadedImages[0].previewUrl : undefined;
 
       const newAcc = await accommodationService.createAccommodation(
         user.id,
@@ -120,14 +173,15 @@ export default function AccommodationComposer({
           : undefined
       );
 
-      for (let i = 1; i < uploadedUrls.length; i++) {
-        await accommodationService.addImage(newAcc.id, uploadedUrls[i]);
+      for (let i = 1; i < uploadedImages.length; i++) {
+        await accommodationService.addImage(newAcc.id, uploadedImages[i].previewUrl);
       }
 
       if (selectedAmenities.length > 0) {
         await accommodationService.setAmenities(newAcc.id, selectedAmenities);
       }
 
+      clearDraft();
       toast.success("Listing created!");
       onCreated();
       onClose();
@@ -357,9 +411,9 @@ export default function AccommodationComposer({
           <div>
             <label className="field-label">Photos (up to 5)</label>
             <div className="grid grid-cols-3 gap-2 mb-2">
-              {imagePreviews.map((preview, idx) => (
-                <div key={idx} className="relative rounded-xl overflow-hidden aspect-video border bg-slate-100 dark:bg-slate-800">
-                  <img src={preview} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+              {uploadedImages.map((imgItem, idx) => (
+                <div key={imgItem.path || idx} className="relative rounded-xl overflow-hidden aspect-video border bg-slate-100 dark:bg-slate-800">
+                  <img src={imgItem.previewUrl} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removeImage(idx)}
@@ -370,20 +424,30 @@ export default function AccommodationComposer({
                   </button>
                 </div>
               ))}
-              {imageFiles.length < 5 && (
+              {uploadedImages.length < 5 && (
                 <>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-medium cursor-pointer"
+                    disabled={uploadingImage}
+                    className="flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-medium cursor-pointer disabled:opacity-50"
                     style={{
                       background: "var(--color-bg)",
                       border: "1.5px dashed var(--color-border)",
                       color: "var(--color-text-secondary)",
                     }}
                   >
-                    <Plus size={16} />
-                    <span>Add photo</span>
+                    {uploadingImage ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin text-primary" />
+                        <span>Uploading…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={16} />
+                        <span>Add photo</span>
+                      </>
+                    )}
                   </button>
                   <input
                     ref={fileInputRef}

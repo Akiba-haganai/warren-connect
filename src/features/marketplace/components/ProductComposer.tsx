@@ -8,6 +8,8 @@ import { compressImage } from "@/utils/compressImage";
 import TagInput from "@/components/ui/TagInput";
 import { tagService } from "@/services/tags/tagService";
 import { priceEngine } from "@/services/pricing/priceEngine";
+import { useDraftPersistence } from "@/hooks/useDraftPersistence";
+import toast from "react-hot-toast";
 
 interface Props {
   onClose: () => void;
@@ -15,14 +17,20 @@ interface Props {
   initialShopId?: string;
 }
 
+interface UploadedImageItem {
+  path: string;
+  previewUrl: string;
+}
+
 export default function ProductComposer({ onClose, onCreated, initialShopId }: Props) {
   const user = useAuthStore((s) => s.user);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<UploadedImageItem[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [condition, setCondition] = useState("");
   const [posting, setPosting] = useState(false);
@@ -30,26 +38,71 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   const [selectedShopId, setSelectedShopId] = useState<string>(initialShopId ?? "");
   const [category, setCategory] = useState("");
 
+  const draftKey = user ? `draft:product-composer:${user.id}` : "draft:product-composer";
+
+  // Persist form draft in sessionStorage (survives OS memory reclaims mid-flow)
+  const { clearDraft } = useDraftPersistence(
+    draftKey,
+    { title, description, price, condition, category, tags, uploadedImages },
+    (draft: any) => {
+      if (draft.title !== undefined) setTitle(draft.title);
+      if (draft.description !== undefined) setDescription(draft.description);
+      if (draft.price !== undefined) setPrice(draft.price);
+      if (draft.condition !== undefined) setCondition(draft.condition);
+      if (draft.category !== undefined) setCategory(draft.category);
+      if (draft.tags !== undefined) setTags(draft.tags);
+      if (draft.uploadedImages !== undefined) {
+        const restored = (draft.uploadedImages || []).map((item: any) => ({
+          path: item.path,
+          previewUrl: item.path
+            ? storageService.getPublicUrl("pending-uploads", item.path)
+            : item.previewUrl,
+        }));
+        setUploadedImages(restored);
+      }
+    }
+  );
+
   useEffect(() => {
     if (!user) return;
     shopService.getShopsForUser(user.id).then(setShops).catch(() => {});
   }, [user]);
 
-  const handleImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Instant Upload: upload images immediately when selected so they survive any page reload
+  const handleImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    setImageFiles((prev) => [...prev, ...files]);
-    const newPreviews = files.map((f) => URL.createObjectURL(f));
-    setPreviews((prev) => [...prev, ...newPreviews]);
-    e.target.value = "";
+    if (files.length === 0 || !user) return;
+    setUploadingImage(true);
+
+    try {
+      const newItems = await Promise.all(
+        files.map(async (file) => {
+          const compressed = await compressImage(file);
+          const fileName = `${Date.now()}_${compressed.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+          const path = `products/${user.id}/drafts/${fileName}`;
+
+          const { publicUrl } = await storageService.uploadFile(
+            "pending-uploads",
+            compressed,
+            user.id,
+            true,
+            path
+          );
+          return { path, previewUrl: publicUrl };
+        })
+      );
+
+      setUploadedImages((prev) => [...prev, ...newItems]);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload image preview");
+    } finally {
+      setUploadingImage(false);
+      e.target.value = "";
+    }
   };
 
   const removeImage = (index: number) => {
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
-    setPreviews((prev) => {
-      URL.revokeObjectURL(prev[index]);
-      return prev.filter((_, i) => i !== index);
-    });
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Backward-safe: if products table doesn’t yet have category, we’ll just keep category empty.
@@ -94,7 +147,6 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   }, [category, condition]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-
     e.preventDefault();
     if (!user || !title.trim() || !price) return;
     setPosting(true);
@@ -105,7 +157,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
         title.trim(),
         description.trim(),
         Number(price),
-        imageFiles.length > 0, // has_image
+        uploadedImages.length > 0, // has_image
         condition || undefined,
         category || undefined
       );
@@ -120,31 +172,12 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
         throw new Error("Failed to retrieve product ID");
       }
 
-      // 2. Upload images to pending-uploads & set primary image immediately
-      if (imageFiles.length > 0) {
-        const uploadedPaths = await Promise.all(
-          imageFiles.map(async (file) => {
-            const compressed = await compressImage(file);
-            const fileName = `${Date.now()}_${compressed.name}`;
-            const path = `products/${user.id}/${createdProductId}/${fileName}`;
-            
-            await storageService.uploadFile(
-              "pending-uploads",
-              compressed,
-              user.id,
-              true,
-              path
-            );
-            return path;
-          })
-        );
-
-        if (uploadedPaths.length > 0) {
-          const primaryPublicUrl = storageService.getPublicUrl("pending-uploads", uploadedPaths[0]);
-          await productService.updateProduct(createdProductId, {
-            image_url: primaryPublicUrl,
-          }).catch(() => {});
-        }
+      // 2. Set primary image URL from already-uploaded image if present
+      if (uploadedImages.length > 0) {
+        const primaryPublicUrl = uploadedImages[0].previewUrl;
+        await productService.updateProduct(createdProductId, {
+          image_url: primaryPublicUrl,
+        }).catch(() => {});
       }
 
       if (tags.length > 0) {
@@ -160,10 +193,11 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
         await shopService.addProductToShop(createdProductId, selectedShopId);
       }
 
+      clearDraft();
       onCreated();
       onClose();
     } catch (e: any) {
-      import("react-hot-toast").then((m) => m.default.error(e.message || "Failed to list item"));
+      toast.error(e.message || "Failed to list item");
     } finally {
       setPosting(false);
     }
@@ -237,11 +271,11 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
           </div>
           <div>
             <label className="field-label">Photos (optional)</label>
-            {previews.length > 0 && (
+            {uploadedImages.length > 0 && (
               <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-2 py-2">
-                {previews.map((preview, i) => (
-                  <div key={i} className="relative flex-shrink-0 w-20 h-20">
-                    <img src={preview} alt="" className="w-full h-full rounded-lg object-cover" />
+                {uploadedImages.map((imgItem, i) => (
+                  <div key={imgItem.path || i} className="relative flex-shrink-0 w-20 h-20">
+                    <img src={imgItem.previewUrl} alt="" className="w-full h-full rounded-lg object-cover" />
                     <button type="button" onClick={() => removeImage(i)} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center">
                       <X size={12} />
                     </button>
@@ -252,10 +286,21 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-sm font-medium cursor-pointer"
+              disabled={uploadingImage}
+              className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-sm font-medium cursor-pointer disabled:opacity-50"
               style={{ background: "var(--color-bg)", border: "1.5px dashed var(--color-border)", color: "var(--color-text-secondary)" }}
             >
-              <Plus size={16} /> Add photos
+              {uploadingImage ? (
+                <>
+                  <Loader2 size={16} className="animate-spin text-primary" />
+                  <span>Uploading photos…</span>
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  <span>Add photos</span>
+                </>
+              )}
             </button>
             <input
               ref={fileInputRef}
