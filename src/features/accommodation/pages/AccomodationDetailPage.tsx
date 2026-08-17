@@ -20,6 +20,8 @@ import { useConfirm } from "@/hooks/useConfirm";
 import InterestQueue from "@/features/accommodation/components/InterestQueue";
 import { ALL_AMENITIES } from "@/constants/amenities";
 import EditAccommodationModal from "@/features/accommodation/components/EditAccommodationModal";
+import ShareModal from "@/components/share/ShareModal";
+import { useSEOHead } from "@/hooks/useSEOHead";
 import { timeAgo } from "@/utils/timeAgo";
 import { Pencil } from "lucide-react";
 
@@ -29,8 +31,6 @@ type Profile = Tables<"profiles">;
 type AccommodationWithLandlord = Accommodation & {
   landlord?: Pick<Profile, "id" | "full_name" | "avatar_url" | "is_verified" | "is_landlord">;
 };
-
-
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
   WiFi: <Wifi size={14} />,
@@ -76,6 +76,14 @@ export default function AccommodationDetailPage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  useSEOHead({
+    title: accommodation ? `${accommodation.title} — K${Number(accommodation.monthly_rent).toLocaleString()}/mo` : undefined,
+    description: accommodation ? `${accommodation.location || "Student Housing"} • ${accommodation.description?.slice(0, 120) || ""}` : undefined,
+    image: accommodation?.image_url || undefined,
+    category: "accommodation",
+  });
 
   const loadAccommodation = async () => {
     if (!id) return;
@@ -192,16 +200,7 @@ export default function AccommodationDetailPage() {
     }
   };
 
-  const handleShare = async () => {
-    if (!accommodation) return;
-    try {
-      await navigator.share({
-        title: accommodation.title,
-        text: `Check out: ${accommodation.title} at ${accommodation.location} for K${accommodation.monthly_rent}/month`,
-        url: window.location.href,
-      });
-    } catch {}
-  };
+
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
@@ -359,7 +358,7 @@ export default function AccommodationDetailPage() {
               <Flag size={18} style={{ color: "var(--color-text-muted)" }} />
             </button>
           )}
-          <button onClick={handleShare} className="p-1" aria-label="Share listing" title="Share">
+          <button onClick={() => setShareModalOpen(true)} className="p-1" aria-label="Share listing" title="Share">
             <Share2 size={18} style={{ color: "var(--color-text-secondary)" }} />
           </button>
         </div>
@@ -737,6 +736,18 @@ export default function AccommodationDetailPage() {
           onUpdated={() => {
             loadAccommodation();
           }}
+        />
+      )}
+
+      {accommodation && (
+        <ShareModal
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          title={accommodation.title}
+          price={accommodation.monthly_rent}
+          imageUrl={accommodation.image_url || undefined}
+          location={accommodation.location}
+          category="accommodation"
         />
       )}
     </div>

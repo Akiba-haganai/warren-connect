@@ -1,18 +1,22 @@
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { notificationService } from "@/services/notifications/notificationService";
 import { useAuthStore } from "@/store/auth/authStore";
 import { useNotifications } from "@/hooks/useNotifications";
 import NotificationItem from "@/features/notifications/components/NotificationItem";
 import GroupedNotificationItem from "@/features/notifications/components/GroupedNotificationItem";
-import { CheckCheck, Loader2, Trash2, Bell } from "lucide-react";
+import { CheckCheck, Loader2, Trash2, Bell, Sparkles, MessageCircle, ShoppingBag } from "lucide-react";
 import { useInView } from "react-intersection-observer";
 import { supabase } from "@/lib/supabase/client";
 import { useConfirm } from "@/hooks/useConfirm";
+import toast from "react-hot-toast";
+
+type FilterTab = "all" | "unread" | "messages" | "listings";
 
 export default function NotificationsPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<FilterTab>("all");
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useNotifications(user?.id);
 
@@ -32,28 +36,54 @@ export default function NotificationsPage() {
     return () => { supabase.removeChannel(channel); };
   }, [user, queryClient]);
 
-  const allNotifications = data?.pages.flatMap((p) => p.notifications) ?? [];
+  const allNotifications = useMemo(() => data?.pages.flatMap((p) => p.notifications) ?? [], [data]);
 
-  const grouped = allNotifications.reduce((acc, n) => {
-    const key = (n.link || "no-link") + "|" + n.type;
-    if (!acc.has(key)) acc.set(key, []);
-    acc.get(key)!.push(n);
-    return acc;
-  }, new Map<string, typeof allNotifications>());
+  const unreadCount = useMemo(() => allNotifications.filter((n) => !n.is_read).length, [allNotifications]);
+  const messageCount = useMemo(() => allNotifications.filter((n) => n.type === "message").length, [allNotifications]);
+  const listingCount = useMemo(() => allNotifications.filter((n) => n.type === "product" || n.type === "accommodation").length, [allNotifications]);
 
-  const groupedItems = Array.from(grouped.entries()).map(([key, notifs]) => ({
-    key,
-    notifications: notifs,
-    count: notifs.length,
-    latest: notifs[0],
-  }));
+  const filteredNotifications = useMemo(() => {
+    switch (activeTab) {
+      case "unread":
+        return allNotifications.filter((n) => !n.is_read);
+      case "messages":
+        return allNotifications.filter((n) => n.type === "message");
+      case "listings":
+        return allNotifications.filter((n) => n.type === "product" || n.type === "accommodation");
+      default:
+        return allNotifications;
+    }
+  }, [allNotifications, activeTab]);
+
+  const grouped = useMemo(() => {
+    return filteredNotifications.reduce((acc, n) => {
+      const key = (n.link || "no-link") + "|" + n.type;
+      if (!acc.has(key)) acc.set(key, []);
+      acc.get(key)!.push(n);
+      return acc;
+    }, new Map<string, typeof allNotifications>());
+  }, [filteredNotifications]);
+
+  const groupedItems = useMemo(() => {
+    return Array.from(grouped.entries()).map(([key, notifs]) => ({
+      key,
+      notifications: notifs,
+      count: notifs.length,
+      latest: notifs[0],
+    }));
+  }, [grouped]);
 
   const { confirm, ConfirmDialog } = useConfirm();
 
   const markAllMutation = async () => {
     if (!user) return;
-    await notificationService.markAllAsRead(user.id);
-    queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+    try {
+      await notificationService.markAllAsRead(user.id);
+      queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+      toast.success("Marked all as read");
+    } catch {
+      toast.error("Failed to mark read");
+    }
   };
 
   const handleClearAll = async () => {
@@ -63,14 +93,24 @@ export default function NotificationsPage() {
       message: "Are you sure you want to delete all your notifications? This action cannot be undone.",
     });
     if (!ok) return;
-    await notificationService.clearAllNotifications(user.id);
-    queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+    try {
+      await notificationService.clearAllNotifications(user.id);
+      queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+      toast.success("Cleared all notifications");
+    } catch {
+      toast.error("Failed to clear notifications");
+    }
   };
 
   const handleClearRead = async () => {
     if (!user) return;
-    await notificationService.clearReadNotifications(user.id);
-    queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+    try {
+      await notificationService.clearReadNotifications(user.id);
+      queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+      toast.success("Cleared read notifications");
+    } catch {
+      toast.error("Failed to clear read notifications");
+    }
   };
 
   const handleMarkOne = async (id: string) => {
@@ -81,43 +121,123 @@ export default function NotificationsPage() {
   const handleDelete = async (id: string) => {
     await notificationService.deleteNotification(id);
     queryClient.invalidateQueries({ queryKey: ["notifications", user!.id] });
+    toast.success("Notification deleted");
   };
 
   if (!user) return null;
 
   return (
-    <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
-      <div className="sticky top-0 z-10 px-4 py-3 flex items-center justify-between"
-        style={{ background: "var(--color-surface)", backdropFilter: "blur(12px)", borderBottom: "1px solid var(--color-border)" }}>
-        <h1 className="text-base font-bold" style={{ color: "var(--color-primary)" }}>Notifications</h1>
-        {allNotifications.length > 0 && (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
+      {/* 1-Line Sticky Glassmorphic Header */}
+      <div className="sticky top-0 z-30 bg-surface/90 backdrop-blur-md border-b border-border shadow-xs">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <button onClick={markAllMutation} className="btn-ghost text-xs flex items-center gap-1">
-              <CheckCheck size={14} /> Mark read
-            </button>
-            <button onClick={handleClearRead} className="btn-ghost text-xs text-slate-500 hover:text-slate-700">
-              Clear Read
-            </button>
-            <button onClick={handleClearAll} className="btn-ghost text-xs text-red-500 hover:text-red-600 flex items-center gap-1">
-              <Trash2 size={13} /> Clear All
-            </button>
+            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+              <Bell size={18} />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-900 dark:text-white leading-none">Notifications</h1>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {unreadCount > 0 ? `${unreadCount} unread update${unreadCount !== 1 ? "s" : ""}` : "All updates read"}
+              </p>
+            </div>
           </div>
-        )}
+
+          {allNotifications.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={markAllMutation}
+                  className="px-2.5 py-1.5 rounded-full border border-border bg-surface text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Mark all as read"
+                >
+                  <CheckCheck size={13} className="text-primary" />
+                  <span className="hidden sm:inline">Mark read</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleClearRead}
+                className="px-2.5 py-1.5 rounded-full border border-border bg-surface text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Clear Read
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="p-1.5 rounded-full border border-red-200 dark:border-red-900/50 bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+                title="Clear all notifications"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Filter Pills */}
+        <div className="max-w-4xl mx-auto px-4 pb-3 flex items-center gap-2 overflow-x-auto hide-scrollbar">
+          {[
+            { id: "all", label: "All", count: allNotifications.length, icon: Sparkles },
+            { id: "unread", label: "Unread", count: unreadCount, icon: Bell },
+            { id: "messages", label: "Chats", count: messageCount, icon: MessageCircle },
+            { id: "listings", label: "Listings", count: listingCount, icon: ShoppingBag },
+          ].map((tab) => {
+            const IconComponent = tab.icon;
+            const isSelected = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+                  isSelected
+                    ? "bg-primary text-white shadow-xs"
+                    : "bg-surface border border-border text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                }`}
+              >
+                <IconComponent size={14} />
+                <span>{tab.label}</span>
+                {tab.count > 0 && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      isSelected ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="px-4 pt-2 pb-8">
+      {/* Main List */}
+      <div className="max-w-4xl mx-auto px-4 pt-4">
         {isLoading ? (
-          <div className="flex justify-center py-12"><Loader2 className="animate-spin" style={{ color: "var(--color-text-muted)" }} /></div>
-        ) : allNotifications.length === 0 ? (
-          <div className="rounded-2xl py-14 px-4 text-center flex flex-col items-center justify-center gap-2" style={{ background: "var(--color-surface)", border: "1px dashed var(--color-border)" }}>
-            <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-1">
-              <Bell size={24} />
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="animate-spin text-primary mb-3" size={32} />
+            <p className="text-sm font-medium text-slate-500">Loading notifications…</p>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="rounded-3xl p-12 text-center bg-surface border border-dashed border-border shadow-xs my-6">
+            <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+              <Bell size={32} />
             </div>
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">No notifications yet</p>
-            <p className="text-xs text-slate-400 max-w-xs">We&apos;ll notify you when someone messages you, interacts with your listings, or updates a post.</p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+              {allNotifications.length === 0 ? "No notifications yet" : "No updates match this filter"}
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              {allNotifications.length === 0
+                ? "We'll notify you when someone messages you, interacts with your listings, or updates a post."
+                : "Try selecting a different filter tab above."}
+            </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
             {groupedItems.map(({ key, notifications, count }) =>
               count > 1 ? (
                 <GroupedNotificationItem
@@ -137,7 +257,7 @@ export default function NotificationsPage() {
               )
             )}
             <div ref={loadMoreRef} className="h-4" />
-            {isFetchingNextPage && <Loader2 className="animate-spin mx-auto" style={{ color: "var(--color-text-muted)" }} />}
+            {isFetchingNextPage && <Loader2 className="animate-spin mx-auto text-primary py-4" />}
           </div>
         )}
       </div>

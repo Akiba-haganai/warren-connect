@@ -174,6 +174,72 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Notification Preferences Tile */}
+        <div className="card p-4">
+          <h2 className="text-sm font-semibold mb-3 text-slate-900 dark:text-white">Notification Preferences</h2>
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-slate-800 dark:text-slate-200">Web Push Notifications</p>
+                <p className="text-[11px] text-slate-400">Receive instant push alerts on your phone</p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!("Notification" in window)) {
+                    toast.error("Web Push is not supported on this browser.");
+                    return;
+                  }
+                  const perm = await Notification.requestPermission();
+                  if (perm === "granted") {
+                    toast.success("Web push notifications enabled!");
+                  } else {
+                    toast.error("Notification permission denied.");
+                  }
+                }}
+                className="px-3 py-1.5 rounded-full bg-primary text-white text-[11px] font-bold hover:bg-primary-dark transition-colors cursor-pointer"
+              >
+                Enable Push
+              </button>
+            </div>
+
+            <div className="h-px bg-border/60" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-slate-800 dark:text-slate-200">Price Drop Alerts</p>
+                <p className="text-[11px] text-slate-400">Alert me when saved items decrease in price</p>
+              </div>
+              <input type="checkbox" defaultChecked className="rounded text-primary focus:ring-primary h-4 w-4" />
+            </div>
+
+            <div className="h-px bg-border/60" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-slate-800 dark:text-slate-200">Direct Message Alerts</p>
+                <p className="text-[11px] text-slate-400">Alert me when someone sends a message</p>
+              </div>
+              <input type="checkbox" defaultChecked className="rounded text-primary focus:ring-primary h-4 w-4" />
+            </div>
+
+            <div className="h-px bg-border/60" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-slate-800 dark:text-slate-200">Email Notifications</p>
+                <p className="text-[11px] text-slate-400">Receive order &amp; account updates by email</p>
+              </div>
+              <input type="checkbox" defaultChecked className="rounded text-primary focus:ring-primary h-4 w-4" />
+            </div>
+
+            {/* iOS PWA Notice */}
+            <div className="mt-3 p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 text-[11px] text-blue-700 dark:text-blue-300">
+              <span className="font-bold">📱 iPhone/iOS Note:</span> On iOS, push notifications require adding PLAWZA to your Home Screen (Share ➔ Add to Home Screen).
+            </div>
+          </div>
+        </div>
+
         <div className="card p-4">
           <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>Change Password</h2>
           <form onSubmit={handleChangePassword} className="flex flex-col gap-3">

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
-import { Bell, Search, UserCircle } from "lucide-react";
+import { Bell, Search, UserCircle, Heart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { notificationService } from "@/services/notifications/notificationService";
+import { useSavedItems } from "@/hooks/useSavedItems";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import SearchOverlay from "@/components/search/SearchOverlay";
 
@@ -17,7 +18,11 @@ export default function Navbar() {
     queryFn: () => (user ? notificationService.getNotifications(user.id) : Promise.resolve([])),
     enabled: !!user,
   });
+
+  const { data: savedItems } = useSavedItems(user?.id);
+
   const unreadCount = notifications?.filter((n: any) => !n.is_read).length ?? 0;
+  const savedCount = savedItems?.length ?? 0;
 
   return (
     <>
@@ -53,7 +58,21 @@ export default function Navbar() {
             <span className="hidden sm:inline">Search…</span>
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Saved Items Link */}
+            <Link
+              to="/saved"
+              className="relative p-2 rounded-xl hover:bg-white/10 transition"
+              aria-label={`Saved items${savedCount > 0 ? ` (${savedCount} items)` : ""}`}
+            >
+              <Heart size={20} className="text-white fill-white/20 hover:fill-white/40 transition-colors" />
+              {savedCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center px-1 border border-white/30 shadow-xs">
+                  {savedCount > 99 ? "99+" : savedCount}
+                </span>
+              )}
+            </Link>
+
             {/* Notifications */}
             <Link
               to="/notifications"
@@ -62,7 +81,7 @@ export default function Navbar() {
             >
               <Bell size={20} className="text-white" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[20px] h-[20px] bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1 animate-pulse">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-amber-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center px-1 border border-white/30 shadow-xs animate-pulse">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}

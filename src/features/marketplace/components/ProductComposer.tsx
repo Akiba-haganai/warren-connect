@@ -52,13 +52,17 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
       if (draft.category !== undefined) setCategory(draft.category);
       if (draft.tags !== undefined) setTags(draft.tags);
       if (draft.uploadedImages !== undefined) {
-        const restored = (draft.uploadedImages || []).map((item: any) => ({
-          path: item.path,
-          previewUrl: item.path
-            ? storageService.getPublicUrl("pending-uploads", item.path)
-            : item.previewUrl,
-        }));
-        setUploadedImages(restored);
+        Promise.all(
+          (draft.uploadedImages || []).map(async (item: any) => {
+            if (!item.path) return item;
+            try {
+              const signedUrl = await storageService.getSignedUrl("pending-uploads", item.path, 3600);
+              return { path: item.path, previewUrl: signedUrl };
+            } catch {
+              return item;
+            }
+          })
+        ).then(setUploadedImages);
       }
     }
   );
@@ -81,14 +85,15 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
           const fileName = `${Date.now()}_${compressed.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
           const path = `products/${user.id}/drafts/${fileName}`;
 
-          const { publicUrl } = await storageService.uploadFile(
+          await storageService.uploadFile(
             "pending-uploads",
             compressed,
             user.id,
             true,
             path
           );
-          return { path, previewUrl: publicUrl };
+          const signedUrl = await storageService.getSignedUrl("pending-uploads", path, 3600);
+          return { path, previewUrl: signedUrl };
         })
       );
 

@@ -5,6 +5,7 @@ import SaveButton from "@/components/ui/SaveButton";
 import { Share2, Star, Loader2, Package } from "lucide-react";
 import { VerificationBadge } from "@/features/verification/components/VerificationBadge";
 import { storageService } from "@/services/storage/storageService";
+import ShareModal from "@/components/share/ShareModal";
 
 type Product = Tables<"products">;
 
@@ -15,20 +16,12 @@ interface Props {
 
 export default function ProductCard({ product, onView }: Props) {
   const [imgError, setImgError] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (navigator.share) {
-      navigator.share({
-        title: product.title,
-        text: product.description ?? "",
-        url: `${window.location.origin}/marketplace/${product.id}`,
-      });
-    } else {
-      navigator.clipboard.writeText(`${window.location.origin}/marketplace/${product.id}`);
-      // toast.success("Link copied!");
-    }
+    setShareModalOpen(true);
   };
 
   const showRating = product.seller_avg_rating && product.seller_review_count;
@@ -165,6 +158,16 @@ export default function ProductCard({ product, onView }: Props) {
           )}
         </div>
       </div>
+
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        title={product.title}
+        price={product.price}
+        url={`${window.location.origin}/marketplace/${product.id}`}
+        imageUrl={product.image_url ? storageService.getPublicUrl("product-images", product.image_url) : undefined}
+        category="product"
+      />
     </Link>
   );
 }

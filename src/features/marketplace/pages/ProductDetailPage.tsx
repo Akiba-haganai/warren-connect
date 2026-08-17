@@ -15,6 +15,8 @@ import {
   ArrowLeft, MessageCircle, Share2, Loader2, ShieldCheck, Flag, ShoppingBag, ChevronLeft, ChevronRight, Lock, Pencil
 } from "lucide-react";
 import EditProductModal from "@/features/marketplace/components/EditProductModal";
+import ShareModal from "@/components/share/ShareModal";
+import { useSEOHead } from "@/hooks/useSEOHead";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function ProductDetailPage() {
@@ -31,6 +33,14 @@ export default function ProductDetailPage() {
   const [images, setImages] = useState<{ id: string; image_url: string }[]>([]);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  useSEOHead({
+    title: product ? `${product.title} — K${Number(product.price).toLocaleString()}` : undefined,
+    description: product?.description || "Find amazing student deals on PLAWZA Marketplace.",
+    image: product?.image_url || undefined,
+    category: "product",
+  });
 
   useEffect(() => {
     if (product) {
@@ -155,8 +165,7 @@ export default function ProductDetailPage() {
               <Flag size={18} style={{ color: "var(--color-text-muted)" }} />
             </button>
           )}
-          <button onClick={() => navigator.share?.({ title: product.title, text: product.description ?? "", url: window.location.href })}
-                  aria-label="Share product">
+          <button onClick={() => setShareModalOpen(true)} aria-label="Share product">
             <Share2 size={18} />
           </button>
         </div>
@@ -326,6 +335,15 @@ export default function ProductDetailPage() {
           }}
         />
       )}
+
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        title={product.title}
+        price={product.price}
+        imageUrl={primaryDisplayUrl || undefined}
+        category="product"
+      />
     </div>
   );
 }

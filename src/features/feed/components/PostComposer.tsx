@@ -43,10 +43,13 @@ export default function PostComposer({ onClose, onCreated }: Props) {
       if (draft.uploadedImage !== undefined) {
         const item = draft.uploadedImage;
         if (item && item.path) {
-          setUploadedImage({
-            path: item.path,
-            previewUrl: storageService.getPublicUrl("pending-uploads", item.path),
-          });
+          storageService.getSignedUrl("pending-uploads", item.path, 3600)
+            .then((signedUrl) => {
+              setUploadedImage({ path: item.path, previewUrl: signedUrl });
+            })
+            .catch(() => {
+              setUploadedImage(item);
+            });
         } else {
           setUploadedImage(item);
         }
@@ -64,14 +67,15 @@ export default function PostComposer({ onClose, onCreated }: Props) {
       const fileName = `${Date.now()}_${compressed.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const path = `posts/${user.id}/drafts/${fileName}`;
 
-      const { publicUrl } = await storageService.uploadFile(
+      await storageService.uploadFile(
         "pending-uploads",
         compressed,
         user.id,
         true,
         path
       );
-      setUploadedImage({ path, previewUrl: publicUrl });
+      const signedUrl = await storageService.getSignedUrl("pending-uploads", path, 3600);
+      setUploadedImage({ path, previewUrl: signedUrl });
     } catch (err: any) {
       toast.error(err.message || "Failed to upload image preview");
     } finally {

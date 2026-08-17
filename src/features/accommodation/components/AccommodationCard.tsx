@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Building2, Zap, Users, CheckCircle2, DoorClosed, BedDouble } from "lucide-react";
+import { MapPin, Building2, Zap, Users, CheckCircle2, DoorClosed, BedDouble, Share2 } from "lucide-react";
 
 import type { Tables } from "@/types/database/database.types";
 import SaveButton from "@/components/ui/SaveButton";
+import ShareModal from "@/components/share/ShareModal";
 
 type Accommodation = Tables<"accommodations">;
 
@@ -20,10 +22,18 @@ interface Props {
 }
 
 export default function AccommodationCard({ listing, onView, landlord }: Props) {
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+
   const avgResponseMs = landlord && landlord.response_count && landlord.total_response_time_ms
     ? landlord.total_response_time_ms / landlord.response_count
     : null;
   const isFastResponder = avgResponseMs !== null && avgResponseMs < 1800000; // < 30 minutes
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShareModalOpen(true);
+  };
 
   return (
     <Link
@@ -33,7 +43,15 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
       onClick={() => onView?.(listing.id)}
       aria-label={`View accommodation: ${listing.title}`}
     >
-      <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={handleShare}
+          className="w-8 h-8 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-white shadow-xs transition-colors cursor-pointer"
+          aria-label="Share listing"
+        >
+          <Share2 size={14} />
+        </button>
         <SaveButton itemType="accommodation" itemId={listing.id} />
       </div>
 
@@ -112,6 +130,17 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
         </div>
 
       </div>
+
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        title={listing.title}
+        price={listing.monthly_rent}
+        url={`${window.location.origin}/accommodation/${listing.id}`}
+        imageUrl={listing.image_url || undefined}
+        location={listing.location}
+        category="accommodation"
+      />
     </Link>
   );
 }
