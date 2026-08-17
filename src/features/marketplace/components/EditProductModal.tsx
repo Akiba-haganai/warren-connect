@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Loader2, Pencil, ImagePlus, Camera, Star } from "lucide-react";
 import { productService } from "@/services/products/productService";
 import { storageService } from "@/services/storage/storageService";
@@ -22,6 +22,7 @@ interface Props {
 
 export default function EditProductModal({ product, onClose, onUpdated }: Props) {
   const user = useAuthStore((s) => s.user);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(product.title || "");
   const [description, setDescription] = useState(product.description || "");
   const [price, setPrice] = useState(product.price ? String(product.price) : "");
@@ -213,17 +214,23 @@ export default function EditProductModal({ product, onClose, onUpdated }: Props)
                 ))}
 
                 {/* Upload button */}
-                <label className="aspect-square border-2 border-dashed border-border hover:border-primary/50 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-center bg-surface hover:bg-primary/5 p-1">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="aspect-square border-2 border-dashed border-border hover:border-primary/50 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-center bg-surface hover:bg-primary/5 p-1"
+                >
                   <ImagePlus size={20} className="text-primary" />
                   <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200">+ Add Photos</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => handleAddFiles(e.target.files)}
-                  />
-                </label>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleAddFiles(e.target.files)}
+                  onClick={(e) => e.stopPropagation()}
+                />
               </div>
             )}
           </div>

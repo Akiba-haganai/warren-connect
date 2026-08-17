@@ -18,12 +18,10 @@ import CreateShopModal from "@/features/marketplace/components/CreateShopModal";
 import ShopList from "@/features/marketplace/components/ShopList";
 import RecentlyViewedSection from "@/components/ui/RecentlyViewedSection";
 import { useConfirm } from "@/hooks/useConfirm";
-import { useScrollHeader } from "@/hooks/useScrollHeader";
 
 type SortMode = "newest" | "oldest" | "price_asc" | "price_desc";
 
 export default function MarketplacePage() {
-  const { subHeaderVisible } = useScrollHeader();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
@@ -160,74 +158,53 @@ export default function MarketplacePage() {
         </div>
       )}
 
-      {/* Glassmorphic Main Header (Hides on Scroll Down) */}
-      <div
-        className={`sticky top-0 z-20 px-3 py-2 flex items-center justify-between backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs transition-all duration-300 transform origin-top ${
-          subHeaderVisible
-            ? "max-h-16 py-2 translate-y-0 opacity-100"
-            : "max-h-0 py-0 opacity-0 -translate-y-full pointer-events-none border-transparent overflow-hidden"
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs font-black shadow-xs">
+      {/* Ultra-Compact 1-Line Glassmorphic Sticky Header */}
+      <div className="sticky top-0 z-20 px-3 py-1.5 flex items-center justify-between gap-2 backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs h-11">
+        {/* Left: Brand + View Mode Toggle */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="w-6 h-6 rounded-md bg-primary text-white flex items-center justify-center text-[11px] font-black shadow-xs">
             P
           </div>
-          <div>
-            <h1 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">Campus Marketplace</h1>
-            <p className="text-[10px] text-slate-400 font-medium">Buy &amp; Sell Items on Campus</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleRefresh} disabled={refreshing} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Refresh">
-            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} style={{ color: "var(--color-text-muted)" }} />
-          </button>
-          <button onClick={() => setShowBulkUpload(true)} className="btn-ghost text-xs py-1 px-2.5">📦 Bulk</button>
-          <button
-            onClick={() => setShowComposer(true)}
-            className="btn-primary text-xs font-bold px-3 py-1.5 rounded-full shadow-xs flex items-center gap-1"
-          >
-            <Plus size={14} /> Sell
-          </button>
-        </div>
-      </div>
-
-      {/* Glassmorphic Sub-Header (Tab Bar) */}
-      <div
-        className={`sticky top-[49px] z-10 px-3 flex items-center justify-between gap-2 backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs transition-all duration-300 transform origin-top ${
-          subHeaderVisible
-            ? "max-h-12 py-1 translate-y-0 opacity-100"
-            : "max-h-0 py-0 opacity-0 -translate-y-full pointer-events-none border-transparent overflow-hidden"
-        }`}
-      >
-        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setViewMode("products")}
-            className={`text-[10px] px-3 py-0.5 rounded-full font-extrabold transition-all ${
-              viewMode === "products" ? "bg-primary text-white shadow-xs" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+            className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold transition-all ${
+              viewMode === "products" ? "bg-primary text-white shadow-xs" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
             }`}
           >
             Products
           </button>
           <button
             onClick={() => setViewMode("shops")}
-            className={`text-[10px] px-3 py-0.5 rounded-full font-extrabold flex items-center gap-1 transition-all ${
-              viewMode === "shops" ? "bg-primary text-white shadow-xs" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+            className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-0.5 transition-all ${
+              viewMode === "shops" ? "bg-primary text-white shadow-xs" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
             }`}
           >
-            <Store size={12} /> Shops
+            <Store size={11} /> Shops
           </button>
         </div>
 
-        {viewMode === "products" && (
-          <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
-            <button onClick={() => setShowMyProducts(!showMyProducts)} className="btn-ghost text-[10px] text-primary font-bold py-0.5 px-1.5">
-              {showMyProducts ? "Hide Mine" : "My Listings"}
-            </button>
-            <button onClick={handleShopClick} className="btn-ghost text-[10px] flex items-center gap-1 font-semibold py-0.5 px-1.5">
-              <Store size={12} /> {shopCount > 0 ? "My Shop" : "Create Shop"}
-            </button>
-          </div>
-        )}
+        {/* Right: Actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {viewMode === "products" && (
+            <>
+              <button onClick={() => setShowMyProducts(!showMyProducts)} className="text-[10px] font-bold text-primary px-1.5 py-0.5 rounded hover:bg-primary/10">
+                {showMyProducts ? "All Items" : "My Items"}
+              </button>
+              <button onClick={handleShopClick} className="text-[10px] font-bold text-slate-700 dark:text-slate-200 px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 hidden sm:inline-flex items-center gap-1">
+                <Store size={11} /> {shopCount > 0 ? "My Shop" : "+ Shop"}
+              </button>
+            </>
+          )}
+          <button onClick={handleRefresh} disabled={refreshing} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800" title="Refresh">
+            <RefreshCw size={14} className={refreshing ? "animate-spin text-primary" : "text-slate-400"} />
+          </button>
+          <button
+            onClick={() => setShowComposer(true)}
+            className="btn-primary text-[11px] font-bold px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1"
+          >
+            <Plus size={13} /> Sell
+          </button>
+        </div>
       </div>
 
       <div className="px-4 pt-4 pb-8">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { productService } from "@/services/products/productService";
@@ -17,6 +17,7 @@ interface Props {
 
 export default function ProductComposer({ onClose, onCreated, initialShopId }: Props) {
   const user = useAuthStore((s) => s.user);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -36,6 +37,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
 
   const handleImages = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     setImageFiles((prev) => [...prev, ...files]);
     const newPreviews = files.map((f) => URL.createObjectURL(f));
     setPreviews((prev) => [...prev, ...newPreviews]);
@@ -247,10 +249,24 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
                 ))}
               </div>
             )}
-            <label className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-sm font-medium cursor-pointer" style={{ background: "var(--color-bg)", border: "1.5px dashed var(--color-border)", color: "var(--color-text-secondary)" }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-sm font-medium cursor-pointer"
+              style={{ background: "var(--color-bg)", border: "1.5px dashed var(--color-border)", color: "var(--color-text-secondary)" }}
+            >
               <Plus size={16} /> Add photos
-              <input type="file" accept="image/*, image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleImages} aria-label="Select product images" />
-            </label>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*, image/jpeg, image/png, image/webp"
+              multiple
+              className="hidden"
+              onChange={handleImages}
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Select product images"
+            />
           </div>
           {priceHint && (
             <div className="px-1">

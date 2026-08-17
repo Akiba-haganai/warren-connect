@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { MapPin, Plus, X, Loader2, Building2, DoorClosed, BedDouble } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { accommodationService } from "@/services/accommodation/accommodationService";
@@ -8,8 +8,6 @@ import { compressImage } from "@/utils/compressImage";
 import { ZAMBIA_LOCATIONS } from "@/constants/locations";
 import { ALL_AMENITIES } from "@/constants/amenities";
 import toast from "react-hot-toast";
-
-
 
 interface Props {
   onClose: () => void;
@@ -25,6 +23,7 @@ export default function AccommodationComposer({
   initialParentId,
 }: Props) {
   const user = useAuthStore((s) => s.user);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Basic fields
   const [title, setTitle] = useState("");
@@ -372,25 +371,31 @@ export default function AccommodationComposer({
                 </div>
               ))}
               {imageFiles.length < 5 && (
-                <label
-                  className="flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-medium cursor-pointer"
-                  style={{
-                    background: "var(--color-bg)",
-                    border: "1.5px dashed var(--color-border)",
-                    color: "var(--color-text-secondary)",
-                  }}
-                >
-                  <Plus size={16} />
-                  <span>Add photo</span>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-medium cursor-pointer"
+                    style={{
+                      background: "var(--color-bg)",
+                      border: "1.5px dashed var(--color-border)",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    <Plus size={16} />
+                    <span>Add photo</span>
+                  </button>
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     multiple
                     className="hidden"
                     onChange={handleImageSelect}
+                    onClick={(e) => e.stopPropagation()}
                     aria-label="Select accommodation images"
                   />
-                </label>
+                </>
               )}
             </div>
           </div>

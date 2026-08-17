@@ -11,15 +11,12 @@ import AccommodationCard from "@/features/accommodation/components/Accommodation
 import PostComposer from "@/features/feed/components/PostComposer";
 import TrendingRow from "@/features/feed/components/TrendingRow";
 import RecentlyViewedSection from "@/components/ui/RecentlyViewedSection";
-import { useScrollHeader } from "@/hooks/useScrollHeader";
 import type { FeedPost } from "@/services/posts/postService";
 import type { Tables } from "@/types/database/database.types";
-
 import { useAuthStore } from "@/store/auth/authStore";
 import { useMutedUsers } from "@/hooks/safety/useMuteUser";
 
 export default function HomeFeedPage() {
-  const { subHeaderVisible } = useScrollHeader();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [showComposer, setShowComposer] = useState(false);
@@ -92,71 +89,65 @@ export default function HomeFeedPage() {
 
   return (
     <div ref={containerRef} style={{ background: "var(--color-bg)", minHeight: "100%" }}>
-      {/* Glassmorphic Main Header (Hides on Scroll Down) */}
-      <div
-        className={`sticky top-0 z-20 px-3 py-2 flex items-center justify-between backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs transition-all duration-300 transform origin-top ${
-          subHeaderVisible
-            ? "max-h-16 py-2 translate-y-0 opacity-100"
-            : "max-h-0 py-0 opacity-0 -translate-y-full pointer-events-none border-transparent overflow-hidden"
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-xs font-black shadow-xs">
+      {/* Ultra-Compact 1-Line Glassmorphic Sticky Header */}
+      <div className="sticky top-0 z-20 px-3 py-1.5 flex items-center gap-2 backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs h-11">
+        {/* Brand Badge */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="w-6 h-6 rounded-md bg-primary text-white flex items-center justify-center text-[11px] font-black shadow-xs">
             P
           </div>
-          <div>
-            <h1 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">Campus Feed</h1>
-            <p className="text-[10px] text-slate-400 font-medium">PLAWZA Student Community</p>
-          </div>
+          <span className="text-xs font-extrabold text-slate-900 dark:text-white hidden sm:inline">Feed</span>
         </div>
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as any)} className="glass-select text-xs py-1 px-3 rounded-full">
-          <option value="all">All Content</option>
+
+        {/* Content Type Selector */}
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value as any)}
+          className="glass-select text-[11px] font-bold py-1 px-2.5 rounded-full shrink-0 border-border"
+        >
+          <option value="all">All</option>
           <option value="post">Posts</option>
-          <option value="product">Marketplace</option>
+          <option value="product">Market</option>
           <option value="accommodation">Housing</option>
         </select>
-      </div>
 
-      {/* Side-Scrolling Feed Topic Sub-Header Pill Track (Hides on Scroll Down) */}
-      {allTags && allTags.length > 0 && (
-        <div
-          className={`sticky top-[49px] z-10 px-3 flex items-center gap-1.5 overflow-x-auto hide-scrollbar backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs transition-all duration-300 transform origin-top flex-nowrap ${
-            subHeaderVisible
-              ? "max-h-12 py-1.5 translate-y-0 opacity-100"
-              : "max-h-0 py-0 opacity-0 -translate-y-full pointer-events-none border-transparent overflow-hidden"
-          }`}
-          style={{ WebkitOverflowScrolling: "touch" }}
-        >
-          <button
-            type="button"
-            onClick={() => setSelectedTag("")}
-            className={`text-xs px-3.5 py-1 rounded-full font-bold transition-all shrink-0 border ${
-              !selectedTag
-                ? "bg-primary text-white border-primary shadow-xs"
-                : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
-            }`}
+        {/* Side-Scrolling Feed Topic Pills */}
+        {allTags && allTags.length > 0 && (
+          <div
+            className="flex items-center gap-1 overflow-x-auto hide-scrollbar flex-nowrap flex-1 py-0.5 min-w-0"
+            style={{ WebkitOverflowScrolling: "touch" }}
           >
-            All Topics
-          </button>
-          {allTags.map((tag: any) => {
-            const isActive = selectedTag === tag.name;
-            return (
-              <button
-                key={tag.id}
-                type="button"
-                onClick={() => setSelectedTag(isActive ? "" : tag.name)}
-                className={`text-xs px-3.5 py-1 rounded-full font-medium transition-all shrink-0 border flex items-center gap-1 ${
-                  isActive
-                    ? "bg-primary text-white border-primary shadow-xs font-bold"
-                    : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
-                }`}
-              >
-                <span>#{tag.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={() => setSelectedTag("")}
+              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold transition-all shrink-0 border ${
+                !selectedTag
+                  ? "bg-primary text-white border-primary shadow-xs"
+                  : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
+              }`}
+            >
+              All Topics
+            </button>
+            {allTags.map((tag: any) => {
+              const isActive = selectedTag === tag.name;
+              return (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => setSelectedTag(isActive ? "" : tag.name)}
+                  className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium transition-all shrink-0 border flex items-center gap-0.5 ${
+                    isActive
+                      ? "bg-primary text-white border-primary shadow-xs font-bold"
+                      : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
+                  }`}
+                >
+                  <span>#{tag.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Interactive Feed Composer Trigger Box */}
       <div className="px-4 pt-3 pb-1">
