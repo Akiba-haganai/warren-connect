@@ -81,41 +81,46 @@ export default function EditProductModal({ product, onClose, onUpdated }: Props)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !price) {
-      toast.error("Title and price are required.");
+    if (!title.trim() || !price) return;
+
+    const parsedPrice = Number(String(price).replace(/,/g, "."));
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      toast.error("Please enter a valid price in ZMW");
       return;
     }
 
     setSaving(true);
     try {
-      // 1. Delete marked gallery images
+      // 1. Delete removed extra images
       if (deletedImageIds.length > 0) {
-        await Promise.all(deletedImageIds.map((id) => productService.deleteProductImage(id)));
+        await Promise.all(
+          deletedImageIds.map((imgId) => {
+            if (imgId !== "main-cover") {
+              return productService.deleteProductImage(imgId);
+            }
+            return Promise.resolve();
+          })
+        );
       }
 
-      // 2. Upload new photo files
+      // 2. Upload new image files
       const uploadedUrls: string[] = [];
       if (newImageFiles.length > 0 && user) {
-        for (const item of newImageFiles) {
-          const compressed = await compressImage(item.file);
-          const fileName = `${Date.now()}_${compressed.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-          const path = `products/${user.id}/${product.id}/${fileName}`;
-          const uploadRes = await storageService.uploadFile(
-            "pending-uploads",
+        for (let i = 0; i < newImageFiles.length; i++) {
+          const compressed = await compressImage(newImageFiles[i].file);
+          const { publicUrl } = await storageService.uploadFile(
+            "product-images",
             compressed,
             user.id,
-            true,
-            path
+            false
           );
-          const url = uploadRes.publicUrl || path;
-          uploadedUrls.push(url);
-          // Add to gallery table
-          await productService.addProductImage(product.id, url);
+          uploadedUrls.push(publicUrl);
+          await productService.addProductImage(product.id, publicUrl);
         }
       }
 
-      // 3. Determine cover photo (first remaining or newly uploaded)
-      let primaryCoverUrl: string | undefined = undefined;
+      // 3. Determine primary cover URL
+      let primaryCoverUrl = product.image_url;
       if (existingImages.length > 0) {
         primaryCoverUrl = existingImages[0].image_url;
       } else if (uploadedUrls.length > 0) {
@@ -126,10 +131,10 @@ export default function EditProductModal({ product, onClose, onUpdated }: Props)
       const updated = await productService.updateProduct(product.id, {
         title: title.trim(),
         description: description.trim() || undefined,
-        price: Number(price),
+        price: parsedPrice,
         condition: condition || undefined,
         category: category || undefined,
-        image_url: primaryCoverUrl,
+        image_url: primaryCoverUrl || undefined,
       });
 
       toast.success("Listing details and gallery photos updated!");
@@ -152,7 +157,7 @@ export default function EditProductModal({ product, onClose, onUpdated }: Props)
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">Manage listing gallery, price, category &amp; details</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors" aria-label="Close modal">
+          <button type="button" onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors" aria-label="Close modal">
             <X size={18} />
           </button>
         </div>

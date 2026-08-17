@@ -126,11 +126,17 @@ export default function EditAccommodationModal({ accommodation, onClose, onUpdat
         primaryCoverUrl = uploadedUrls[0];
       }
 
+      const parsedRent = Number(String(monthlyRent).replace(/,/g, "."));
+      if (isNaN(parsedRent) || parsedRent <= 0) {
+        toast.error("Please enter a valid monthly rent in ZMW");
+        return;
+      }
+
       // 4. Update accommodation details
       const updated = await accommodationService.updateAccommodation(accommodation.id, {
         title: title.trim(),
         location,
-        monthly_rent: Number(monthlyRent),
+        monthly_rent: parsedRent,
         description: description.trim() || undefined,
         capacity: capacity ? Number(capacity) : null,
         listing_type: listingType,
@@ -159,7 +165,7 @@ export default function EditAccommodationModal({ accommodation, onClose, onUpdat
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">Manage property photos, rent, location &amp; availability</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors" aria-label="Close modal">
+          <button type="button" onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors" aria-label="Close modal">
             <X size={18} />
           </button>
         </div>

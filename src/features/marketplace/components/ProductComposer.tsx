@@ -149,6 +149,13 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !title.trim() || !price) return;
+    
+    const parsedPrice = Number(String(price).replace(/,/g, "."));
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      toast.error("Please enter a valid price in ZMW");
+      return;
+    }
+
     setPosting(true);
     try {
       // 1. Create Product (Synchronous text moderation)
@@ -156,7 +163,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
         user.id,
         title.trim(),
         description.trim(),
-        Number(price),
+        parsedPrice,
         uploadedImages.length > 0, // has_image
         condition || undefined,
         category || undefined
@@ -332,8 +339,8 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             </div>
           )}
 
-          <button type="submit" disabled={posting} className="btn-primary" aria-label="Publish listing">
-            {posting ? <span className="flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Listing…</span> : "List item"}
+          <button type="submit" disabled={posting || uploadingImage} className="btn-primary cursor-pointer disabled:opacity-50" aria-label="Publish listing">
+            {posting ? <span className="flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Listing…</span> : uploadingImage ? <span className="flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Uploading photos…</span> : "List item"}
           </button>
 
         </form>

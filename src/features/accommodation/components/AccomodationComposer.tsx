@@ -155,6 +155,12 @@ export default function AccommodationComposer({
     e.preventDefault();
     if (!user || !title.trim() || !location.trim() || !monthly_rent) return;
 
+    const parsedRent = Number(String(monthly_rent).replace(/,/g, "."));
+    if (isNaN(parsedRent) || parsedRent <= 0) {
+      toast.error("Please enter a valid monthly rent in ZMW");
+      return;
+    }
+
     setPosting(true);
     try {
       const primaryImageUrl = uploadedImages.length > 0 ? uploadedImages[0].previewUrl : undefined;
@@ -164,7 +170,7 @@ export default function AccommodationComposer({
         title.trim(),
         description.trim() || "",
         location.trim(),
-        Number(monthly_rent),
+        parsedRent,
         primaryImageUrl,
         listingType,
         listingType !== "property" ? parentPropertyId || undefined : undefined,
@@ -464,10 +470,14 @@ export default function AccommodationComposer({
             </div>
           </div>
 
-          <button type="submit" disabled={posting} className="btn-primary" aria-label="Publish listing">
+          <button type="submit" disabled={posting || uploadingImage} className="btn-primary cursor-pointer disabled:opacity-50" aria-label="Publish listing">
             {posting ? (
               <span className="flex items-center gap-2">
                 <Loader2 size={15} className="animate-spin" /> Listing…
+              </span>
+            ) : uploadingImage ? (
+              <span className="flex items-center gap-2">
+                <Loader2 size={15} className="animate-spin" /> Uploading photos…
               </span>
             ) : isAddingRoom ? (
               "Add Room"
