@@ -9,12 +9,16 @@ export const storageService = {
     generateThumb = false,
     customPath?: string
   ): Promise<{ publicUrl: string; thumbUrl?: string }> {
-    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"];
-    if (file.type && !allowedMimeTypes.includes(file.type.toLowerCase())) {
+    const extension = (file.name ? file.name.split(".").pop() : "jpg")?.toLowerCase() ?? "jpg";
+    const allowedExtensions = ["jpg", "jpeg", "png", "webp", "heic", "heif", "gif", "bmp", "pdf"];
+    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/gif", "image/bmp", "application/pdf", "application/octet-stream", ""];
+
+    const isMimeValid = !file.type || allowedMimeTypes.includes(file.type.toLowerCase()) || file.type.startsWith("image/");
+    const isExtValid = allowedExtensions.includes(extension);
+
+    if (!isMimeValid && !isExtValid) {
       throw new Error("Invalid file type. Only JPEG, PNG, WebP, HEIC and PDF files are allowed.");
     }
-
-    const extension = file.name.split(".").pop() ?? "jpg";
 
     const filePath = customPath
       ? customPath
