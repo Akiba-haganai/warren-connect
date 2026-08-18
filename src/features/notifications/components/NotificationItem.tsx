@@ -22,15 +22,15 @@ export default function NotificationItem({ notification, onMarkRead, onDelete }:
   const Icon = iconMap[notification.type] ?? Bell;
 
   const handleClick = async () => {
-    if (notification.link) {
-      navigate(notification.link);
-    }
     if (!notification.is_read) {
       try {
         await onMarkRead();
       } catch (err) {
         console.error("Mark as read failed:", err);
       }
+    }
+    if (notification.link) {
+      navigate(notification.link);
     }
   };
 

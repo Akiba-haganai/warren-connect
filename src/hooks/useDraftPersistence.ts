@@ -1,48 +1,53 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 export function useDraftPersistence<T extends Record<string, any>>(
-  key: string,
-  state: T,
-  setState: (draft: Partial<T> | ((prev: T) => T)) => void
+  storageKey: string,
+  currentValue?: T,
+  onRestore?: (saved: T) => void
 ) {
-  const hydrated = useRef(false);
-
-  // Restore once on mount
+  // On mount, restore draft if available
   useEffect(() => {
+    if (!storageKey || !onRestore) return;
     try {
-      const saved = sessionStorage.getItem(key);
+      const saved = sessionStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === "object") {
-          setState(parsed);
+          onRestore(parsed);
         }
       }
-    } catch (err) {
-      console.warn(`Failed to restore draft for ${key}:`, err);
-    } finally {
-      hydrated.current = true;
+    } catch (e) {
+      console.warn("Failed to restore draft from storage:", e);
     }
-  }, [key]);
+  }, [storageKey]);
 
-  // Persist on every state change, lightly debounced
+  // Sync current value to sessionStorage on update
   useEffect(() => {
-    if (!hydrated.current) return;
-    const timer = setTimeout(() => {
-      try {
-        sessionStorage.setItem(key, JSON.stringify(state));
-      } catch (err) {
-        console.warn(`Failed to save draft for ${key}:`, err);
-      }
-    }, 300);
+    if (!storageKey || !currentValue) return;
+    try {
+      const hasValue = Object.values(currentValue).some((val) => {
+        if (Array.isArray(val)) return val.length > 0;
+        if (typeof val === "string") return val.trim().length > 0;
+        return Boolean(val);
+      });
 
-    return () => clearTimeout(timer);
-  }, [key, state]);
+      if (hasValue) {
+        sessionStorage.setItem(storageKey, JSON.stringify(currentValue));
+      } else {
+        sessionStorage.removeItem(storageKey);
+      }
+    } catch (e) {
+      console.warn("Failed to save draft to storage:", e);
+    }
+  }, [storageKey, currentValue]);
 
   const clearDraft = () => {
     try {
-      sessionStorage.removeItem(key);
+      sessionStorage.removeItem(storageKey);
     } catch {}
   };
 
-  return { clearDraft };
+  return {
+    clearDraft,
+  };
 }

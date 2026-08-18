@@ -129,15 +129,15 @@ export default function NotificationsPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
       {/* 1-Line Sticky Glassmorphic Header */}
-      <div className="sticky top-0 z-30 bg-surface/90 backdrop-blur-md border-b border-border shadow-xs">
+      <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
               <Bell size={18} />
             </div>
             <div>
-              <h1 className="text-base font-bold text-slate-900 dark:text-white leading-none">Notifications</h1>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              <h1 className="text-base font-extrabold text-slate-950 dark:text-white leading-none">Notifications</h1>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium mt-0.5">
                 {unreadCount > 0 ? `${unreadCount} unread update${unreadCount !== 1 ? "s" : ""}` : "All updates read"}
               </p>
             </div>
@@ -149,11 +149,11 @@ export default function NotificationsPage() {
                 <button
                   type="button"
                   onClick={markAllMutation}
-                  className="px-2.5 py-1.5 rounded-full border border-border bg-surface text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-full bg-primary text-white text-xs font-bold flex items-center gap-1.5 hover:bg-primary-dark shadow-xs transition-colors cursor-pointer"
                   title="Mark all as read"
                 >
-                  <CheckCheck size={13} className="text-primary" />
-                  <span className="hidden sm:inline">Mark read</span>
+                  <CheckCheck size={14} />
+                  <span>Mark read</span>
                 </button>
               )}
 

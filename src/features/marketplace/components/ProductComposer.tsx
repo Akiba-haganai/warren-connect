@@ -9,6 +9,7 @@ import TagInput from "@/components/ui/TagInput";
 import { tagService } from "@/services/tags/tagService";
 import { priceEngine } from "@/services/pricing/priceEngine";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
+import ImageSourceModal from "@/components/ui/ImageSourceModal";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -25,6 +26,7 @@ interface UploadedImageItem {
 export default function ProductComposer({ onClose, onCreated, initialShopId }: Props) {
   const user = useAuthStore((s) => s.user);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showImageModal, setShowImageModal] = useState(false);
   
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -73,8 +75,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   }, [user]);
 
   // Instant Upload: upload images immediately when selected so they survive any page reload
-  const handleImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+  const handleSelectedFiles = async (files: File[]) => {
     if (files.length === 0 || !user) return;
     setUploadingImage(true);
 
@@ -102,8 +103,13 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
       toast.error(err.message || "Failed to upload image preview");
     } finally {
       setUploadingImage(false);
-      e.target.value = "";
     }
+  };
+
+  const handleImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    await handleSelectedFiles(files);
+    e.target.value = "";
   };
 
   const removeImage = (index: number) => {
@@ -297,7 +303,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             )}
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setShowImageModal(true)}
               disabled={uploadingImage}
               className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-sm font-medium cursor-pointer disabled:opacity-50"
               style={{ background: "var(--color-bg)", border: "1.5px dashed var(--color-border)", color: "var(--color-text-secondary)" }}
@@ -317,7 +323,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,image/heic,image/heif,image/webp,.jpg,.jpeg,.png,.webp"
               multiple
               className="hidden"
               onChange={handleImages}
@@ -350,6 +356,13 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
 
         </form>
       </div>
+
+      <ImageSourceModal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        onSelectImages={handleSelectedFiles}
+        multiple={true}
+      />
     </div>
   );
 }

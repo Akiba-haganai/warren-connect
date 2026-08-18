@@ -8,8 +8,8 @@ import { compressImage } from "@/utils/compressImage";
 import { ZAMBIA_LOCATIONS } from "@/constants/locations";
 import { ALL_AMENITIES } from "@/constants/amenities";
 import toast from "react-hot-toast";
-
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
+import ImageSourceModal from "@/components/ui/ImageSourceModal";
 
 interface Props {
   onClose: () => void;
@@ -31,6 +31,7 @@ export default function AccommodationComposer({
 }: Props) {
   const user = useAuthStore((s) => s.user);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   // Basic fields
   const [title, setTitle] = useState("");
@@ -111,9 +112,8 @@ export default function AccommodationComposer({
       .catch(() => {});
   }, [user]);
 
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length || !user) return;
+  const handleSelectedFiles = async (files: File[]) => {
+    if (files.length === 0 || !user) return;
 
     if (uploadedImages.length + files.length > 5) {
       toast.error("You can upload up to 5 photos.");
@@ -143,8 +143,13 @@ export default function AccommodationComposer({
       toast.error(err.message || "Failed to upload photo");
     } finally {
       setUploadingImage(false);
-      e.target.value = "";
     }
+  };
+
+  const handleImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    await handleSelectedFiles(files);
+    e.target.value = "";
   };
 
   const removeImage = (index: number) => {
@@ -434,7 +439,7 @@ export default function AccommodationComposer({
                 <>
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => setShowImageModal(true)}
                     disabled={uploadingImage}
                     className="flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-medium cursor-pointer disabled:opacity-50"
                     style={{
@@ -458,10 +463,10 @@ export default function AccommodationComposer({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,image/heic,image/heif,image/webp,.jpg,.jpeg,.png,.webp"
                     multiple
                     className="hidden"
-                    onChange={handleImageSelect}
+                    onChange={handleImages}
                     onClick={(e) => e.stopPropagation()}
                     aria-label="Select accommodation images"
                   />
@@ -487,6 +492,13 @@ export default function AccommodationComposer({
           </button>
         </form>
       </div>
+
+      <ImageSourceModal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        onSelectImages={handleSelectedFiles}
+        multiple={true}
+      />
     </div>
   );
 }
