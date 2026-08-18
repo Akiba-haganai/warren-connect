@@ -46,6 +46,15 @@ export default defineConfig({
     versionPlugin(),
     VitePWA({
       injectRegister: null,
+      workbox: {
+        navigateFallbackDenylist: [/^\/version\.json/],
+        runtimeCaching: [
+          {
+            urlPattern: /version\.json/,
+            handler: "NetworkOnly",
+          },
+        ],
+      },
       manifest: {
         name: "PLAWZA",
         short_name: "PLAWZA",

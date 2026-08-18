@@ -36,13 +36,14 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
   };
 
   return (
-    <Link
-      to={`/accommodation/${listing.id}`}
-      className="card overflow-hidden block relative"
-      style={{ textDecoration: "none", color: "inherit" }}
-      onClick={() => onView?.(listing.id)}
-      aria-label={`View accommodation: ${listing.title}`}
-    >
+    <>
+      <Link
+        to={`/accommodation/${listing.id}`}
+        className="card overflow-hidden block relative"
+        style={{ textDecoration: "none", color: "inherit" }}
+        onClick={() => onView?.(listing.id)}
+        aria-label={`View accommodation: ${listing.title}`}
+      >
       <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
@@ -130,6 +131,7 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
         </div>
 
       </div>
+    </Link>
 
       <ShareModal
         isOpen={shareModalOpen}
@@ -141,6 +143,6 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
         location={listing.location}
         category="accommodation"
       />
-    </Link>
+    </>
   );
 }

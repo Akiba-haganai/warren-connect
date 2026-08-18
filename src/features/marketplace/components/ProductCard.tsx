@@ -31,13 +31,14 @@ export default function ProductCard({ product, onView }: Props) {
   );
 
   return (
-    <Link
-      to={`/marketplace/${product.id}`}
-      className="card overflow-hidden block relative"
-      style={{ textDecoration: "none", color: "inherit" }}
-      onClick={() => onView?.(product.id)}
-      aria-label={`View product: ${product.title}`}
-    >
+    <>
+      <Link
+        to={`/marketplace/${product.id}`}
+        className="card overflow-hidden block relative"
+        style={{ textDecoration: "none", color: "inherit" }}
+        onClick={() => onView?.(product.id)}
+        aria-label={`View product: ${product.title}`}
+      >
       {/* Save button top-right */}
       <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
         <SaveButton itemType="product" itemId={product.id} />
@@ -158,6 +159,7 @@ export default function ProductCard({ product, onView }: Props) {
           )}
         </div>
       </div>
+    </Link>
 
       <ShareModal
         isOpen={shareModalOpen}
@@ -168,6 +170,6 @@ export default function ProductCard({ product, onView }: Props) {
         imageUrl={product.image_url ? storageService.getPublicUrl("product-images", product.image_url) : undefined}
         category="product"
       />
-    </Link>
+    </>
   );
 }

@@ -5,6 +5,12 @@ import "./index.css";
 import { registerServiceWorker } from "@/utils/pwa-register";
 import { PWAInstaller } from "@/utils/install-prompt";
 
+// Intercept Vite dynamic import chunk loading errors (occurs on new deployment)
+window.addEventListener("vite:preloadError", (event) => {
+  console.warn("Vite preload error, hard reloading to fetch new chunks", event);
+  window.location.reload();
+});
+
 registerServiceWorker({
   onError: (err) => console.warn("[PWA]", err),
 });

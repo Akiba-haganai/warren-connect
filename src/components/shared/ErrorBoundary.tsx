@@ -24,7 +24,18 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("ErrorBoundary caught:", error, errorInfo);
-    this.props.onError?.(error);                  // ✅ call the new prop
+    
+    // Auto-reload on dynamic import failure (usually due to new deployment removing old chunks)
+    if (
+      error.name === "ChunkLoadError" ||
+      error.message.includes("Failed to fetch dynamically imported module")
+    ) {
+      console.warn("Chunk load error detected in boundary. Hard reloading...");
+      window.location.reload();
+      return;
+    }
+    
+    this.props.onError?.(error);
   }
 
   handleRetry = () => {

@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/marketplace/:id",
+      "destination": "/api/metadata?type=product&id=:id"
+    },
+    {
+      "source": "/accommodation/:id",
+      "destination": "/api/metadata?type=accommodation&id=:id"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
