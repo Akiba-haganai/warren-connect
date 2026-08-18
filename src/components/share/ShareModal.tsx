@@ -145,19 +145,19 @@ export default function ShareModal({
           </div>
 
           {/* Share Channels Grid */}
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {/* WhatsApp Direct */}
             <button
               type="button"
               onClick={handleWhatsAppDirect}
-              className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-semibold text-xs hover:bg-emerald-500/20 transition-colors cursor-pointer text-left"
+              className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer text-left"
             >
-              <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                <Send size={15} />
+              <div className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Send size={16} />
               </div>
-              <div>
-                <div className="font-bold">WhatsApp</div>
-                <div className="text-[10px] opacity-80">Direct Chat</div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-xs truncate">WhatsApp</div>
+                <div className="text-[10px] opacity-80 truncate">Send to a friend</div>
               </div>
             </button>
 
@@ -165,14 +165,14 @@ export default function ShareModal({
             <button
               type="button"
               onClick={handleWhatsAppStatus}
-              className="flex items-center gap-2.5 p-3 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-400 font-semibold text-xs hover:bg-teal-500/20 transition-colors cursor-pointer text-left"
+              className="flex items-center gap-3 p-3 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-400 hover:bg-teal-500/20 transition-colors cursor-pointer text-left"
             >
-              <div className="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center shrink-0">
-                <MessageSquare size={15} />
+              <div className="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <MessageSquare size={16} />
               </div>
-              <div>
-                <div className="font-bold">WA Status</div>
-                <div className="text-[10px] opacity-80">Copy &amp; Post</div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-xs truncate">WA Status</div>
+                <div className="text-[10px] opacity-80 truncate">Post to your status</div>
               </div>
             </button>
 
@@ -180,14 +180,14 @@ export default function ShareModal({
             <button
               type="button"
               onClick={handleFacebookShare}
-              className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400 font-semibold text-xs hover:bg-blue-500/20 transition-colors cursor-pointer text-left"
+              className="flex items-center gap-3 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20 transition-colors cursor-pointer text-left"
             >
-              <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
-                <Globe size={15} />
+              <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Globe size={16} />
               </div>
-              <div>
-                <div className="font-bold">Facebook</div>
-                <div className="text-[10px] opacity-80">Share to Feed</div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-xs truncate">Facebook</div>
+                <div className="text-[10px] opacity-80 truncate">Share to feed</div>
               </div>
             </button>
 
@@ -195,38 +195,40 @@ export default function ShareModal({
             <button
               type="button"
               onClick={handleTwitterShare}
-              className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-500/10 border border-slate-500/20 text-slate-800 dark:text-slate-200 font-semibold text-xs hover:bg-slate-500/20 transition-colors cursor-pointer text-left"
+              className="flex items-center gap-3 p-3 rounded-xl bg-slate-500/10 border border-slate-500/20 text-slate-800 dark:text-slate-200 hover:bg-slate-500/20 transition-colors cursor-pointer text-left"
             >
-              <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center shrink-0">
-                <Share2 size={15} />
+              <div className="w-9 h-9 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Share2 size={16} />
               </div>
-              <div>
-                <div className="font-bold">X (Twitter)</div>
-                <div className="text-[10px] opacity-80">Post Tweet</div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-xs truncate">X (Twitter)</div>
+                <div className="text-[10px] opacity-80 truncate">Post a tweet</div>
               </div>
             </button>
           </div>
 
           {/* Native Device Share Sheet / Copy Link Bar */}
-          <div className="pt-2 flex items-center gap-2">
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch gap-2">
             {"share" in navigator && (
               <button
                 type="button"
                 onClick={handleNativeShare}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-primary text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-primary-dark transition-colors cursor-pointer"
+                className="flex-1 py-3 px-4 rounded-xl bg-primary text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-primary-dark transition-colors cursor-pointer"
               >
-                <Share2 size={15} /> Native System Share
+                <Share2 size={16} /> More Options
               </button>
             )}
 
             <button
               type="button"
               onClick={handleCopyLink}
-              className={`py-2.5 px-4 rounded-xl border border-border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                "share" in navigator ? "w-auto" : "w-full bg-primary text-white"
+              className={`py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                "share" in navigator
+                  ? "border border-border bg-surface text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  : "w-full bg-primary text-white hover:bg-primary-dark"
               }`}
             >
-              {copied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
+              {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
               {copied ? "Copied!" : "Copy Link"}
             </button>
           </div>
