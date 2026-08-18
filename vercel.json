@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
       "source": "/marketplace/:id",
       "destination": "/api/metadata?type=product&id=:id"
     },

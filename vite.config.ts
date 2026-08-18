@@ -48,6 +48,7 @@ export default defineConfig({
       injectRegister: null,
       workbox: {
         navigateFallbackDenylist: [/^\/version\.json/],
+        globIgnores: ["**/version.json"],
         runtimeCaching: [
           {
             urlPattern: /version\.json/,
