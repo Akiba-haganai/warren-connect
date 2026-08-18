@@ -6,7 +6,7 @@ import { useSearchParams } from "react-router-dom";
 import { accommodationService } from "@/services/accommodation/accommodationService";
 import { locationService } from "@/services/locations/locationService";
 import { ZAMBIA_LOCATIONS } from "@/constants/locations";
-import { Plus, Building2, Loader2, MapPin, X } from "lucide-react";
+import { Plus, Building2, Loader2, MapPin, X, RefreshCw } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import AccommodationCard from "@/features/accommodation/components/AccommodationCard";
 import AccommodationFilters from "@/features/accommodation/components/AccommodationFilters";
@@ -15,19 +15,46 @@ import LandlordPortal from "@/features/accommodation/components/LandlordPortal";
 import EditAccommodationModal from "@/features/accommodation/components/EditAccommodationModal";
 import RecentlyViewedSection from "@/components/ui/RecentlyViewedSection";
 import { supabase } from "@/lib/supabase/client";
+import { AccommodationCardSkeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PullToRefresh } from "@/components/ui/PullToRefresh";
 
 const PAGE_SIZE = 10;
 
 export default function AccommodationPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
-  const [searchParams] = useSearchParams();
-  const parentIdFromUrl = searchParams.get("parentId");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [showComposer, setShowComposer] = useState(false);
   const [showPortal, setShowPortal] = useState(false);
   const [editingListing, setEditingListing] = useState<any>(null);
   const [composerParentId, setComposerParentId] = useState<string | undefined>(undefined);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Restore composer state on mount (covers deep links and LMK reloads)
+  useEffect(() => {
+    const parentId = searchParams.get("parentId");
+    const composerParam = searchParams.get("composer");
+    if (parentId || composerParam === "listing") {
+      if (parentId) setComposerParentId(parentId);
+      setShowComposer(true);
+    }
+  }, []);
+
+  // Keep URL in sync with composer state so OS process kills reload cleanly
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (showComposer) {
+      next.set("composer", "listing");
+      if (composerParentId) next.set("parentId", composerParentId);
+      else next.delete("parentId");
+    } else {
+      next.delete("composer");
+      next.delete("parentId");
+    }
+    setSearchParams(next, { replace: true });
+  }, [showComposer, composerParentId]);
 
   // ---- Debounced search ----
   const [searchInput, setSearchInput] = useState("");
@@ -50,10 +77,6 @@ export default function AccommodationPage() {
   useEffect(() => {
     locationService.getLocations().then((locs) => setAllLocations(locs));
   }, []);
-
-  useEffect(() => {
-    if (parentIdFromUrl) setShowComposer(true);
-  }, [parentIdFromUrl]);
 
   const [sortMode, setSortMode] = useState<"newest" | "oldest" | "price_asc" | "price_desc">("newest");
 
@@ -84,7 +107,7 @@ export default function AccommodationPage() {
     return { listings: data, nextPage: data.length === PAGE_SIZE ? pageParam + 1 : undefined };
   };
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status, refetch } = useInfiniteQuery({
     queryKey: [
       "accommodations",
       debouncedSearch,
@@ -106,6 +129,12 @@ export default function AccommodationPage() {
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   const allListings = data?.pages.flatMap((p) => p.listings) ?? [];
 
@@ -169,198 +198,192 @@ export default function AccommodationPage() {
         </div>
       </div>
 
-      <div className="px-4 pt-4 pb-8 flex flex-col gap-3">
-        <RecentlyViewedSection filterType="accommodation" title="Recently Viewed Housing" />
+      {refreshing && (
+        <div className="flex items-center justify-center py-2 text-xs text-primary bg-surface/50 border-b border-border/40">
+          <RefreshCw size={14} className="animate-spin mr-2" /> Refreshing…
+        </div>
+      )}
 
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setShowPortal(true)}
-            className="btn-ghost text-xs text-primary font-bold px-2 py-1 flex items-center gap-1"
-          >
-            <Building2 size={13} />
-            Landlord Management Hub
-          </button>
+      <PullToRefresh onRefresh={handleRefresh}>
+        <div className="px-4 pt-4 pb-8 flex flex-col gap-3">
+          <RecentlyViewedSection filterType="accommodation" title="Recently Viewed Housing" />
 
-          {/* Active Filters Reset Pill */}
-          {(locationFilter || roommateFilter || genderFilter || priceMin || priceMax || selectedAmenities.length > 0 || debouncedSearch) && (
+          <div className="flex items-center justify-between">
             <button
-              onClick={() => {
-                setLocationFilter("");
-                setRoommateFilter(false);
-                setGenderFilter("");
-                setPriceMin("");
-                setPriceMax("");
-                setSelectedAmenities([]);
-                setSearchInput("");
-              }}
-              className="text-[11px] font-bold text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-950/40 px-2.5 py-1 rounded-full border border-red-200 dark:border-red-900 transition-colors"
+              onClick={() => setShowPortal(true)}
+              className="btn-ghost text-xs text-primary font-bold px-2 py-1 flex items-center gap-1"
             >
-              Reset Active Filters ✕
+              <Building2 size={13} />
+              Landlord Management Hub
             </button>
-          )}
-        </div>
 
-        {/* Active filter chips — individual removable tags */}
-        {(locationFilter || roommateFilter || genderFilter || priceMin || priceMax || selectedAmenities.length > 0 || debouncedSearch) && (
-          <div className="flex flex-wrap gap-1.5">
-            {debouncedSearch && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-border">
-                🔍 &ldquo;{debouncedSearch}&rdquo;
-                <button type="button" onClick={() => setSearchInput("")} className="hover:text-red-500 transition-colors"><X size={11} /></button>
-              </span>
-            )}
-            {locationFilter && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
-                <MapPin size={11} />{locationFilter.replace("Lusaka - ", "").replace("Kitwe - ", "").replace("Ndola - ", "")}
-                <button type="button" onClick={() => setLocationFilter("")} className="hover:text-red-500 transition-colors"><X size={11} /></button>
-              </span>
-            )}
-            {roommateFilter && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                Roommate
-                <button type="button" onClick={() => setRoommateFilter(false)} className="hover:text-red-500 transition-colors"><X size={11} /></button>
-              </span>
-            )}
-            {genderFilter && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                {genderFilter.charAt(0).toUpperCase() + genderFilter.slice(1)}
-                <button type="button" onClick={() => setGenderFilter("")} className="hover:text-red-500 transition-colors"><X size={11} /></button>
-              </span>
-            )}
-            {(priceMin || priceMax) && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                K{priceMin || "0"} – K{priceMax || "∞"}
-                <button type="button" onClick={() => { setPriceMin(""); setPriceMax(""); }} className="hover:text-red-500 transition-colors"><X size={11} /></button>
-              </span>
-            )}
-            {selectedAmenities.map((a) => (
-              <span key={a} className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-white dark:bg-white dark:text-slate-900 border border-transparent">
-                {a}
-                <button type="button" onClick={() => setSelectedAmenities((prev) => prev.filter((x) => x !== a))} className="hover:text-red-400 dark:hover:text-red-600 transition-colors"><X size={11} /></button>
-              </span>
-            ))}
-          </div>
-        )}
-
-
-        {/* Side-Scrolling Campus Location Pill Track */}
-        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-1 flex-nowrap" style={{ WebkitOverflowScrolling: "touch" }}>
-          <button
-            type="button"
-            onClick={() => setLocationFilter("")}
-            className={`text-xs px-3.5 py-1.5 rounded-full font-bold transition-all shrink-0 border ${
-              !locationFilter
-                ? "bg-primary text-white border-primary shadow-xs"
-                : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
-            }`}
-          >
-            All Locations
-          </button>
-          {locations.map((loc) => {
-            const shortLoc = loc.replace("Lusaka - ", "").replace("Kitwe - ", "").replace("Ndola - ", "");
-            const isActive = locationFilter === loc;
-            return (
+            {/* Active Filters Reset Pill */}
+            {(locationFilter || roommateFilter || genderFilter || priceMin || priceMax || selectedAmenities.length > 0 || debouncedSearch) && (
               <button
-                key={loc}
-                type="button"
-                onClick={() => setLocationFilter(isActive ? "" : loc)}
-                className={`text-xs px-3.5 py-1.5 rounded-full font-medium transition-all shrink-0 border flex items-center gap-1 ${
-                  isActive
-                    ? "bg-primary text-white border-primary shadow-xs font-bold"
-                    : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
-                }`}
+                onClick={() => {
+                  setLocationFilter("");
+                  setRoommateFilter(false);
+                  setGenderFilter("");
+                  setPriceMin("");
+                  setPriceMax("");
+                  setSelectedAmenities([]);
+                  setSearchInput("");
+                }}
+                className="text-[11px] font-bold text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-950/40 px-2.5 py-1 rounded-full border border-red-200 dark:border-red-900 transition-colors"
               >
-                <MapPin size={12} className={isActive ? "text-white" : "text-primary"} />
-                <span>{shortLoc}</span>
+                Reset Active Filters ✕
               </button>
-            );
-          })}
-        </div>
+            )}
+          </div>
 
-        <AccommodationFilters
-          search={searchInput}
-          onSearchChange={setSearchInput}
-          locationFilter={locationFilter}
-          onLocationChange={setLocationFilter}
-          locations={locations}
-          roommateFilter={roommateFilter}
-          onRoommateChange={setRoommateFilter}
-          genderFilter={genderFilter}
-          onGenderChange={setGenderFilter}
-          priceMin={priceMin}
-          onPriceMinChange={setPriceMin}
-          priceMax={priceMax}
-          onPriceMaxChange={setPriceMax}
-          selectedAmenities={selectedAmenities}
-          onAmenitiesChange={setSelectedAmenities}
-        />
+          {/* Active filter chips — individual removable tags */}
+          {(locationFilter || roommateFilter || genderFilter || priceMin || priceMax || selectedAmenities.length > 0 || debouncedSearch) && (
+            <div className="flex flex-wrap gap-1.5">
+              {debouncedSearch && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-border">
+                  🔍 &ldquo;{debouncedSearch}&rdquo;
+                  <button type="button" onClick={() => setSearchInput("")} className="hover:text-red-500 transition-colors"><X size={11} /></button>
+                </span>
+              )}
+              {locationFilter && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  <MapPin size={11} />{locationFilter.replace("Lusaka - ", "").replace("Kitwe - ", "").replace("Ndola - ", "")}
+                  <button type="button" onClick={() => setLocationFilter("")} className="hover:text-red-500 transition-colors"><X size={11} /></button>
+                </span>
+              )}
+              {roommateFilter && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  Roommate
+                  <button type="button" onClick={() => setRoommateFilter(false)} className="hover:text-red-500 transition-colors"><X size={11} /></button>
+                </span>
+              )}
+              {genderFilter && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                  {genderFilter.charAt(0).toUpperCase() + genderFilter.slice(1)}
+                  <button type="button" onClick={() => setGenderFilter("")} className="hover:text-red-500 transition-colors"><X size={11} /></button>
+                </span>
+              )}
+              {(priceMin || priceMax) && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                  K{priceMin || "0"} – K{priceMax || "∞"}
+                  <button type="button" onClick={() => { setPriceMin(""); setPriceMax(""); }} className="hover:text-red-500 transition-colors"><X size={11} /></button>
+                </span>
+              )}
+              {selectedAmenities.map((a) => (
+                <span key={a} className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-white dark:bg-white dark:text-slate-900 border border-transparent">
+                  {a}
+                  <button type="button" onClick={() => setSelectedAmenities((prev) => prev.filter((x) => x !== a))} className="hover:text-red-400 dark:hover:text-red-600 transition-colors"><X size={11} /></button>
+                </span>
+              ))}
+            </div>
+          )}
 
-        {/* Listing type chips & Sort selector */}
-        <div className="flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar py-1">
-          <div className="flex gap-1.5">
-            {(["all", "property", "room", "bedspace"] as const).map((type) => {
-              const label = type === "all" ? "All" : type.charAt(0).toUpperCase() + type.slice(1);
-              const active = listingTypeFilter === type;
+
+          {/* Side-Scrolling Campus Location Pill Track */}
+          <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-1 flex-nowrap" style={{ WebkitOverflowScrolling: "touch" }}>
+            <button
+              type="button"
+              onClick={() => setLocationFilter("")}
+              className={`text-xs px-3.5 py-1.5 rounded-full font-bold transition-all shrink-0 border ${
+                !locationFilter
+                  ? "bg-primary text-white border-primary shadow-xs"
+                  : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
+              }`}
+            >
+              All Locations
+            </button>
+            {locations.map((loc) => {
+              const shortLoc = loc.replace("Lusaka - ", "").replace("Kitwe - ", "").replace("Ndola - ", "");
+              const isActive = locationFilter === loc;
               return (
                 <button
-                  key={type}
+                  key={loc}
                   type="button"
-                  onClick={() => setListingTypeFilter(type)}
-                  className={`text-xs px-3.5 py-1.5 rounded-full font-medium transition-all shrink-0 border ${
-                    active
-                      ? "bg-primary text-white border-primary shadow-xs"
+                  onClick={() => setLocationFilter(isActive ? "" : loc)}
+                  className={`text-xs px-3.5 py-1.5 rounded-full font-medium transition-all shrink-0 border flex items-center gap-1 ${
+                    isActive
+                      ? "bg-primary text-white border-primary shadow-xs font-bold"
                       : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
                   }`}
                 >
-                  {label}
+                  <MapPin size={12} className={isActive ? "text-white" : "text-primary"} />
+                  <span>{shortLoc}</span>
                 </button>
               );
             })}
           </div>
 
-          <select
-            value={sortMode}
-            onChange={(e) => setSortMode(e.target.value as any)}
-            className="glass-select text-xs py-1.5 px-3 rounded-full shrink-0"
-          >
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="price_desc">Price: High to Low</option>
-          </select>
-        </div>
+          <AccommodationFilters
+            search={searchInput}
+            onSearchChange={setSearchInput}
+            locationFilter={locationFilter}
+            onLocationChange={setLocationFilter}
+            locations={locations}
+            roommateFilter={roommateFilter}
+            onRoommateChange={setRoommateFilter}
+            genderFilter={genderFilter}
+            onGenderChange={setGenderFilter}
+            priceMin={priceMin}
+            onPriceMinChange={setPriceMin}
+            priceMax={priceMax}
+            onPriceMaxChange={setPriceMax}
+            selectedAmenities={selectedAmenities}
+            onAmenitiesChange={setSelectedAmenities}
+          />
+
+          {/* Listing type chips & Sort selector */}
+          <div className="flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar py-1">
+            <div className="flex gap-1.5">
+              {(["all", "property", "room", "bedspace"] as const).map((type) => {
+                const label = type === "all" ? "All" : type.charAt(0).toUpperCase() + type.slice(1);
+                const active = listingTypeFilter === type;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setListingTypeFilter(type)}
+                    className={`text-xs px-3.5 py-1.5 rounded-full font-medium transition-all shrink-0 border ${
+                      active
+                        ? "bg-primary text-white border-primary shadow-xs"
+                        : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as any)}
+              className="glass-select text-xs py-1.5 px-3 rounded-full shrink-0"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+            </select>
+          </div>
 
         {status === "pending" ? (
-          <>
+          <div className="flex flex-col gap-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="card overflow-hidden">
-                <div className="skeleton" style={{ height: 180 }} />
-                <div className="p-4 flex flex-col gap-2">
-                  <div className="skeleton rounded" style={{ height: 14, width: "70%" }} />
-                  <div className="skeleton rounded" style={{ height: 12, width: "45%" }} />
-                </div>
-              </div>
+              <AccommodationCardSkeleton key={i} />
             ))}
-          </>
+          </div>
         ) : noListings ? (
-          <div className="rounded-2xl py-16 text-center" style={{ background: "var(--color-surface)", border: "1px dashed var(--color-border)" }}>
-            <Building2 size={40} style={{ color: "var(--color-text-muted)", margin: "0 auto 12px" }} />
-            <h3 className="text-lg font-bold mb-1" style={{ color: "var(--color-text)" }}>
-              {debouncedSearch || locationFilter || roommateFilter || genderFilter || priceMin || priceMax || selectedAmenities.length > 0
+          <EmptyState
+            icon={Building2}
+            title={debouncedSearch || locationFilter || roommateFilter || genderFilter || priceMin || priceMax || selectedAmenities.length > 0
                 ? "No listings match your criteria"
                 : "No listings yet"}
-            </h3>
-            <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)" }}>
-              {debouncedSearch || locationFilter || roommateFilter || genderFilter || priceMin || priceMax || selectedAmenities.length > 0
+            description={debouncedSearch || locationFilter || roommateFilter || genderFilter || priceMin || priceMax || selectedAmenities.length > 0
                 ? "Try adjusting your filters."
                 : "Add the first accommodation!"}
-            </p>
-            {!debouncedSearch && !locationFilter && !roommateFilter && !genderFilter && !priceMin && !priceMax && selectedAmenities.length === 0 && (
-              <button onClick={() => setShowComposer(true)} className="btn-primary w-auto px-6 mx-auto inline-flex items-center gap-2">
-                <Plus size={16} /> Add your first listing
-              </button>
-            )}
-          </div>
+            actionLabel={!debouncedSearch && !locationFilter && !roommateFilter && !genderFilter && !priceMin && !priceMax && selectedAmenities.length === 0 ? "Add your first listing" : undefined}
+            onAction={!debouncedSearch && !locationFilter && !roommateFilter && !genderFilter && !priceMin && !priceMax && selectedAmenities.length === 0 ? () => setShowComposer(true) : undefined}
+          />
         ) : (
           <>
             {status === "success" && totalCount > 0 && (
@@ -377,6 +400,7 @@ export default function AccommodationPage() {
           </>
         )}
       </div>
+      </PullToRefresh>
 
       {showComposer && (
         <AccommodationComposer
@@ -385,8 +409,8 @@ export default function AccommodationPage() {
             setComposerParentId(undefined);
           }}
           onCreated={handleCreated}
-          initialListingType={composerParentId || parentIdFromUrl ? "room" : undefined}
-          initialParentId={composerParentId || parentIdFromUrl || undefined}
+          initialListingType={composerParentId ? "room" : undefined}
+          initialParentId={composerParentId || undefined}
         />
       )}
 

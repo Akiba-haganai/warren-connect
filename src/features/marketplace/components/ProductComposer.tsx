@@ -45,7 +45,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   // Persist form draft in sessionStorage (survives OS memory reclaims mid-flow)
   const { clearDraft } = useDraftPersistence(
     draftKey,
-    { title, description, price, condition, category, tags, uploadedImages },
+    { title, description, price, condition, category, tags, uploadedImages, selectedShopId },
     (draft: any) => {
       if (draft.title !== undefined) setTitle(draft.title);
       if (draft.description !== undefined) setDescription(draft.description);
@@ -53,18 +53,9 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
       if (draft.condition !== undefined) setCondition(draft.condition);
       if (draft.category !== undefined) setCategory(draft.category);
       if (draft.tags !== undefined) setTags(draft.tags);
+      if (draft.selectedShopId !== undefined) setSelectedShopId(draft.selectedShopId);
       if (draft.uploadedImages !== undefined) {
-        Promise.all(
-          (draft.uploadedImages || []).map(async (item: any) => {
-            if (!item.path) return item;
-            try {
-              const signedUrl = await storageService.getSignedUrl("pending-uploads", item.path, 3600);
-              return { path: item.path, previewUrl: signedUrl };
-            } catch {
-              return item;
-            }
-          })
-        ).then(setUploadedImages);
+        setUploadedImages(draft.uploadedImages || []);
       }
     }
   );
@@ -74,7 +65,29 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
     shopService.getShopsForUser(user.id).then(setShops).catch(() => {});
   }, [user]);
 
-  // Instant Upload: upload images immediately when selected so they survive any page reload
+  // Helper to convert File to Data URL for zero-latency local preview & draft persistence
+  const fileToDataUrl = (file: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const dataUrlToFile = (dataUrl: string, fileName: string): File => {
+    const arr = dataUrl.split(",");
+    const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], fileName, { type: mime });
+  };
+
+  // Instant local preview generation: Zero network dependency, survives process reclaims
   const handleSelectedFiles = async (files: File[]) => {
     if (files.length === 0 || !user) return;
     setUploadingImage(true);
@@ -82,25 +95,16 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
     try {
       const newItems = await Promise.all(
         files.map(async (file) => {
-          const compressed = await compressImage(file);
-          const fileName = `${Date.now()}_${compressed.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-          const path = `products/${user.id}/drafts/${fileName}`;
-
-          await storageService.uploadFile(
-            "pending-uploads",
-            compressed,
-            user.id,
-            true,
-            path
-          );
-          const signedUrl = await storageService.getSignedUrl("pending-uploads", path, 3600);
-          return { path, previewUrl: signedUrl };
+          const compressed = await compressImage(file, 800, 0.7);
+          const dataUrl = await fileToDataUrl(compressed);
+          const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+          return { path: fileName, previewUrl: dataUrl };
         })
       );
 
       setUploadedImages((prev) => [...prev, ...newItems]);
     } catch (err: any) {
-      toast.error(err.message || "Failed to upload image preview");
+      toast.error(err.message || "Failed to process selected photos");
     } finally {
       setUploadingImage(false);
     }
@@ -190,9 +194,18 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
         throw new Error("Failed to retrieve product ID");
       }
 
-      // 2. Set primary image URL from already-uploaded image if present
+      // 2. Upload primary image to Supabase if present
       if (uploadedImages.length > 0) {
-        const primaryPublicUrl = uploadedImages[0].previewUrl;
+        let primaryPublicUrl = uploadedImages[0].previewUrl;
+        if (primaryPublicUrl.startsWith("data:")) {
+          try {
+            const file = dataUrlToFile(primaryPublicUrl, `product_${createdProductId}.jpg`);
+            const uploadRes = await storageService.uploadFile("public-images", file, user.id);
+            primaryPublicUrl = uploadRes.publicUrl;
+          } catch (uploadErr) {
+            console.warn("Failed to upload primary image file:", uploadErr);
+          }
+        }
         await productService.updateProduct(createdProductId, {
           image_url: primaryPublicUrl,
         }).catch(() => {});
@@ -229,7 +242,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             <h2 className="text-base font-bold text-slate-900 dark:text-white">New Listing</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">Add your item to the campus marketplace</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors" aria-label="Close composer">
+          <button onClick={() => { clearDraft(); onClose(); }} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors" aria-label="Close composer">
             <X size={18} />
           </button>
         </div>

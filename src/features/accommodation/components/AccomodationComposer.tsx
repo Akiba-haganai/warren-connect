@@ -91,13 +91,7 @@ export default function AccommodationComposer({
       if (draft.parentPropertyId !== undefined) setParentPropertyId(draft.parentPropertyId);
       if (draft.capacity !== undefined) setCapacity(draft.capacity);
       if (draft.uploadedImages !== undefined) {
-        const restored = (draft.uploadedImages || []).map((item: any) => ({
-          path: item.path,
-          previewUrl: item.path
-            ? storageService.getPublicUrl("accommodation-images", item.path)
-            : item.previewUrl,
-        }));
-        setUploadedImages(restored);
+        setUploadedImages(draft.uploadedImages || []);
       }
     }
   );
@@ -112,6 +106,28 @@ export default function AccommodationComposer({
       .catch(() => {});
   }, [user]);
 
+  // Helpers for instant Data URL previews
+  const fileToDataUrl = (file: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const dataUrlToFile = (dataUrl: string, fileName: string): File => {
+    const arr = dataUrl.split(",");
+    const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], fileName, { type: mime });
+  };
+
   const handleSelectedFiles = async (files: File[]) => {
     if (files.length === 0 || !user) return;
 
@@ -124,23 +140,16 @@ export default function AccommodationComposer({
     setUploadingImage(true);
     try {
       const newItems = await Promise.all(
-        filesToUpload.map(async (file, index) => {
-          const compressed = await compressImage(file);
-          const extension = file.name.split(".").pop() ?? "jpg";
-          const customPath = `${user.id}/${Date.now()}_${crypto.randomUUID()}.${extension}`;
-          const { publicUrl } = await storageService.uploadFile(
-            "accommodation-images",
-            compressed,
-            user.id,
-            uploadedImages.length === 0 && index === 0,
-            customPath
-          );
-          return { path: customPath, previewUrl: publicUrl };
+        filesToUpload.map(async (file) => {
+          const compressed = await compressImage(file, 800, 0.7);
+          const dataUrl = await fileToDataUrl(compressed);
+          const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+          return { path: fileName, previewUrl: dataUrl };
         })
       );
       setUploadedImages((prev) => [...prev, ...newItems]);
     } catch (err: any) {
-      toast.error(err.message || "Failed to upload photo");
+      toast.error(err.message || "Failed to process selected photo");
     } finally {
       setUploadingImage(false);
     }
@@ -168,7 +177,23 @@ export default function AccommodationComposer({
 
     setPosting(true);
     try {
-      const primaryImageUrl = uploadedImages.length > 0 ? uploadedImages[0].previewUrl : undefined;
+      // Upload images to Supabase on submit
+      const uploadedPublicUrls: string[] = [];
+      for (let i = 0; i < uploadedImages.length; i++) {
+        let url = uploadedImages[i].previewUrl;
+        if (url.startsWith("data:")) {
+          try {
+            const file = dataUrlToFile(url, `accom_${user.id}_${i}.jpg`);
+            const uploadRes = await storageService.uploadFile("accommodation-images", file, user.id);
+            url = uploadRes.publicUrl;
+          } catch (uploadErr) {
+            console.warn("Failed to upload accommodation image:", uploadErr);
+          }
+        }
+        uploadedPublicUrls.push(url);
+      }
+
+      const primaryImageUrl = uploadedPublicUrls.length > 0 ? uploadedPublicUrls[0] : undefined;
 
       const newAcc = await accommodationService.createAccommodation(
         user.id,
@@ -184,8 +209,8 @@ export default function AccommodationComposer({
           : undefined
       );
 
-      for (let i = 1; i < uploadedImages.length; i++) {
-        await accommodationService.addImage(newAcc.id, uploadedImages[i].previewUrl);
+      for (let i = 1; i < uploadedPublicUrls.length; i++) {
+        await accommodationService.addImage(newAcc.id, uploadedPublicUrls[i]);
       }
 
       if (selectedAmenities.length > 0) {
@@ -227,7 +252,7 @@ export default function AccommodationComposer({
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => { clearDraft(); onClose(); }}
             className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
             aria-label="Close composer"
           >

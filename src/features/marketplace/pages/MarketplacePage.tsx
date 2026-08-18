@@ -11,6 +11,9 @@ import {
   RefreshCw
 } from "lucide-react";
 import ProductCard from "@/features/marketplace/components/ProductCard";
+import { ProductCardSkeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import ProductComposer from "@/features/marketplace/components/ProductComposer";
 import BulkUpload from "@/features/marketplace/components/BulkUpload";
 import MyProducts from "@/features/marketplace/components/MyProducts";
@@ -38,18 +41,32 @@ export default function MarketplacePage() {
   const [conditionFilter, setConditionFilter] = useState<string>("all");
   const { ConfirmDialog } = useConfirm();
 
-  // ---- Shop pre-selection from URL ----
-  const shopIdFromUrl = searchParams.get("shopId");
+  // ---- Shop pre-selection & composer state sync with URL ----
   const [composerShopId, setComposerShopId] = useState<string>("");
+
+  // Restore composer state on mount (covers deep links and LMK reloads)
   useEffect(() => {
-    if (shopIdFromUrl) {
-      setComposerShopId(shopIdFromUrl);
+    const shopId = searchParams.get("shopId");
+    const composerParam = searchParams.get("composer");
+    if (shopId || composerParam === "product") {
+      if (shopId) setComposerShopId(shopId);
       setShowComposer(true);
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete("shopId");
-      setSearchParams(newParams, { replace: true });
     }
-  }, [shopIdFromUrl]);
+  }, []);
+
+  // Keep URL in sync with composer state so OS process kills reload cleanly
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (showComposer) {
+      next.set("composer", "product");
+      if (composerShopId) next.set("shopId", composerShopId);
+      else next.delete("shopId");
+    } else {
+      next.delete("composer");
+      next.delete("shopId");
+    }
+    setSearchParams(next, { replace: true });
+  }, [showComposer, composerShopId]);
 
   // ---- Refresh ----
   const [refreshing, setRefreshing] = useState(false);
@@ -207,7 +224,8 @@ export default function MarketplacePage() {
         </div>
       </div>
 
-      <div className="px-4 pt-4 pb-8">
+      <PullToRefresh onRefresh={handleRefresh}>
+        <div className="px-4 pt-4 pb-8">
 
         {showMyProducts && viewMode === "products" && <MyProducts />}
 
@@ -260,46 +278,32 @@ export default function MarketplacePage() {
             {status === "pending" ? (
               <div className="grid grid-cols-2 gap-3">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="card overflow-hidden">
-                    <div className="skeleton" style={{ height: 160 }} />
-                    <div className="p-3 flex flex-col gap-2">
-                      <div className="skeleton rounded" style={{ height: 12, width: "80%" }} />
-                      <div className="skeleton rounded" style={{ height: 12, width: "40%" }} />
-                    </div>
-                  </div>
+                  <ProductCardSkeleton key={i} />
                 ))}
               </div>
             ) : finalFiltered.length === 0 ? (
-              <div className="rounded-2xl py-16 text-center" style={{ background: "var(--color-surface)", border: "1px dashed var(--color-border)" }}>
-                <ShoppingBag size={40} style={{ color: "var(--color-text-muted)", margin: "0 auto 12px" }} />
-                <h3 className="text-lg font-bold mb-1" style={{ color: "var(--color-text)" }}>
-                  {search || selectedTag || conditionFilter !== "all" ? "No listings match your criteria" : "Nothing listed yet"}
-                </h3>
-                <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)" }}>
-                  {search || selectedTag || conditionFilter !== "all" ? "Try adjusting your filters." : "Be the first to sell something!"}
-                </p>
-                {!search && !selectedTag && conditionFilter === "all" && (
-                  <button onClick={() => setShowComposer(true)} className="btn-primary w-auto px-6 mx-auto inline-flex items-center gap-2">
-                    <Plus size={16} /> List your first item
-                  </button>
-                )}
-              </div>
+              <EmptyState 
+                icon={ShoppingBag}
+                title={search || selectedTag || conditionFilter !== "all" ? "No listings match your criteria" : "Nothing listed yet"}
+                description={search || selectedTag || conditionFilter !== "all" ? "Try adjusting your filters." : "Be the first to sell something!"}
+                actionLabel={!search && !selectedTag && conditionFilter === "all" ? "List your first item" : undefined}
+                onAction={!search && !selectedTag && conditionFilter === "all" ? () => setShowComposer(true) : undefined}
+              />
             ) : (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  {finalFiltered.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </div>
-                <div ref={loadMoreRef} className="h-4" />
-                {isFetchingNextPage && <Loader2 className="animate-spin mx-auto mt-4" style={{ color: "var(--color-text-muted)" }} />}
-              </>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {finalFiltered.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
             )}
+            <div ref={loadMoreRef} className="h-4" />
+            {isFetchingNextPage && <Loader2 className="animate-spin mx-auto mt-4" style={{ color: "var(--color-text-muted)" }} />}
           </>
         )}
 
         {viewMode === "shops" && <ShopList />}
       </div>
+      </PullToRefresh>
 
       {showComposer && (
         <ProductComposer

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { unifiedFeedService, type UnifiedFeedItem } from "@/services/feed/unifiedFeedService";
 import { tagService } from "@/services/tags/tagService";
-import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PlusCircle, MessageCircle } from "lucide-react";
 
 import PostCard from "@/features/feed/components/PostCard";
@@ -15,6 +14,9 @@ import type { FeedPost } from "@/services/posts/postService";
 import type { Tables } from "@/types/database/database.types";
 import { useAuthStore } from "@/store/auth/authStore";
 import { useMutedUsers } from "@/hooks/safety/useMuteUser";
+import { PostCardSkeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PullToRefresh } from "@/components/ui/PullToRefresh";
 
 export default function HomeFeedPage() {
   const queryClient = useQueryClient();
@@ -35,11 +37,9 @@ export default function HomeFeedPage() {
     queryFn: () => unifiedFeedService.getUnifiedFeed(50),
   });
 
-  const { containerRef } = usePullToRefresh({
-    onRefresh: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["unified-feed"] });
-    },
-  });
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["unified-feed"] });
+  };
 
   // Filter by type AND tag AND muted status
   const filtered = (items || []).filter((item) => {
@@ -88,7 +88,7 @@ export default function HomeFeedPage() {
   const profile = useAuthStore((s) => s.profile);
 
   return (
-    <div ref={containerRef} style={{ background: "var(--color-bg)", minHeight: "100%" }}>
+    <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
       {/* Ultra-Compact 1-Line Glassmorphic Sticky Header */}
       <div className="sticky top-0 z-20 px-3 py-1.5 flex items-center gap-2 backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs h-11">
         {/* Brand Badge */}
@@ -149,6 +149,7 @@ export default function HomeFeedPage() {
         )}
       </div>
 
+      <PullToRefresh onRefresh={handleRefresh}>
       {/* Interactive Feed Composer Trigger Box */}
       <div className="px-4 pt-3 pb-1">
         <div
@@ -183,16 +184,16 @@ export default function HomeFeedPage() {
       <div className="px-4 pt-2 pb-8">
         {isLoading ? (
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => <div key={i} className="card p-4 skeleton" style={{ height: 120 }} />)}
+            {[1, 2, 3].map((i) => <PostCardSkeleton key={i} />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-2xl py-16 text-center" style={{ background: "var(--color-surface)", border: "1px dashed var(--color-border)" }}>
-            <MessageCircle size={40} style={{ color: "var(--color-text-muted)", margin: "0 auto 12px" }} />
-            <h3 className="text-lg font-bold mb-1" style={{ color: "var(--color-text)" }}>Nothing to show</h3>
-            <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-              {selectedTag ? "No items with this tag." : typeFilter !== "all" ? `No ${typeFilter}s yet.` : "Be the first to post, sell, or list a property!"}
-            </p>
-          </div>
+          <EmptyState
+            icon={MessageCircle}
+            title="Nothing to show"
+            description={selectedTag ? "No items with this tag." : typeFilter !== "all" ? `No ${typeFilter}s yet.` : "Be the first to post, sell, or list a property!"}
+            actionLabel={!selectedTag && typeFilter === "all" ? "Create a post" : undefined}
+            onAction={!selectedTag && typeFilter === "all" ? () => setShowComposer(true) : undefined}
+          />
         ) : (
           <div className="flex flex-col gap-4">
             {filtered.map((item) => (
@@ -206,6 +207,7 @@ export default function HomeFeedPage() {
           </div>
         )}
       </div>
+      </PullToRefresh>
 
       {/* FAB */}
       <button

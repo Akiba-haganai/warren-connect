@@ -34,24 +34,6 @@ export default function ImageSourceModal({
       className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={onClose}
     >
-      {/* Hidden File Inputs */}
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleFilesSelected}
-      />
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,image/heic,image/heif,image/webp,.jpg,.jpeg,.png,.webp"
-        multiple={multiple}
-        className="hidden"
-        onChange={handleFilesSelected}
-      />
-
       <div
         className="w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-in slide-in-from-bottom-6 duration-200"
         style={{
@@ -60,6 +42,25 @@ export default function ImageSourceModal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Visually Hidden File Inputs (Must be inside stopPropagation container to prevent modal from closing) */}
+        <input
+          id="camera-upload-input"
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          onChange={handleFilesSelected}
+        />
+        <input
+          id="file-upload-input"
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple={multiple}
+          className="sr-only"
+          onChange={handleFilesSelected}
+        />
         <div className="flex items-center justify-between pb-3 border-b border-border/60 mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
@@ -86,9 +87,8 @@ export default function ImageSourceModal({
         {/* Action Buttons Stack */}
         <div className="grid grid-cols-2 gap-3">
           {/* Camera Option */}
-          <button
-            type="button"
-            onClick={() => cameraInputRef.current?.click()}
+          <label
+            htmlFor="camera-upload-input"
             className="flex flex-col items-center justify-center p-4 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 transition-all cursor-pointer group text-center"
           >
             <div className="w-12 h-12 rounded-full bg-teal-500 text-white flex items-center justify-center shadow-md mb-2 group-hover:scale-105 transition-transform">
@@ -98,12 +98,11 @@ export default function ImageSourceModal({
             <span className="text-[10px] text-teal-600/80 dark:text-teal-400/80 mt-0.5">
               Use Camera
             </span>
-          </button>
+          </label>
 
           {/* Internal Storage / Files Option */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
+          <label
+            htmlFor="file-upload-input"
             className="flex flex-col items-center justify-center p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 transition-all cursor-pointer group text-center"
           >
             <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md mb-2 group-hover:scale-105 transition-transform">
@@ -113,7 +112,7 @@ export default function ImageSourceModal({
             <span className="text-[10px] text-blue-600/80 dark:text-blue-400/80 mt-0.5">
               SD Card &amp; Internal
             </span>
-          </button>
+          </label>
         </div>
       </div>
     </div>

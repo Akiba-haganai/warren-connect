@@ -12,6 +12,7 @@ import { tagService } from "@/services/tags/tagService";                // ✅ n
 import type { FeedPost } from "@/services/posts/postService";
 import type { Tables } from "@/types/database/database.types";
 import CommentItem from "@/features/feed/components/CommentItem";
+import { triggerHaptic } from "@/utils/haptic";
 
 type Profile = Tables<"profiles">;
 
@@ -58,6 +59,7 @@ export default function PostCard({ post }: { post: FeedPost }) {
   const likeMutation = useMutation({
     mutationFn: async () => {
       if (!user) return;
+      triggerHaptic();
       if (liked) {
         await likeService.unlikePost(post.id, user.id);
       } else {
