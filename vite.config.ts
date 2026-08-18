@@ -5,7 +5,10 @@ import { VitePWA } from "vite-plugin-pwa";
 import tailwindcss from "@tailwindcss/vite";
 import fs from "node:fs";
 
-const appVersion = process.env.VERCEL_GIT_COMMIT_SHA || `dev-${Date.now()}`;
+const gitSha = process.env.VERCEL_GIT_COMMIT_SHA
+  ? process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7)
+  : "dev";
+const appVersion = `v1.4.0 (${gitSha})`;
 
 const versionPlugin = () => {
   return {
@@ -14,7 +17,7 @@ const versionPlugin = () => {
       server.middlewares.use((req: any, res: any, next: any) => {
         if (req.url?.startsWith("/version.json")) {
           res.setHeader("Content-Type", "application/json");
-          res.end(JSON.stringify({ version: appVersion }));
+          res.end(JSON.stringify({ version: appVersion, gitSha }));
         } else {
           next();
         }
@@ -27,7 +30,7 @@ const versionPlugin = () => {
       }
       fs.writeFileSync(
         path.resolve(distPath, "version.json"),
-        JSON.stringify({ version: appVersion })
+        JSON.stringify({ version: appVersion, gitSha })
       );
     },
   };

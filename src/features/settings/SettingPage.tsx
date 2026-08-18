@@ -293,16 +293,23 @@ export default function SettingsPage() {
           <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>App Information</h2>
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs py-1" style={{ color: "var(--color-text-secondary)" }}>
-              <span>Current Version</span>
-              <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                {currentVersion.slice(0, 7)}
+              <span>Installed Version</span>
+              <span className="font-mono bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-2 py-0.5 rounded font-bold">
+                {currentVersion}
               </span>
             </div>
-            {updateAvailable && serverVersion && (
+            {updateAvailable && serverVersion ? (
               <div className="flex items-center justify-between text-xs py-1 text-amber-600 dark:text-amber-400">
-                <span>Update Available</span>
-                <span className="font-mono bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/50">
-                  {serverVersion.slice(0, 7)}
+                <span>Vercel Live Build</span>
+                <span className="font-mono bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/50 font-bold">
+                  {serverVersion} (New Build Ready)
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between text-xs py-1 text-emerald-600 dark:text-emerald-400">
+                <span>Vercel Deployment</span>
+                <span className="font-mono bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/50 font-bold">
+                  ✅ Up to date
                 </span>
               </div>
             )}
