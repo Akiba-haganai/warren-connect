@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
 import { supabase } from "@/lib/supabase/client";
-import { ArrowLeft, Lock, Loader2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Lock, Loader2, ShieldCheck, BellRing, Check, Smartphone } from "lucide-react";
 import toast from "react-hot-toast";
 import { useVersionCheck } from "@/hooks/useVersionCheck";
+import { triggerHaptic } from "@/utils/haptic";
 
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
@@ -16,6 +17,85 @@ export default function SettingsPage() {
   const [message, setMessage] = useState("");
   const [verificationStatus, setVerificationStatus] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState(false);
+
+  // Push Permission State (Survives Refresh)
+  const [pushPerm, setPushPerm] = useState<NotificationPermission | "unsupported">("default");
+  const [testingPush, setTestingPush] = useState(false);
+
+  // Granular Notification Preferences (Persisted in localStorage)
+  const [notifPrefs, setNotifPrefs] = useState({
+    dmAlerts: true,
+    priceDropAlerts: true,
+    listingAlerts: true,
+    emailAlerts: true,
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if ("Notification" in window) {
+        setPushPerm(Notification.permission);
+      } else {
+        setPushPerm("unsupported");
+      }
+
+      const saved = localStorage.getItem("plawza_notif_prefs");
+      if (saved) {
+        try {
+          setNotifPrefs((prev) => ({ ...prev, ...JSON.parse(saved) }));
+        } catch {}
+      }
+    }
+  }, []);
+
+  const toggleNotifPref = (key: keyof typeof notifPrefs) => {
+    triggerHaptic();
+    setNotifPrefs((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem("plawza_notif_prefs", JSON.stringify(next));
+      return next;
+    });
+    toast.success("Preferences updated", { id: "pref-update", duration: 1500 });
+  };
+
+  const handleEnablePush = async () => {
+    triggerHaptic();
+    if (!("Notification" in window)) {
+      toast.error("Web Push is not supported on this browser.");
+      return;
+    }
+    try {
+      const perm = await Notification.requestPermission();
+      setPushPerm(perm);
+      if (perm === "granted") {
+        toast.success("Web push notifications enabled!");
+      } else if (perm === "denied") {
+        toast.error("Notification permission denied in browser settings.");
+      }
+    } catch {
+      toast.error("Failed to request notification permission.");
+    }
+  };
+
+  const handleTestNotification = async () => {
+    triggerHaptic();
+    setTestingPush(true);
+    try {
+      if (pushPerm === "granted" && "Notification" in window) {
+        new Notification("PLAWZA Alert", {
+          body: "🔔 Push notifications are working perfectly on this device!",
+          icon: "/icons/icon-192.png",
+          badge: "/icons/icon-72.png",
+        });
+        toast.success("Test notification sent!");
+      } else {
+        toast.error("Please enable push notifications first.");
+      }
+    } catch {
+      toast.error("Could not trigger notification.");
+    } finally {
+      setTestingPush(false);
+    }
+  };
 
   const { updateAvailable, currentVersion, serverVersion } = useVersionCheck();
   const [clearing, setClearing] = useState(false);
@@ -175,67 +255,157 @@ export default function SettingsPage() {
         </div>
 
         {/* Notification Preferences Tile */}
-        <div className="card p-4">
-          <h2 className="text-sm font-semibold mb-3 text-slate-900 dark:text-white">Notification Preferences</h2>
-          <div className="space-y-3 text-xs">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">Web Push Notifications</p>
-                <p className="text-[11px] text-slate-400">Receive instant push alerts on your phone</p>
+        <div className="card p-5 border border-border bg-surface/80 backdrop-blur-md shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                <BellRing size={16} />
               </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!("Notification" in window)) {
-                    toast.error("Web Push is not supported on this browser.");
-                    return;
-                  }
-                  const perm = await Notification.requestPermission();
-                  if (perm === "granted") {
-                    toast.success("Web push notifications enabled!");
-                  } else {
-                    toast.error("Notification permission denied.");
-                  }
-                }}
-                className="px-3 py-1.5 rounded-full bg-primary text-white text-[11px] font-bold hover:bg-primary-dark transition-colors cursor-pointer"
-              >
-                Enable Push
-              </button>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">Notification Preferences</h2>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Control real-time updates and device alerts</p>
+              </div>
+            </div>
+            {pushPerm === "granted" && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                <Check size={11} /> Push Active
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-3.5 text-xs">
+            {/* Main Push Permission Row */}
+            <div className="p-3.5 rounded-2xl bg-slate-100/70 dark:bg-slate-900/60 border border-border/80 flex items-center justify-between gap-3">
+              <div>
+                <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <Smartphone size={13} className="text-primary" /> Web Push Notifications
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {pushPerm === "granted"
+                    ? "Instant notifications delivered to this device"
+                    : pushPerm === "denied"
+                    ? "Blocked by your browser. Enable in site settings."
+                    : "Receive instant push alerts for chats & activity"}
+                </p>
+              </div>
+
+              {pushPerm === "granted" ? (
+                <button
+                  type="button"
+                  onClick={handleTestNotification}
+                  disabled={testingPush}
+                  className="px-3 py-1.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-all active:scale-95 cursor-pointer shrink-0"
+                >
+                  {testingPush ? <Loader2 size={12} className="animate-spin" /> : "Test Alert"}
+                </button>
+              ) : pushPerm === "denied" ? (
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 px-2 py-1 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                  Permission Blocked
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleEnablePush}
+                  className="px-3.5 py-1.5 rounded-full bg-primary text-white text-[11px] font-bold hover:bg-primary-dark shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
+                >
+                  Enable Push
+                </button>
+              )}
             </div>
 
-            <div className="h-px bg-border/60" />
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">Price Drop Alerts</p>
-                <p className="text-[11px] text-slate-400">Alert me when saved items decrease in price</p>
+            {/* Granular Toggles (Survive Refresh via localStorage) */}
+            <div className="divide-y divide-border/60">
+              <div className="py-2.5 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">Direct Message Alerts</p>
+                  <p className="text-[11px] text-slate-400">Instant notification when a buyer or student messages you</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleNotifPref("dmAlerts")}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 cursor-pointer ${
+                    notifPrefs.dmAlerts ? "bg-primary" : "bg-slate-300 dark:bg-slate-700"
+                  }`}
+                  aria-label="Toggle direct message alerts"
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                      notifPrefs.dmAlerts ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
               </div>
-              <input type="checkbox" defaultChecked className="rounded text-primary focus:ring-primary h-4 w-4" />
-            </div>
 
-            <div className="h-px bg-border/60" />
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">Direct Message Alerts</p>
-                <p className="text-[11px] text-slate-400">Alert me when someone sends a message</p>
+              <div className="py-2.5 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">Price Drop & Saved Alerts</p>
+                  <p className="text-[11px] text-slate-400">Alert me when wishlist items or saved listings update</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleNotifPref("priceDropAlerts")}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 cursor-pointer ${
+                    notifPrefs.priceDropAlerts ? "bg-primary" : "bg-slate-300 dark:bg-slate-700"
+                  }`}
+                  aria-label="Toggle price drop alerts"
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                      notifPrefs.priceDropAlerts ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
               </div>
-              <input type="checkbox" defaultChecked className="rounded text-primary focus:ring-primary h-4 w-4" />
-            </div>
 
-            <div className="h-px bg-border/60" />
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">Email Notifications</p>
-                <p className="text-[11px] text-slate-400">Receive order &amp; account updates by email</p>
+              <div className="py-2.5 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">Listing & Order Updates</p>
+                  <p className="text-[11px] text-slate-400">Notify about moderation approvals, reviews, and inquiries</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleNotifPref("listingAlerts")}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 cursor-pointer ${
+                    notifPrefs.listingAlerts ? "bg-primary" : "bg-slate-300 dark:bg-slate-700"
+                  }`}
+                  aria-label="Toggle listing updates"
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                      notifPrefs.listingAlerts ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
               </div>
-              <input type="checkbox" defaultChecked className="rounded text-primary focus:ring-primary h-4 w-4" />
+
+              <div className="py-2.5 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">Email Updates</p>
+                  <p className="text-[11px] text-slate-400">Receive important security, password, and account emails</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleNotifPref("emailAlerts")}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 cursor-pointer ${
+                    notifPrefs.emailAlerts ? "bg-primary" : "bg-slate-300 dark:bg-slate-700"
+                  }`}
+                  aria-label="Toggle email alerts"
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                      notifPrefs.emailAlerts ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
             {/* iOS PWA Notice */}
-            <div className="mt-3 p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 text-[11px] text-blue-700 dark:text-blue-300">
-              <span className="font-bold">📱 iPhone/iOS Note:</span> On iOS, push notifications require adding PLAWZA to your Home Screen (Share ➔ Add to Home Screen).
+            <div className="mt-2 p-3 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 text-[11px] text-blue-700 dark:text-blue-300 flex items-start gap-2">
+              <span className="text-base leading-none">📱</span>
+              <p>
+                <span className="font-bold">iPhone/iOS Note:</span> On iOS, push notifications require adding PLAWZA to your Home Screen (Tap <span className="font-semibold">Share ➔ Add to Home Screen</span>).
+              </p>
             </div>
           </div>
         </div>

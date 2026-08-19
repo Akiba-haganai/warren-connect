@@ -5,18 +5,63 @@ import { useAuthStore } from "@/store/auth/authStore";
 import { useNotifications } from "@/hooks/useNotifications";
 import NotificationItem from "@/features/notifications/components/NotificationItem";
 import GroupedNotificationItem from "@/features/notifications/components/GroupedNotificationItem";
-import { CheckCheck, Loader2, Trash2, Bell, Sparkles, MessageCircle, ShoppingBag } from "lucide-react";
+import { CheckCheck, Loader2, Trash2, Bell, Sparkles, MessageCircle, ShoppingBag, BellRing, X } from "lucide-react";
 import { useInView } from "react-intersection-observer";
 import { supabase } from "@/lib/supabase/client";
 import { useConfirm } from "@/hooks/useConfirm";
 import toast from "react-hot-toast";
+import { triggerHaptic } from "@/utils/haptic";
 
 type FilterTab = "all" | "unread" | "messages" | "listings";
+
+function NotificationSkeleton() {
+  return (
+    <div className="flex flex-col gap-2.5">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="p-4 rounded-2xl bg-surface border border-border flex items-start gap-3.5 animate-pulse">
+          <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
+          <div className="flex-1 space-y-2 py-1">
+            <div className="h-3.5 bg-slate-200 dark:bg-slate-800 rounded-md w-3/4" />
+            <div className="h-2.5 bg-slate-100 dark:bg-slate-800/60 rounded-md w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function NotificationsPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
+  const [pushPerm, setPushPerm] = useState<NotificationPermission | "unsupported">("default");
+  const [showPushBanner, setShowPushBanner] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setPushPerm(Notification.permission);
+    }
+  }, []);
+
+  const handleEnablePush = async () => {
+    triggerHaptic();
+    if (!("Notification" in window)) {
+      toast.error("Web Push is not supported on this browser.");
+      return;
+    }
+    try {
+      const perm = await Notification.requestPermission();
+      setPushPerm(perm);
+      if (perm === "granted") {
+        toast.success("Push notifications enabled!");
+        setShowPushBanner(false);
+      } else {
+        toast.error("Notification permission denied.");
+      }
+    } catch {
+      toast.error("Could not request notification permission.");
+    }
+  };
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useNotifications(user?.id);
 
@@ -217,11 +262,42 @@ export default function NotificationsPage() {
 
       {/* Main List */}
       <div className="max-w-4xl mx-auto px-4 pt-4">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="animate-spin text-primary mb-3" size={32} />
-            <p className="text-sm font-medium text-slate-500">Loading notifications…</p>
+        {/* Opt-in Push Banner (Shows only if not granted) */}
+        {showPushBanner && pushPerm !== "granted" && pushPerm !== "unsupported" && (
+          <div className="mb-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-primary/10 to-teal-500/10 border border-primary/20 flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+                <BellRing size={20} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white">Enable Instant Push Alerts</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Get notified instantly when buyers message you or price drops happen.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleEnablePush}
+                className="px-3.5 py-1.5 rounded-full bg-primary text-white text-xs font-bold hover:bg-primary-dark shadow-xs transition-all active:scale-95 cursor-pointer"
+              >
+                Turn On
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPushBanner(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                aria-label="Dismiss banner"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
+        )}
+
+        {isLoading ? (
+          <NotificationSkeleton />
         ) : filteredNotifications.length === 0 ? (
           <div className="rounded-3xl p-12 text-center bg-surface border border-dashed border-border shadow-xs my-6">
             <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
