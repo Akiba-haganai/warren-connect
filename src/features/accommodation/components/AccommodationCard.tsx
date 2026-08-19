@@ -48,10 +48,10 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
         <button
           type="button"
           onClick={handleShare}
-          className="w-8 h-8 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-white shadow-xs transition-colors cursor-pointer"
+          className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/40 hover:scale-105 active:scale-95 shadow-lg transition-all cursor-pointer"
           aria-label="Share listing"
         >
-          <Share2 size={14} />
+          <Share2 size={14} style={{ filter: "drop-shadow(0px 1px 2px rgba(0,0,0,0.3))" }} />
         </button>
         <SaveButton itemType="accommodation" itemId={listing.id} />
       </div>

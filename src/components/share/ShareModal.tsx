@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Copy, Check, Share2, Send, MessageSquare, Globe } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -88,17 +89,18 @@ export default function ShareModal({
     }
   };
 
-  return (
+  // We use a Portal to ensure the fixed modal breaks out of any parent CSS transforms/filters
+  const modalContent = (
     <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="bg-surface border border-border rounded-t-3xl sm:rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-4 duration-200"
+        className="bg-surface border border-border rounded-t-3xl sm:rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-4 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-surface">
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-surface shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
               <Share2 size={16} />
@@ -121,8 +123,8 @@ export default function ShareModal({
           </button>
         </div>
 
-        {/* Modal Content */}
-        <div className="p-5 space-y-4">
+        {/* Modal Content (Scrollable) */}
+        <div className="p-5 pb-8 sm:pb-5 space-y-4 overflow-y-auto flex-1 overscroll-contain">
           {/* Card Preview Banner */}
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/80 border border-border">
             {imageUrl && !imageUrl.includes("pending-uploads") ? (
@@ -208,7 +210,7 @@ export default function ShareModal({
           </div>
 
           {/* Native Device Share Sheet / Copy Link Bar */}
-          <div className="pt-2 flex flex-col sm:flex-row items-stretch gap-2">
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch gap-2 shrink-0">
             {"share" in navigator && (
               <button
                 type="button"
@@ -236,4 +238,7 @@ export default function ShareModal({
       </div>
     </div>
   );
+
+  // Render into body to escape ALL CSS transforms/positioning traps
+  return typeof document !== "undefined" ? createPortal(modalContent, document.body) : null;
 }

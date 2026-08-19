@@ -47,10 +47,10 @@ export default function ProductCard({ product, onView }: Props) {
       {/* Share button top-left */}
       <button
         onClick={handleShare}
-        className="absolute top-2 left-2 z-10 p-1 rounded-full bg-white/70 hover:bg-white shadow"
+        className="absolute top-2 left-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md border border-white/20 text-white shadow-lg hover:bg-black/40 hover:scale-105 active:scale-95 transition-all cursor-pointer"
         aria-label="Share product"
       >
-        <Share2 size={14} style={{ color: "var(--color-text-secondary)" }} />
+        <Share2 size={14} style={{ filter: "drop-shadow(0px 1px 2px rgba(0,0,0,0.3))" }} />
       </button>
 
       {(() => {
