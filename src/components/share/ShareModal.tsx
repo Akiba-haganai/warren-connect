@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Copy, Check, Share2, Send, MessageSquare, Globe } from "lucide-react";
+import { X, Copy, Check, Share2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface ShareModalProps {

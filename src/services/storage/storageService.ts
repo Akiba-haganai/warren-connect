@@ -75,6 +75,7 @@ export const storageService = {
     }
 
     let fileToUpload = file;
+    const extension = file.name ? file.name.split(".").pop()?.toLowerCase() ?? "jpg" : "jpg";
     let finalExtension = extension;
 
     if (file.type && file.type.startsWith("image/") && file.type !== "image/gif") {
