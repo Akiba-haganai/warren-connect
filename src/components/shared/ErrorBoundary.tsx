@@ -30,8 +30,19 @@ export default class ErrorBoundary extends Component<Props, State> {
       error.name === "ChunkLoadError" ||
       error.message.includes("Failed to fetch dynamically imported module")
     ) {
-      console.warn("Chunk load error detected in boundary. Hard reloading...");
-      window.location.reload();
+      console.warn("Chunk load error detected. Unregistering SW and reloading...");
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const registration of registrations) {
+            registration.unregister();
+          }
+          window.location.reload();
+        }).catch(() => {
+          window.location.reload();
+        });
+      } else {
+        window.location.reload();
+      }
       return;
     }
     
