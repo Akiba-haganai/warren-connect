@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { recoveryService, type RecoveryQuestion, type SubmittedAnswer } from "@/services/auth/recoveryService";
 import { Mail, ArrowLeft, CheckCircle, ShieldCheck, HelpCircle } from "lucide-react";
@@ -14,10 +14,45 @@ export default function ForgotPasswordPage() {
   const [questions, setQuestions] = useState<RecoveryQuestion[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
 
+  const [cooldown, setCooldown] = useState(0);
+
+  // Restore cooldown from localStorage when email changes
+  useEffect(() => {
+    if (!email) {
+      setCooldown(0);
+      return;
+    }
+    const key = `reset_cooldown_${email.trim().toLowerCase()}`;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      const remaining = Math.ceil((Number(stored) - Date.now()) / 1000);
+      if (remaining > 0) {
+        setCooldown(remaining);
+      } else {
+        localStorage.removeItem(key);
+        setCooldown(0);
+      }
+    } else {
+      setCooldown(0);
+    }
+  }, [email]);
+
+  // Tick the cooldown timer down every second
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  const persistCooldown = (seconds: number) => {
+    setCooldown(seconds);
+    localStorage.setItem(`reset_cooldown_${email.trim().toLowerCase()}`, (Date.now() + seconds * 1000).toString());
+  };
+
   // Step 1: Start recovery challenge
   const handleStartChallenge = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || cooldown > 0) return;
     setLoading(true);
     setError("");
 
@@ -30,7 +65,17 @@ export default function ForgotPasswordPage() {
         setError(res.message || "Failed to load verification questions.");
       }
     } catch (err: any) {
-      setError(err.message || "Failed to generate identity verification challenge.");
+      const msg = err.message || "Failed to generate identity verification challenge.";
+      
+      // Handle Rate Limiting gracefully
+      if (msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("seconds")) {
+        const match = msg.match(/after (\d+) seconds/i);
+        const secs = match ? parseInt(match[1], 10) : 60;
+        persistCooldown(secs);
+        setError(`Please wait ${secs}s before trying again.`);
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -130,8 +175,8 @@ export default function ForgotPasswordPage() {
             </div>
           )}
 
-          <button type="submit" disabled={loading || !email.trim()} className="btn-primary flex items-center justify-center gap-2">
-            {loading ? <Spinner size={16} /> : "Continue to Verification Challenge"}
+          <button type="submit" disabled={loading || !email.trim() || cooldown > 0} className="btn-primary flex items-center justify-center gap-2">
+            {loading ? <Spinner size={16} /> : cooldown > 0 ? `Please wait ${cooldown}s` : "Continue to Verification Challenge"}
           </button>
         </form>
       )}
