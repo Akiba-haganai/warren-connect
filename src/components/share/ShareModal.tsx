@@ -38,30 +38,6 @@ export default function ShareModal({
   const encodedUrl = encodeURIComponent(targetUrl);
   const encodedTitle = encodeURIComponent(`Check out ${title}${formattedPrice} on PLAWZA! 🛍️`);
 
-  const handleWhatsAppDirect = () => {
-    window.open(`https://api.whatsapp.com/send?text=${encodedWhatsappText}`, "_blank");
-  };
-
-  const handleWhatsAppStatus = async () => {
-    try {
-      await navigator.clipboard.writeText(whatsappText);
-      toast.success("Caption copied! Opening WhatsApp Status…", { duration: 3000 });
-      setTimeout(() => {
-        window.open("https://api.whatsapp.com/send", "_blank");
-      }, 800);
-    } catch {
-      toast.error("Failed to copy text");
-    }
-  };
-
-  const handleFacebookShare = () => {
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, "_blank");
-  };
-
-  const handleTwitterShare = () => {
-    window.open(`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`, "_blank");
-  };
-
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(targetUrl);
@@ -88,6 +64,57 @@ export default function ShareModal({
       handleCopyLink();
     }
   };
+
+  const shareOptions = [
+    {
+      id: "whatsapp",
+      label: "WhatsApp",
+      description: "Send to a friend",
+      href: `https://wa.me/?text=${encodedWhatsappText}`,
+      iconBg: "bg-[#25D366]",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="white" className="w-6 h-6" aria-hidden="true">
+          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.28-1.39a9.9 9.9 0 0 0 4.76 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm5.8 14.11c-.24.68-1.4 1.31-1.93 1.36-.5.05-.99.24-3.34-.7-2.82-1.12-4.63-4-4.77-4.19-.14-.19-1.14-1.52-1.14-2.9 0-1.38.73-2.06.98-2.34.26-.28.56-.35.75-.35h.53c.17 0 .4-.06.62.48.24.58.8 2 .87 2.14.07.14.12.31.02.5-.09.19-.14.31-.28.48-.14.16-.29.36-.42.49-.14.13-.28.28-.12.55.16.28.71 1.18 1.53 1.92 1.05.94 1.94 1.23 2.21 1.37.28.14.44.12.6-.07.17-.19.7-.82.89-1.1.19-.28.38-.23.63-.14.26.09 1.66.79 1.94.93.28.14.47.21.53.33.07.12.07.68-.17 1.36Z" />
+        </svg>
+      ),
+    },
+    {
+      id: "facebook",
+      label: "Facebook",
+      description: "Share to timeline",
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+      iconBg: "bg-[#1877F2]",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="white" className="w-6 h-6" aria-hidden="true">
+          <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z" />
+        </svg>
+      ),
+    },
+    {
+      id: "twitter",
+      label: "X (Twitter)",
+      description: "Post to your feed",
+      href: `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`,
+      iconBg: "bg-black",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5" aria-hidden="true">
+          <path d="M18.9 2H22l-7.6 8.7L23.3 22H16.7l-5.2-6.8L5.6 22H2.4l8.1-9.3L1.5 2h6.8l4.7 6.2L18.9 2Zm-1.2 18h1.7L7.4 3.9H5.6L17.7 20Z" />
+        </svg>
+      ),
+    },
+    {
+      id: "telegram",
+      label: "Telegram",
+      description: "Send in a chat",
+      href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}`,
+      iconBg: "bg-[#26A5E4]",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="white" className="w-6 h-6" aria-hidden="true">
+          <path d="M21.94 4.5 18.6 20.2c-.25 1.13-.9 1.4-1.82.87l-5.03-3.7-2.43 2.33c-.27.27-.5.5-1.02.5l.36-5.13 9.34-8.44c.4-.36-.09-.56-.63-.2L6.06 12.9 1.1 11.34c-1.08-.34-1.1-1.08.23-1.6L20.6 3.34c.9-.33 1.68.21 1.34 1.16Z" />
+        </svg>
+      ),
+    },
+  ] as const;
 
   // We use a Portal to ensure the fixed modal breaks out of any parent CSS transforms/filters
   const modalContent = (
@@ -147,66 +174,26 @@ export default function ShareModal({
           </div>
 
           {/* Share Channels Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {/* WhatsApp Direct */}
-            <button
-              type="button"
-              onClick={handleWhatsAppDirect}
-              className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer text-left"
-            >
-              <div className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-                <Send size={16} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs truncate">WhatsApp</div>
-                <div className="text-[10px] opacity-80 truncate">Send to a friend</div>
-              </div>
-            </button>
-
-            {/* WhatsApp Status */}
-            <button
-              type="button"
-              onClick={handleWhatsAppStatus}
-              className="flex items-center gap-3 p-3 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-400 hover:bg-teal-500/20 transition-colors cursor-pointer text-left"
-            >
-              <div className="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                <MessageSquare size={16} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs truncate">WA Status</div>
-                <div className="text-[10px] opacity-80 truncate">Post to your status</div>
-              </div>
-            </button>
-
-            {/* Facebook */}
-            <button
-              type="button"
-              onClick={handleFacebookShare}
-              className="flex items-center gap-3 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20 transition-colors cursor-pointer text-left"
-            >
-              <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                <Globe size={16} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs truncate">Facebook</div>
-                <div className="text-[10px] opacity-80 truncate">Share to feed</div>
-              </div>
-            </button>
-
-            {/* Twitter / X */}
-            <button
-              type="button"
-              onClick={handleTwitterShare}
-              className="flex items-center gap-3 p-3 rounded-xl bg-slate-500/10 border border-slate-500/20 text-slate-800 dark:text-slate-200 hover:bg-slate-500/20 transition-colors cursor-pointer text-left"
-            >
-              <div className="w-9 h-9 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center shrink-0 shadow-sm">
-                <Share2 size={16} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs truncate">X (Twitter)</div>
-                <div className="text-[10px] opacity-80 truncate">Post a tweet</div>
-              </div>
-            </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {shareOptions.map((opt) => (
+              <a
+                key={opt.id}
+                href={opt.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-2xl border border-border p-3 transition-colors hover:border-border-hover dark:hover:bg-slate-800/50 hover:bg-slate-50 active:scale-[0.98]"
+              >
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${opt.iconBg}`}>
+                  {opt.icon}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{opt.label}</span>
+                  <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                    {opt.description}
+                  </span>
+                </span>
+              </a>
+            ))}
           </div>
 
           {/* Native Device Share Sheet / Copy Link Bar */}
