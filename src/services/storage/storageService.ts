@@ -20,15 +20,24 @@ export const storageService = {
       throw new Error("Invalid file type. Only JPEG, PNG, WebP, HEIC and PDF files are allowed.");
     }
 
+    let fileToUpload = file;
+    let finalExtension = extension;
+
+    // Aggressively compress main image on client-side (skip GIFs to preserve animation)
+    if (file.type && file.type.startsWith("image/") && file.type !== "image/gif") {
+      fileToUpload = await compressImage(file, 1200, 0.8);
+      finalExtension = "jpg"; // compressImage forces JPEG output
+    }
+
     const filePath = customPath
       ? customPath
       : userId
-      ? `${userId}/${crypto.randomUUID()}.${extension}`
-      : `${crypto.randomUUID()}.${extension}`;
+      ? `${userId}/${crypto.randomUUID()}.${finalExtension}`
+      : `${crypto.randomUUID()}.${finalExtension}`;
 
     const { error } = await supabase.storage
       .from(bucket)
-      .upload(filePath, file, { upsert: false });
+      .upload(filePath, fileToUpload, { upsert: false });
 
     if (error) throw error;
 
@@ -65,14 +74,21 @@ export const storageService = {
       throw new Error("Invalid file type. Only JPEG, PNG, WebP, HEIC and PDF files are allowed.");
     }
 
-    const extension = file.name.split(".").pop() ?? "jpg";
+    let fileToUpload = file;
+    let finalExtension = extension;
+
+    if (file.type && file.type.startsWith("image/") && file.type !== "image/gif") {
+      fileToUpload = await compressImage(file, 1200, 0.8);
+      finalExtension = "jpg";
+    }
+
     const filePath = userId
-      ? `${userId}/${crypto.randomUUID()}.${extension}`
-      : `${crypto.randomUUID()}.${extension}`;
+      ? `${userId}/${crypto.randomUUID()}.${finalExtension}`
+      : `${crypto.randomUUID()}.${finalExtension}`;
 
     const { error } = await supabase.storage
       .from(bucket)
-      .upload(filePath, file, { upsert: false });
+      .upload(filePath, fileToUpload, { upsert: false });
 
     if (error) throw error;
     return { path: filePath };
