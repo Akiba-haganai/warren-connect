@@ -24,10 +24,26 @@ export default function GroupedNotificationItem({ notifications, onMarkRead }: P
   const isAllRead = notifications.every((n) => n.is_read);
   const Icon = iconMap[latest.type] ?? Bell;
 
-  const handleClick = async () => {
-    if (latest.link) navigate(latest.link);
+  const handleClick = () => {
+    triggerHaptic();
+    const targetLink =
+      latest.link ||
+      (latest.type === "message"
+        ? "/messages"
+        : latest.type === "product"
+        ? "/marketplace"
+        : latest.type === "accommodation"
+        ? "/accommodation"
+        : latest.type === "like" || latest.type === "comment"
+        ? "/feed"
+        : "/feed");
+
     if (!isAllRead) {
-      await onMarkRead();
+      onMarkRead().catch((err) => console.warn("Group mark read failed:", err));
+    }
+
+    if (targetLink) {
+      navigate(targetLink);
     }
   };
 

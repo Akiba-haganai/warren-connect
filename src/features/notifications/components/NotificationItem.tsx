@@ -21,16 +21,28 @@ export default function NotificationItem({ notification, onMarkRead, onDelete }:
   const navigate = useNavigate();
   const Icon = iconMap[notification.type] ?? Bell;
 
-  const handleClick = async () => {
+  const handleClick = () => {
+    triggerHaptic();
+    // Fire mark as read in background without blocking navigation
     if (!notification.is_read) {
-      try {
-        await onMarkRead();
-      } catch (err) {
-        console.error("Mark as read failed:", err);
-      }
+      onMarkRead().catch((err) => console.warn("Mark as read failed:", err));
     }
-    if (notification.link) {
-      navigate(notification.link);
+
+    // Resolve target link with smart fallback based on notification type
+    const targetLink =
+      notification.link ||
+      (notification.type === "message"
+        ? "/messages"
+        : notification.type === "product"
+        ? "/marketplace"
+        : notification.type === "accommodation"
+        ? "/accommodation"
+        : notification.type === "like" || notification.type === "comment"
+        ? "/feed"
+        : "/feed");
+
+    if (targetLink) {
+      navigate(targetLink);
     }
   };
 

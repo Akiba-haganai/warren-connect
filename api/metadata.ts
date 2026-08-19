@@ -29,14 +29,18 @@ export default async function handler(req: any, res: any) {
     return res.status(200).send(html);
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseKey) {
-    res.setHeader("Content-Type", "text/html");
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    return res.status(200).send(html);
-  }
+  const supabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    "https://dhxgdapxzovsjdgqoore.supabase.co";
+
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRoeGdkYXB4em92c2pkZ3Fvb3JlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI2MTYsImV4cCI6MjA5NzcwODYxNn0.aPwZ7MzbP1LujmAugIp_x-vc6lVkuCeW7S-jFqZFPSU";
 
   const supabase = createClient(supabaseUrl, supabaseKey);
   
