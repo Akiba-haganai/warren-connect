@@ -188,9 +188,12 @@ export default function AccommodationComposer({
             url = uploadRes.publicUrl;
           } catch (uploadErr) {
             console.warn("Failed to upload accommodation image:", uploadErr);
+            url = "";
           }
         }
-        uploadedPublicUrls.push(url);
+        if (url && url.startsWith("http")) {
+          uploadedPublicUrls.push(url);
+        }
       }
 
       const primaryImageUrl = uploadedPublicUrls.length > 0 ? uploadedPublicUrls[0] : undefined;

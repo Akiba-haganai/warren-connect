@@ -18,15 +18,23 @@ export default async function handler(req: any, res: any) {
     return res.status(500).send("Error loading app");
   }
 
+  const isBot = /facebookexternalhit|WhatsApp|Twitterbot|TelegramBot|Slackbot|LinkedInBot|Discordbot|Applebot|Pinterest|Googlebot|bingbot/i.test(userAgent);
+
   const { type, id } = query;
-  if (!id || !type) {
+
+  // Real human users: serve the fresh SPA shell immediately with no-cache (matches vercel.json)
+  if (!isBot || !id || !type) {
+    res.setHeader("Content-Type", "text/html");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     return res.status(200).send(html);
   }
 
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || !supabaseKey) {
+    res.setHeader("Content-Type", "text/html");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     return res.status(200).send(html);
   }
 
@@ -40,19 +48,33 @@ export default async function handler(req: any, res: any) {
     if (type === "product") {
       const { data } = await supabase.from("products").select("title, description, price, image_url").eq("id", id).single();
       if (data) {
-        title = `${data.title} - K${data.price} | PLAWZA`;
+        title = `${data.title} - K${Number(data.price || 0).toLocaleString()} | PLAWZA`;
         description = data.description || description;
         if (data.image_url) {
-           imageUrl = data.image_url.startsWith("http") ? data.image_url : `${supabaseUrl}/storage/v1/object/public/product-images/${data.image_url}`;
+          if (data.image_url.startsWith("http")) {
+            imageUrl = data.image_url;
+          } else {
+            const bucket = data.image_url.startsWith("product-images/") ? "product-images" : "public-images";
+            const cleanPath = data.image_url.replace(/^(product-images|public-images)\//, "");
+            const { data: storageData } = supabase.storage.from(bucket).getPublicUrl(cleanPath);
+            imageUrl = storageData.publicUrl;
+          }
         }
       }
     } else if (type === "accommodation") {
       const { data } = await supabase.from("accommodations").select("title, description, monthly_rent, image_url").eq("id", id).single();
       if (data) {
-        title = `${data.title} - K${data.monthly_rent}/mo | PLAWZA`;
+        title = `${data.title} - K${Number(data.monthly_rent || 0).toLocaleString()}/mo | PLAWZA`;
         description = data.description || description;
         if (data.image_url) {
-           imageUrl = data.image_url.startsWith("http") ? data.image_url : `${supabaseUrl}/storage/v1/object/public/accommodation-images/${data.image_url}`;
+          if (data.image_url.startsWith("http")) {
+            imageUrl = data.image_url;
+          } else {
+            const bucket = data.image_url.startsWith("accommodation-images/") ? "accommodation-images" : "public-images";
+            const cleanPath = data.image_url.replace(/^(accommodation-images|public-images)\//, "");
+            const { data: storageData } = supabase.storage.from(bucket).getPublicUrl(cleanPath);
+            imageUrl = storageData.publicUrl;
+          }
         }
       }
     }

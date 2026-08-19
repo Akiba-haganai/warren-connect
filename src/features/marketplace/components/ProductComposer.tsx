@@ -204,11 +204,14 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             primaryPublicUrl = uploadRes.publicUrl;
           } catch (uploadErr) {
             console.warn("Failed to upload primary image file:", uploadErr);
+            primaryPublicUrl = ""; // Prevent base64 payload from polluting the database
           }
         }
-        await productService.updateProduct(createdProductId, {
-          image_url: primaryPublicUrl,
-        }).catch(() => {});
+        if (primaryPublicUrl && primaryPublicUrl.startsWith("http")) {
+          await productService.updateProduct(createdProductId, {
+            image_url: primaryPublicUrl,
+          }).catch(() => {});
+        }
       }
 
       if (tags.length > 0) {

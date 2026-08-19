@@ -88,9 +88,6 @@ serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const siteUrl = Deno.env.get("SITE_URL") || "https://plawza.com";
-
     // Action: Approve -> Generate Auth Link & Dispatch via Resend API
     const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
@@ -137,7 +134,7 @@ serve(async (req) => {
                   Reset My Password
                 </a>
               </div>
-              <p style="font-size: 12px; color: #94a3b8; border-t: 1px solid #f1f5f9; pt-16; margin-top: 24px;">If the button does not work, copy and paste this link into your browser:<br/><a href="${resetLink}" style="color: #00897B; word-break: break-all;">${resetLink}</a></p>
+              <p style="font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 24px;">If the button does not work, copy and paste this link into your browser:<br/><a href="${resetLink}" style="color: #00897B; word-break: break-all;">${resetLink}</a></p>
               <p style="font-size: 12px; color: #94a3b8; margin-top: 12px;">If you did not request password recovery, please secure your account immediately.</p>
             </div>
           `,
