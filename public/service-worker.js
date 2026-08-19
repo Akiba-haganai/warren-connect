@@ -9,7 +9,7 @@
  * from it, so stale caches get cleaned up automatically.
  */
 
-const CACHE_VERSION = "v1.0.1";
+const CACHE_VERSION = "v1.0.2";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 
@@ -97,7 +97,8 @@ self.addEventListener("message", (event) => {
 });
 
 // ---------------------------------------------------------------
-// FETCH — safe handling for navigation and static assets
+// ---------------------------------------------------------------
+// FETCH — resilient handling for navigation and static assets
 // ---------------------------------------------------------------
 self.addEventListener("fetch", (event) => {
   const { request } = event;
@@ -105,10 +106,16 @@ self.addEventListener("fetch", (event) => {
   // 1. Only handle GET requests from http/https
   if (request.method !== "GET" || !request.url.startsWith("http")) return;
 
-  // 2. Bypass API calls, Supabase endpoints, and auth
-  if (request.url.includes("supabase.co") || request.url.includes("/api/")) return;
+  // 2. Bypass API calls, Supabase endpoints, version checks, and backend functions
+  if (
+    request.url.includes("supabase.co") ||
+    request.url.includes("/api/") ||
+    request.url.includes("/version.json")
+  ) {
+    return;
+  }
 
-  // 3. Navigation requests (Page loads)
+  // 3. Navigation requests (Page loads) — Network-first, fallback to index.html
   if (request.mode === "navigate") {
     event.respondWith(
       (async () => {
@@ -122,10 +129,13 @@ self.addEventListener("fetch", (event) => {
           return cached || (await caches.match("/index.html")) || fresh;
         } catch {
           const cached = await caches.match(request);
-          return (
-            cached ||
-            (await caches.match("/index.html")) ||
-            new Response("Offline", { status: 503, headers: { "Content-Type": "text/html" } })
+          const fallbackShell = await caches.match("/index.html");
+          if (cached) return cached;
+          if (fallbackShell) return fallbackShell;
+          // Return valid 200 offline fallback rather than throwing 503
+          return new Response(
+            `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>PLAWZA Offline</title><style>body{font-family:system-ui,sans-serif;text-align:center;padding:40px;background:#0f172a;color:#fff}h1{color:#00897B;font-size:24px}p{color:#94a3b8;font-size:14px}button{background:#00897B;color:#fff;border:none;padding:10px 20px;border-radius:9999px;font-weight:bold;cursor:pointer;margin-top:16px}</style></head><body><h1>PLAWZA</h1><p>You appear to be offline. Please check your internet connection.</p><button onclick="window.location.reload()">Retry</button></body></html>`,
+            { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
           );
         }
       })()
@@ -133,31 +143,19 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 4. Static assets (stale-while-revalidate)
+  // 4. Static assets (JS, CSS, images) — Network-first with silent cache fallback
   event.respondWith(
     (async () => {
       try {
-        const cached = await caches.match(request);
-        const networkFetch = fetch(request)
-          .then((response) => {
-            if (response && response.status === 200) {
-              safeCachePut(RUNTIME_CACHE, request, response);
-            }
-            return response;
-          })
-          .catch(() => null);
-
-        if (cached) {
-          // Trigger background fetch refresh
-          networkFetch.catch(() => {});
-          return cached;
+        const networkResponse = await fetch(request);
+        if (networkResponse && networkResponse.status === 200) {
+          safeCachePut(RUNTIME_CACHE, request, networkResponse);
         }
-
-        const freshResponse = await networkFetch;
-        if (freshResponse) return freshResponse;
-
-        return Response.error();
+        return networkResponse;
       } catch {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        // Never return Response.error(); delegate to default browser fetch behavior
         return fetch(request);
       }
     })()
