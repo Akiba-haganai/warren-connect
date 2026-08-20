@@ -29,15 +29,11 @@ export default async function middleware(req: Request) {
 
   if (!resourceId) return;
 
-  const supabaseUrl =
-    process.env.VITE_SUPABASE_URL ||
-    process.env.SUPABASE_URL ||
-    "https://dhxgdapxzovsjdgqoore.supabase.co";
-
-  const supabaseAnonKey =
-    process.env.VITE_SUPABASE_ANON_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRoeGdkYXB4em92c2pkZ3Fvb3JlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI2MTYsImV4cCI6MjA5NzcwODYxNn0.aPwZ7MzbP1LujmAugIp_x-vc6lVkuCeW7S-jFqZFPSU";
+  // NOTE: no hardcoded fallback here on purpose. If these env vars aren't set
+  // in the Vercel project settings, we skip the DB lookup entirely and serve
+  // the static default preview below rather than silently using a baked-in key.
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
   const defaultBanner = `${url.origin}/og-image-1200x630.png`;
 
@@ -45,64 +41,70 @@ export default async function middleware(req: Request) {
   let description = "Find student deals, campus housing, and connect with your campus community on PLAWZA.";
   let imageUrl = defaultBanner;
 
-  try {
-    if (resourceType === "marketplace") {
-      const res = await fetch(
-        `${supabaseUrl}/rest/v1/products?id=eq.${encodeURIComponent(resourceId)}&select=title,description,price,image_url,moderation_status`,
-        {
-          headers: {
-            apikey: supabaseAnonKey,
-            Authorization: `Bearer ${supabaseAnonKey}`,
-          },
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error(
+      "[MIDDLEWARE-OG] Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY env vars — serving static default preview."
+    );
+  } else {
+    try {
+      if (resourceType === "marketplace") {
+        const res = await fetch(
+          `${supabaseUrl}/rest/v1/products?id=eq.${encodeURIComponent(resourceId)}&select=title,description,price,image_url,moderation_status`,
+          {
+            headers: {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${supabaseAnonKey}`,
+            },
+          }
+        );
+        const data = await res.json();
+        if (Array.isArray(data) && data[0]) {
+          const item = data[0];
+          title = `${item.title} - K${Number(item.price || 0).toLocaleString()} | PLAWZA`;
+          if (item.description) {
+            description = item.description.slice(0, 160);
+          }
+          if (item.image_url && !item.image_url.includes("pending-uploads")) {
+            if (item.image_url.startsWith("http")) {
+              imageUrl = item.image_url;
+            } else {
+              const bucket = item.image_url.startsWith("product-images/") ? "product-images" : "public-images";
+              const cleanPath = item.image_url.replace(/^(product-images|public-images)\//, "");
+              imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
+            }
+          }
         }
-      );
-      const data = await res.json();
-      if (Array.isArray(data) && data[0]) {
-        const item = data[0];
-        title = `${item.title} - K${Number(item.price || 0).toLocaleString()} | PLAWZA`;
-        if (item.description) {
-          description = item.description.slice(0, 160);
-        }
-        if (item.image_url && !item.image_url.includes("pending-uploads")) {
-          if (item.image_url.startsWith("http")) {
-            imageUrl = item.image_url;
-          } else {
-            const bucket = item.image_url.startsWith("product-images/") ? "product-images" : "public-images";
-            const cleanPath = item.image_url.replace(/^(product-images|public-images)\//, "");
-            imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
+      } else if (resourceType === "accommodation") {
+        const res = await fetch(
+          `${supabaseUrl}/rest/v1/accommodations?id=eq.${encodeURIComponent(resourceId)}&select=title,description,monthly_rent,location,image_url,moderation_status`,
+          {
+            headers: {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${supabaseAnonKey}`,
+            },
+          }
+        );
+        const data = await res.json();
+        if (Array.isArray(data) && data[0]) {
+          const item = data[0];
+          title = `${item.title} - K${Number(item.monthly_rent || 0).toLocaleString()}/mo | PLAWZA`;
+          description = `${item.location ? `${item.location} • ` : ""}${
+            item.description ? item.description.slice(0, 140) : "Student housing listing on PLAWZA"
+          }`;
+          if (item.image_url && !item.image_url.includes("pending-uploads")) {
+            if (item.image_url.startsWith("http")) {
+              imageUrl = item.image_url;
+            } else {
+              const bucket = item.image_url.startsWith("accommodation-images/") ? "accommodation-images" : "public-images";
+              const cleanPath = item.image_url.replace(/^(accommodation-images|public-images)\//, "");
+              imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
+            }
           }
         }
       }
-    } else if (resourceType === "accommodation") {
-      const res = await fetch(
-        `${supabaseUrl}/rest/v1/accommodations?id=eq.${encodeURIComponent(resourceId)}&select=title,description,monthly_rent,location,image_url,moderation_status`,
-        {
-          headers: {
-            apikey: supabaseAnonKey,
-            Authorization: `Bearer ${supabaseAnonKey}`,
-          },
-        }
-      );
-      const data = await res.json();
-      if (Array.isArray(data) && data[0]) {
-        const item = data[0];
-        title = `${item.title} - K${Number(item.monthly_rent || 0).toLocaleString()}/mo | PLAWZA`;
-        description = `${item.location ? `${item.location} • ` : ""}${
-          item.description ? item.description.slice(0, 140) : "Student housing listing on PLAWZA"
-        }`;
-        if (item.image_url && !item.image_url.includes("pending-uploads")) {
-          if (item.image_url.startsWith("http")) {
-            imageUrl = item.image_url;
-          } else {
-            const bucket = item.image_url.startsWith("accommodation-images/") ? "accommodation-images" : "public-images";
-            const cleanPath = item.image_url.replace(/^(accommodation-images|public-images)\//, "");
-            imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
-          }
-        }
-      }
+    } catch (err) {
+      console.error("[MIDDLEWARE-OG] Fetch error:", err);
     }
-  } catch (err) {
-    console.error("[MIDDLEWARE-OG] Fetch error:", err);
   }
 
   const html = `<!DOCTYPE html>
@@ -111,7 +113,7 @@ export default async function middleware(req: Request) {
   <meta charset="UTF-8" />
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}" />
-  
+
   <!-- OpenGraph Meta Tags -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="${escapeHtml(req.url)}" />
