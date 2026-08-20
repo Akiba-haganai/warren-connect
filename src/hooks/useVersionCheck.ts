@@ -6,7 +6,12 @@ export function useVersionCheck() {
 
   const checkVersion = async () => {
     try {
-      const response = await fetch(`/version.json?t=${Date.now()}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const response = await fetch(`/version.json?t=${Date.now()}`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
       if (!response.ok) return;
       const data = await response.json();
       if (data && data.version) {
@@ -18,8 +23,8 @@ export function useVersionCheck() {
           setUpdateAvailable(false);
         }
       }
-    } catch (err) {
-      console.error("Failed to check app version:", err);
+    } catch {
+      // Silently degrade on network offline/timeout during version check
     }
   };
 
