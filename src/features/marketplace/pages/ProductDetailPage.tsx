@@ -231,6 +231,18 @@ export default function ProductDetailPage() {
             )}
           </div>
           <p className="text-2xl font-extrabold mt-1" style={{ color: "var(--color-primary)" }}>K{(product.price ?? 0).toLocaleString()}</p>
+          <div className="flex flex-col gap-0.5 mt-2">
+            {product.created_at && (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                Listed: {new Date(product.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+              </p>
+            )}
+            {isEdited && (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                Updated: {new Date((product as any).updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Stock toggle for owner */}

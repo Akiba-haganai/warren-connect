@@ -423,14 +423,28 @@ export default function AccommodationDetailPage() {
         </div>
 
         {/* Rent & status */}
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-2xl font-extrabold" style={{ color: "var(--color-primary)" }}>K{accommodation.monthly_rent.toLocaleString()}</span>
-            <span className="text-sm ml-1" style={{ color: "var(--color-text-muted)" }}>/month</span>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-2xl font-extrabold" style={{ color: "var(--color-primary)" }}>K{accommodation.monthly_rent.toLocaleString()}</span>
+              <span className="text-sm ml-1" style={{ color: "var(--color-text-muted)" }}>/month</span>
+            </div>
+            <span className={`badge ${accommodation.status === "available" ? "badge-green" : "badge-amber"}`}>
+              {accommodation.status || "available"}
+            </span>
           </div>
-          <span className={`badge ${accommodation.status === "available" ? "badge-green" : "badge-amber"}`}>
-            {accommodation.status || "available"}
-          </span>
+          <div className="flex flex-col gap-0.5">
+            {accommodation.created_at && (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                Listed: {new Date(accommodation.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+              </p>
+            )}
+            {(accommodation as any).updated_at && accommodation.created_at && (new Date((accommodation as any).updated_at).getTime() - new Date(accommodation.created_at).getTime() > 60000) && (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                Updated: {new Date((accommodation as any).updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Interest Queue */}

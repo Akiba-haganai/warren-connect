@@ -115,11 +115,6 @@ export default function ProductCard({ product, onView }: Props) {
           <h3 className="font-semibold text-sm line-clamp-2" style={{ color: "var(--color-text)" }}>
             {product.title}
           </h3>
-          {isEdited && (
-            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 shrink-0 italic">
-              Edited
-            </span>
-          )}
         </div>
         {product.description && (
           <p
@@ -129,6 +124,19 @@ export default function ProductCard({ product, onView }: Props) {
             {product.description}
           </p>
         )}
+        
+        <div className="flex flex-col gap-0.5 mt-2">
+          {product.created_at && (
+            <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              Listed {new Date(product.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
+          )}
+          {isEdited && (
+            <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              Edited {new Date((product as any).updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
+          )}
+        </div>
 
 
       {/* Seller verification tier (if available) */}

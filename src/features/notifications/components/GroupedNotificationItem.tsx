@@ -44,7 +44,11 @@ export default function GroupedNotificationItem({ notifications, onMarkRead }: P
     }
 
     if (targetLink) {
-      navigate(targetLink);
+      if (targetLink.startsWith("http")) {
+        window.location.href = targetLink;
+      } else {
+        navigate(targetLink);
+      }
     }
   };
 

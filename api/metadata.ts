@@ -98,8 +98,11 @@ export default async function handler(req: any, res: any) {
     <meta name="twitter:image" content="${imageUrl}" />
   `;
 
-  // Inject meta tags into the <head>
-  const finalHtml = html.replace("</head>", `${ogTags}\n  </head>`);
+  // Remove existing static og and twitter meta tags from the HTML so they don't conflict with our dynamic tags
+  const cleanedHtml = html.replace(/<meta (property="og:|name="twitter:)[^>]+>/g, "");
+
+  // Inject dynamic meta tags into the <head>
+  const finalHtml = cleanedHtml.replace("</head>", `${ogTags}\n  </head>`);
   
   res.setHeader("Content-Type", "text/html");
   res.setHeader("Cache-Control", "public, max-age=60, s-maxage=3600");

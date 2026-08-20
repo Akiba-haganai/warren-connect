@@ -1,4 +1,5 @@
 import { Trash2, Check, CheckCheck } from "lucide-react";
+import { triggerHaptic } from "@/utils/haptic";
 
 interface Props {
   content?: string;
@@ -20,38 +21,53 @@ export default function ChatBubble({
   attachmentUrl,
 }: Props) {
   const statusIcon = isTemp ? (
-    <Check size={10} style={{ opacity: 0.5 }} />
+    <Check size={11} className="opacity-60" />
   ) : readAt ? (
-    <CheckCheck size={10} style={{ color: "var(--color-primary)" }} />
+    <CheckCheck size={12} className="text-white drop-shadow-xs" />
   ) : (
-    <CheckCheck size={10} style={{ color: "var(--color-text-muted)" }} />
+    <Check size={12} className="text-white/80" />
   );
 
   return (
-    <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl relative group ${isTemp ? "opacity-70" : ""}`}
-        style={{
-          background: isMe ? "var(--color-primary)" : "var(--color-surface)",
-          color: isMe ? "#fff" : "var(--color-text)",
-          borderBottomRightRadius: isMe ? "4px" : "16px",
-          borderBottomLeftRadius: isMe ? "16px" : "4px",
-          border: isMe ? "none" : "1px solid var(--color-border)",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-        }}>
-        {attachmentUrl && <img src={attachmentUrl} alt="Attachment" className="mb-2 rounded-lg max-w-full max-h-40 object-cover" loading="lazy" />}
-        <p className="text-sm whitespace-pre-wrap break-words">{content}</p>
-        <div className="flex items-center justify-end gap-1 mt-1">
-          <span className="text-[10px]" style={{ color: isMe ? "rgba(255,255,255,0.7)" : "var(--color-text-muted)" }}>
+    <div className={`flex w-full ${isMe ? "justify-end pl-10" : "justify-start pr-10"} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+      <div 
+        className={`relative group flex flex-col gap-1 max-w-[85%] sm:max-w-[75%] px-3.5 py-2.5 shadow-sm transition-all ${
+          isTemp ? "opacity-70 scale-[0.98]" : "scale-100"
+        } ${
+          isMe 
+            ? "bg-gradient-to-br from-primary to-primary-dark text-white rounded-2xl rounded-br-sm" 
+            : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-700/50 rounded-2xl rounded-bl-sm"
+        }`}
+      >
+        {attachmentUrl && (
+          <div className="overflow-hidden rounded-xl mb-1 border border-black/5 dark:border-white/5">
+            <img src={attachmentUrl} alt="Attachment" className="max-w-full max-h-48 object-cover hover:scale-105 transition-transform duration-500 cursor-zoom-in" loading="lazy" />
+          </div>
+        )}
+        
+        {content && (
+          <p className="text-[15px] leading-snug whitespace-pre-wrap break-words">{content}</p>
+        )}
+        
+        <div className={`flex items-center gap-1.5 mt-0.5 select-none ${isMe ? "justify-end" : "justify-start"}`}>
+          <span className={`text-[10px] font-medium ${isMe ? "text-white/70" : "text-slate-400 dark:text-slate-500"}`}>
             {timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
-            {isTemp ? " · Sending…" : ""}
           </span>
           {isMe && statusIcon}
         </div>
+
         {onDelete && (
-          <button onClick={(e) => { e.stopPropagation(); if (confirm("Delete this message?")) onDelete(); }}
-            className="absolute -top-2 -right-2 p-1 rounded-full bg-red-100 hover:bg-red-200 opacity-0 group-hover:opacity-100 transition-opacity"
-            aria-label="Delete message" style={{ color: "var(--color-error)" }}>
-            <Trash2 size={12} />
+          <button 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              triggerHaptic();
+              onDelete(); 
+            }}
+            className="absolute top-1/2 -translate-y-1/2 p-2 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 opacity-0 group-hover:opacity-100 transition-all shadow-xs scale-90 group-hover:scale-100"
+            style={{ [isMe ? 'left' : 'right']: '-36px' }}
+            aria-label="Delete message"
+          >
+            <Trash2 size={14} />
           </button>
         )}
       </div>

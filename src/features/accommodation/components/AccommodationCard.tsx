@@ -81,11 +81,6 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
       <div className="p-4">
         <div className="flex items-start justify-between gap-1">
           <h3 className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>{listing.title}</h3>
-          {(listing as any).updated_at && listing.created_at && (new Date((listing as any).updated_at).getTime() - new Date(listing.created_at).getTime() > 60000) && (
-            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 shrink-0 italic">
-              Edited
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-1.5 mt-1">
           <MapPin size={12} style={{ color: "var(--color-text-muted)" }} />
@@ -121,6 +116,19 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
         {listing.description && (
           <p className="text-xs mt-2 line-clamp-2" style={{ color: "var(--color-text-secondary)" }}>{listing.description}</p>
         )}
+        
+        <div className="flex flex-col gap-0.5 mt-2">
+          {listing.created_at && (
+            <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              Listed {new Date(listing.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
+          )}
+          {(listing as any).updated_at && listing.created_at && (new Date((listing as any).updated_at).getTime() - new Date(listing.created_at).getTime() > 60000) && (
+            <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              Edited {new Date((listing as any).updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
+          )}
+        </div>
 
         <div className="mt-3 flex items-center justify-between">
           <span className="text-base font-bold" style={{ color: "var(--color-primary)" }}>

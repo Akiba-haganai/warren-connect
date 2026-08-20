@@ -43,7 +43,11 @@ export default function NotificationItem({ notification, onMarkRead, onDelete }:
         : "/feed");
 
     if (targetLink) {
-      navigate(targetLink);
+      if (targetLink.startsWith("http")) {
+        window.location.href = targetLink;
+      } else {
+        navigate(targetLink);
+      }
     }
   };
 

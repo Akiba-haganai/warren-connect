@@ -152,6 +152,11 @@ export default function MessagesPage() {
     if (!conv) return;
     const otherUserId = conv.user1_id === user.id ? conv.user2_id : conv.user1_id;
 
+    // Optional haptic tap
+    if (typeof window !== "undefined" && window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(50);
+    }
+
     sendMessage.mutate(
       { conversationId: activeId, senderId: user.id, content: input.trim() },
       {
@@ -234,13 +239,14 @@ export default function MessagesPage() {
 
   if (activeId && activeConversation) {
     return (
-      <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "var(--color-bg)" }}>
-        {/* Header */}
-        <div
-          className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
-          style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
-        >
-          <button aria-label="Back" onClick={() => setActiveId(null)} className="p-1 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">
+      <div className="fixed inset-0 z-[60] flex flex-col bg-slate-50 dark:bg-slate-950 animate-in fade-in slide-in-from-right-4 duration-300">
+        {/* Header (Glassmorphic) */}
+        <div className="flex items-center gap-3 px-4 py-3 flex-shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm z-10 pt-[max(env(safe-area-inset-top),12px)]">
+          <button 
+            aria-label="Back" 
+            onClick={() => setActiveId(null)} 
+            className="p-1.5 rounded-full text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
             <ArrowLeft size={20} />
           </button>
           
@@ -249,27 +255,34 @@ export default function MessagesPage() {
             <Link to={`/user/${activeOtherId}`} className="flex items-center gap-3 min-w-0 flex-1 group hover:opacity-90 transition-opacity">
               {activeOtherProfile?.avatar_url ? (
                 <div className="relative shrink-0">
-                  <img src={activeOtherProfile.avatar_url} className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500/20 shadow-xs group-hover:scale-105 transition-transform" alt="" />
-                  {activeOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-surface rounded-full" />}
+                  <img src={activeOtherProfile.avatar_url} className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800 shadow-xs group-hover:scale-105 transition-transform" alt="" />
+                  {activeOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />}
                 </div>
               ) : (
                 <div className="relative shrink-0">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-xs bg-primary group-hover:scale-105 transition-transform">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-xs bg-gradient-to-br from-primary to-primary-dark group-hover:scale-105 transition-transform">
                     {(activeOtherProfile?.full_name?.[0] || "?").toUpperCase()}
                   </div>
-                  {activeOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-surface rounded-full" />}
+                  {activeOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />}
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <span className="font-bold text-sm text-slate-900 dark:text-white block truncate group-hover:text-primary transition-colors">
+                <span className="font-bold text-[15px] text-slate-900 dark:text-white block truncate group-hover:text-primary transition-colors">
                   {activeOtherProfile?.full_name || "View Profile"}
                 </span>
                 {isTyping ? (
-                  <p className="text-xs italic text-primary">typing…</p>
+                  <p className="text-xs font-semibold text-primary flex items-center gap-1">
+                    typing
+                    <span className="flex gap-0.5 mt-1">
+                      <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </span>
+                  </p>
                 ) : activeOnline ? (
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Online now</p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Online now</p>
                 ) : activeOtherProfile?.last_seen ? (
-                  <p className="text-xs text-slate-400">Last seen {timeAgo(activeOtherProfile.last_seen)}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Last seen {timeAgo(activeOtherProfile.last_seen)}</p>
                 ) : null}
               </div>
             </Link>
@@ -279,8 +292,12 @@ export default function MessagesPage() {
             </div>
           )}
 
-          <button onClick={() => handleDeleteConversation(activeId)} className="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-950/50 text-slate-400 hover:text-red-500 transition-colors" aria-label="Delete conversation">
-            <Trash2 size={16} />
+          <button 
+            onClick={() => handleDeleteConversation(activeId)} 
+            className="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 transition-colors" 
+            aria-label="Delete conversation"
+          >
+            <Trash2 size={18} />
           </button>
         </div>
 
@@ -288,12 +305,15 @@ export default function MessagesPage() {
         <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2">
           {msgsLoading ? (
             <div className="flex items-center justify-center flex-1">
-              <Loader2 size={24} className="animate-spin" style={{ color: "var(--color-text-muted)" }} />
+              <Loader2 size={24} className="animate-spin text-primary" />
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center flex-1 gap-2">
-              <MessageCircle size={48} style={{ color: "var(--color-border)", opacity: 0.6 }} />
-              <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No messages yet — say hello!</p>
+            <div className="flex flex-col items-center justify-center flex-1 gap-3">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                <MessageCircle size={28} className="text-primary" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">No messages yet</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Say hello to start the conversation!</p>
             </div>
           ) : (
             messages.map((msg) => (
@@ -309,31 +329,42 @@ export default function MessagesPage() {
               />
             ))
           )}
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-2" />
         </div>
 
-        {/* Input */}
-        <div
-          className="flex items-end gap-2 px-4 py-3 flex-shrink-0"
-          style={{ background: "var(--color-surface)", borderTop: "1px solid var(--color-border)", paddingBottom: "max(12px, env(safe-area-inset-bottom))", boxShadow: "0 -1px 4px rgba(0,0,0,0.04)" }}
-        >
-          <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-full" style={{ color: "var(--color-text-muted)" }}>
-            <ImagePlus size={20} />
+        {/* Input (Glassmorphic) */}
+        <div className="flex items-end gap-2 px-4 py-3 flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_12px_rgba(0,0,0,0.02)] pb-[max(12px,env(safe-area-inset-bottom))]">
+          <button 
+            onClick={() => fileInputRef.current?.click()} 
+            className="p-2.5 rounded-full text-slate-500 hover:text-primary hover:bg-primary/10 transition-colors focus:outline-none shrink-0"
+          >
+            <ImagePlus size={22} />
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-          <div className="flex-1 rounded-2xl" style={{ background: "var(--color-bg)", padding: "0.375rem" }}>
+          
+          <div className="flex-1 rounded-3xl bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30 transition-all flex items-end min-h-[44px]">
             <input
-              className="w-full bg-transparent px-3 py-2 text-sm outline-none"
-              style={{ color: "var(--color-text)", border: "none" }}
-              placeholder="Message…"
+              className="w-full bg-transparent px-4 py-3 text-[15px] outline-none text-slate-900 dark:text-white placeholder:text-slate-400"
+              placeholder="Type a message..."
               value={input}
               onChange={(e) => { setInput(e.target.value); handleTyping(); }}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               aria-label="Type a message"
             />
           </div>
-          <button onClick={handleSend} disabled={sendMessage.isPending || !input.trim()} className="flex items-center justify-center rounded-2xl px-4 py-2.5 transition-all active:scale-95" style={{ background: input.trim() ? "var(--color-primary)" : "var(--color-border)", color: input.trim() ? "#fff" : "var(--color-text-muted)", minWidth: 44 }} aria-label="Send message">
-            {sendMessage.isPending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+          
+          <button 
+            onClick={handleSend} 
+            disabled={sendMessage.isPending || !input.trim()} 
+            className="flex items-center justify-center rounded-full h-11 w-11 transition-all active:scale-95 disabled:opacity-50 shrink-0" 
+            style={{ 
+              background: input.trim() ? "var(--color-primary)" : "var(--color-surface)", 
+              color: input.trim() ? "#fff" : "var(--color-text-muted)",
+              boxShadow: input.trim() ? "0 4px 12px rgba(0, 137, 123, 0.25)" : "none"
+            }} 
+            aria-label="Send message"
+          >
+            {sendMessage.isPending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className={input.trim() ? "ml-0.5" : ""} />}
           </button>
         </div>
       </div>
@@ -342,38 +373,48 @@ export default function MessagesPage() {
 
   // Conversation list
   return (
-    <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
-      <div className="sticky top-0 z-10 px-4 py-4" style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-        <h1 className="text-lg font-bold tracking-tight" style={{ color: "var(--color-text)" }}>Messages</h1>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
+      <div className="sticky top-0 z-30 px-4 py-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm pt-[max(env(safe-area-inset-top),12px)]">
+        <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Messages</h1>
         <div className="relative mt-3">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--color-text-muted)" }} />
-          <input className="input-field pl-9 text-sm" placeholder="Search conversations…" value={conversationSearch} onChange={(e) => setConversationSearch(e.target.value)} />
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input 
+            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-sm outline-none text-slate-900 dark:text-white placeholder:text-slate-500 border border-slate-200/50 dark:border-slate-700/50 focus:ring-2 focus:ring-primary/20 transition-all" 
+            placeholder="Search conversations..." 
+            value={conversationSearch} 
+            onChange={(e) => setConversationSearch(e.target.value)} 
+          />
         </div>
       </div>
 
-      <div className="px-4 pt-3 pb-8">
+      <div className="px-4 pt-4 pb-8 max-w-3xl mx-auto">
         {!isOnlineApp && (
-          <div className="flex items-center gap-2 mb-3 text-xs text-yellow-600 bg-yellow-50 p-2 rounded-lg">
+          <div className="flex items-center gap-2 mb-4 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-3 rounded-xl shadow-xs">
             <WifiOff size={14} /> You are offline — messages may not send
           </div>
         )}
+        
         {convsLoading ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="card p-4 flex items-center gap-3">
-                <div className="skeleton rounded-full" style={{ width: 44, height: 44, flexShrink: 0 }} />
+              <div key={i} className="flex items-center gap-3 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 animate-pulse shrink-0" />
                 <div className="flex flex-col gap-2 flex-1">
-                  <div className="skeleton rounded" style={{ height: 12, width: "50%" }} />
-                  <div className="skeleton rounded" style={{ height: 10, width: "70%" }} />
+                  <div className="h-3.5 bg-slate-100 dark:bg-slate-800 rounded w-1/2 animate-pulse" />
+                  <div className="h-2.5 bg-slate-50 dark:bg-slate-800/60 rounded w-3/4 animate-pulse" />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredConversations.length === 0 ? (
-          <div className="rounded-3xl py-20 text-center" style={{ background: "var(--color-surface)", border: "1px dashed var(--color-border)" }}>
-            <MessageCircle size={40} style={{ color: "var(--color-text-muted)", margin: "0 auto 12px", opacity: 0.5 }} />
-            <h3 className="text-base font-bold mb-1" style={{ color: "var(--color-text)" }}>No messages yet</h3>
-            <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>Start a conversation by contacting a seller or landlord.</p>
+          <div className="rounded-3xl p-12 text-center bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 mt-6 shadow-sm">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <MessageCircle size={28} className="text-primary" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">No messages yet</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-[250px] mx-auto">
+              Start a conversation by contacting a seller or landlord.
+            </p>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
