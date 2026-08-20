@@ -19,6 +19,7 @@ export default function MainLayout() {
 
 
       <div
+        id="main-scroll-container"
         className="flex-1 overflow-y-auto"
         style={{
           WebkitOverflowScrolling: "touch",

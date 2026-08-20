@@ -1,12 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { Home, Store, Building2, MessageCircle, Users } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth/authStore";
 import { notificationService } from "@/services/notifications/notificationService";
 import { roommateService } from "@/services/roommates/roommateService";
 import { supabase } from "@/lib/supabase/client";
+import { triggerHaptic } from "@/utils/haptic";
 
 const tabs = [
   { label: "Home",      path: "/feed",          icon: Home },
@@ -20,6 +21,9 @@ export default function BottomNav() {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const scrollTimeout = useRef<any>(null);
 
   const { data: notifications } = useQuery({
     queryKey: ["notifications"],
@@ -59,17 +63,59 @@ export default function BottomNav() {
     return () => { supabase.removeChannel(channel); };
   }, [user, queryClient]);
 
+  // Hide on scroll down, show on scroll up behavior
+  useEffect(() => {
+    const container = document.getElementById("main-scroll-container");
+    if (!container) return;
+
+    const handleScroll = () => {
+      const currentScrollY = container.scrollTop;
+      const maxScroll = container.scrollHeight - container.clientHeight;
+
+      // Always show if we are near the top or bottom
+      if (currentScrollY < 50 || currentScrollY >= maxScroll - 50) {
+        setIsVisible(true);
+      } else {
+        // Show if scrolling up, hide if scrolling down
+        const diff = currentScrollY - lastScrollY.current;
+        if (diff > 10) {
+          setIsVisible(false);
+        } else if (diff < -10) {
+          setIsVisible(true);
+        }
+      }
+      
+      lastScrollY.current = currentScrollY;
+
+      // Auto-show after user stops scrolling for a bit so the nav is never totally lost
+      clearTimeout(scrollTimeout.current);
+      scrollTimeout.current = setTimeout(() => {
+        setIsVisible(true);
+      }, 1500);
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      clearTimeout(scrollTimeout.current);
+    };
+  }, [location.pathname]);
+
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 glass-surface"
+    <motion.nav
+      initial={{ y: 0 }}
+      animate={{ y: isVisible ? 0 : "100%" }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="fixed bottom-0 left-0 right-0"
       style={{
         zIndex: 50,
-        borderTop: "1px solid var(--color-border)",
         paddingBottom: "env(safe-area-inset-bottom)",
-        boxShadow: "0 -4px 20px rgba(15,23,42,0.06)",
       }}
     >
-      <div className="flex items-stretch h-16 max-w-lg mx-auto relative">
+      {/* Premium Glassmorphism Backdrop */}
+      <div className="absolute inset-0 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-t border-slate-200/50 dark:border-slate-800/50 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.1)]" />
+
+      <div className="flex items-stretch h-16 max-w-lg mx-auto relative px-2">
         {tabs.map((tab) => {
           const active =
             tab.path === "/"
@@ -84,52 +130,81 @@ export default function BottomNav() {
             <Link
               key={tab.path}
               to={tab.path}
-              className="flex-1 flex flex-col items-center justify-center gap-1 relative transition-colors"
+              onClick={() => {
+                if (!active) triggerHaptic();
+              }}
+              className="flex-1 flex flex-col items-center justify-center gap-1 relative touch-manipulation group"
               style={{
-                color: active ? "var(--color-primary)" : "var(--color-text-muted)",
                 textDecoration: "none",
+                WebkitTapHighlightColor: "transparent"
               }}
             >
+              {/* Animated Pill Background */}
               {active && (
-                <motion.span
+                <motion.div
                   layoutId="bottom-nav-pill"
-                  className="absolute inset-x-2 inset-y-1.5 rounded-xl"
-                  style={{ background: "var(--color-accent-light)" }}
-                  transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                  className="absolute inset-x-2 inset-y-1.5 rounded-2xl bg-primary/10 dark:bg-primary/20"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
 
-              <div className={`relative z-10 ${active ? "nav-bounce" : ""}`}>
-                <Icon
-                  size={20}
-                  strokeWidth={active ? 2.5 : 1.8}
-                  style={{ color: active ? "var(--color-primary)" : "var(--color-text-muted)" }}
-                />
-                {showNotifBadge && (
-                  <span className="absolute -top-1.5 -right-3 min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                )}
-                {showMatchBadge && (
-                  <span className="absolute -top-1.5 -right-3 min-w-[20px] h-5 bg-purple-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                    {matchesCount > 9 ? "9+" : matchesCount}
-                  </span>
-                )}
+              <div className="relative z-10 flex items-center justify-center">
+                <motion.div
+                  animate={{ 
+                    scale: active ? 1.15 : 1,
+                    y: active ? -2 : 0 
+                  }}
+                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                >
+                  <Icon
+                    size={22}
+                    strokeWidth={active ? 2.5 : 2}
+                    className="transition-colors duration-200"
+                    style={{ 
+                      color: active ? "var(--color-primary)" : "var(--color-text-muted)",
+                      opacity: active ? 1 : 0.7 
+                    }}
+                  />
+                </motion.div>
+                
+                {/* Notification Indicators (Minimal Dots) */}
+                <AnimatePresence>
+                  {showNotifBadge && (
+                    <motion.span 
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full shadow-sm ring-2 ring-white dark:ring-slate-900"
+                    />
+                  )}
+                  {showMatchBadge && (
+                    <motion.span 
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      className="absolute top-0 right-0 w-2.5 h-2.5 bg-purple-500 rounded-full shadow-sm ring-2 ring-white dark:ring-slate-900"
+                    />
+                  )}
+                </AnimatePresence>
               </div>
 
-              <span
-                className="relative z-10 text-[10px] font-semibold leading-none"
+              <motion.span
+                animate={{
+                  y: active ? -1 : 0,
+                  opacity: active ? 1 : 0.7
+                }}
+                className="relative z-10 text-[10px] leading-none transition-colors duration-200"
                 style={{
                   color: active ? "var(--color-primary)" : "var(--color-text-muted)",
                   fontWeight: active ? 700 : 500,
                 }}
               >
                 {tab.label}
-              </span>
+              </motion.span>
             </Link>
           );
         })}
       </div>
-    </nav>
+    </motion.nav>
   );
 }
