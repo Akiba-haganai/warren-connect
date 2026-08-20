@@ -1,28 +1,22 @@
 /**
  * Vercel Edge Middleware for Dynamic OpenGraph Previews
- * Intercepts requests ONLY from social crawlers (WhatsApp, Facebook, Twitter, LinkedIn)
+ * Intercepts requests ONLY from social crawlers (WhatsApp, Facebook, Twitter, LinkedIn, etc.)
  * to serve pre-rendered OpenGraph HTML meta tags.
- * Regular human browser visitors pass through untouched to the Vite SPA.
+ * Regular human visitors pass through untouched directly to the Vite SPA.
  */
 
 export const config = {
   matcher: ["/marketplace/:id*", "/accommodation/:id*"],
 };
 
-const SUPABASE_URL = "https://wryuhcujgslhwtvpxeey.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyeXVoY3VqZ3NsaHd0dnB4ZWV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3NDkyMzQsImV4cCI6MjA4NjMyNTIzNH0.R2gO51lZ89xL1mU0d6768a48-qS5-yQ5c2ZgO51lZ89";
-
-const DEFAULT_BANNER = "https://plawza.com/icons/og-image-1200x630.png";
-
 export default async function middleware(req: Request) {
   const userAgent = req.headers.get("user-agent") || "";
   const isCrawler =
-    /facebookexternalhit|WhatsApp|Twitterbot|LinkedInBot|TelegramBot|Slackbot|discordbot/i.test(
+    /facebookexternalhit|WhatsApp|Twitterbot|LinkedInBot|TelegramBot|Slackbot|discordbot|Applebot|Pinterest|Googlebot|bingbot/i.test(
       userAgent
     );
 
-  // For regular human visitors, pass through to Vite SPA index.html
+  // For regular human visitors, pass through directly to the Vite SPA shell
   if (!isCrawler) {
     return;
   }
@@ -35,56 +29,80 @@ export default async function middleware(req: Request) {
 
   if (!resourceId) return;
 
-  let title = "PLAWZA — Find places. Find opportunities.";
-  let description = "Campus marketplace, accommodation, businesses and student culture.";
-  let imageUrl = DEFAULT_BANNER;
+  const supabaseUrl =
+    process.env.VITE_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    "https://dhxgdapxzovsjdgqoore.supabase.co";
+
+  const supabaseAnonKey =
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRoeGdkYXB4em92c2pkZ3Fvb3JlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI2MTYsImV4cCI6MjA5NzcwODYxNn0.aPwZ7MzbP1LujmAugIp_x-vc6lVkuCeW7S-jFqZFPSU";
+
+  const defaultBanner = `${url.origin}/og-image-1200x630.png`;
+
+  let title = "PLAWZA — Campus Marketplace & Student Hub";
+  let description = "Find student deals, campus housing, and connect with your campus community on PLAWZA.";
+  let imageUrl = defaultBanner;
 
   try {
     if (resourceType === "marketplace") {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/products?id=eq.${resourceId}&select=title,description,price,image_url,moderation_status`,
+        `${supabaseUrl}/rest/v1/products?id=eq.${encodeURIComponent(resourceId)}&select=title,description,price,image_url,moderation_status`,
         {
           headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
           },
         }
       );
       const data = await res.json();
-      if (data && data[0] && data[0].moderation_status === "approved") {
+      if (Array.isArray(data) && data[0]) {
         const item = data[0];
-        title = `${item.title} | PLAWZA Marketplace`;
-        description = `K${Number(item.price).toLocaleString()} • ${
-          item.description ? item.description.slice(0, 150) : "Available on PLAWZA Marketplace"
-        }`;
+        title = `${item.title} - K${Number(item.price || 0).toLocaleString()} | PLAWZA`;
+        if (item.description) {
+          description = item.description.slice(0, 160);
+        }
         if (item.image_url && !item.image_url.includes("pending-uploads")) {
-          imageUrl = item.image_url;
+          if (item.image_url.startsWith("http")) {
+            imageUrl = item.image_url;
+          } else {
+            const bucket = item.image_url.startsWith("product-images/") ? "product-images" : "public-images";
+            const cleanPath = item.image_url.replace(/^(product-images|public-images)\//, "");
+            imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
+          }
         }
       }
     } else if (resourceType === "accommodation") {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/accommodations?id=eq.${resourceId}&select=title,description,monthly_rent,location,image_url,moderation_status`,
+        `${supabaseUrl}/rest/v1/accommodations?id=eq.${encodeURIComponent(resourceId)}&select=title,description,monthly_rent,location,image_url,moderation_status`,
         {
           headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
           },
         }
       );
       const data = await res.json();
-      if (data && data[0] && data[0].moderation_status === "approved") {
+      if (Array.isArray(data) && data[0]) {
         const item = data[0];
-        title = `${item.title} | PLAWZA Housing`;
-        description = `K${Number(item.monthly_rent).toLocaleString()}/mo • ${
-          item.location || "Student Housing"
-        } — ${item.description ? item.description.slice(0, 120) : ""}`;
+        title = `${item.title} - K${Number(item.monthly_rent || 0).toLocaleString()}/mo | PLAWZA`;
+        description = `${item.location ? `${item.location} • ` : ""}${
+          item.description ? item.description.slice(0, 140) : "Student housing listing on PLAWZA"
+        }`;
         if (item.image_url && !item.image_url.includes("pending-uploads")) {
-          imageUrl = item.image_url;
+          if (item.image_url.startsWith("http")) {
+            imageUrl = item.image_url;
+          } else {
+            const bucket = item.image_url.startsWith("accommodation-images/") ? "accommodation-images" : "public-images";
+            const cleanPath = item.image_url.replace(/^(accommodation-images|public-images)\//, "");
+            imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
+          }
         }
       }
     }
-  } catch {
-    // Fall back to default title & banner on network error
+  } catch (err) {
+    console.error("[MIDDLEWARE-OG] Fetch error:", err);
   }
 
   const html = `<!DOCTYPE html>
@@ -93,14 +111,17 @@ export default async function middleware(req: Request) {
   <meta charset="UTF-8" />
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}" />
+  
   <!-- OpenGraph Meta Tags -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="${escapeHtml(req.url)}" />
   <meta property="og:title" content="${escapeHtml(title)}" />
   <meta property="og:description" content="${escapeHtml(description)}" />
   <meta property="og:image" content="${escapeHtml(imageUrl)}" />
+  <meta property="og:image:secure_url" content="${escapeHtml(imageUrl)}" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
+
   <!-- Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="${escapeHtml(req.url)}" />
@@ -119,7 +140,7 @@ export default async function middleware(req: Request) {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "public, max-age=3600, s-maxage=86400",
+      "Cache-Control": "public, max-age=60, s-maxage=3600",
     },
   });
 }
