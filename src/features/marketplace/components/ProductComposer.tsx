@@ -350,7 +350,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic"
               multiple
               className="hidden"
               onChange={handleImages}
