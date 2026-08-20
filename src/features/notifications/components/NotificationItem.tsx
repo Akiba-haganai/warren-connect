@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Bell, MessageCircle, Heart, ShoppingBag, Home, Trash2 } from "lucide-react";
 import type { Tables } from "@/types/database/database.types";
+import { triggerHaptic } from "@/utils/haptic";
 
 type Notification = Tables<"notifications">;
 
