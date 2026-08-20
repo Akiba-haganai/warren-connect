@@ -138,21 +138,32 @@ export default function AccommodationComposer({
     if (filesToUpload.length === 0) return;
 
     setUploadingImage(true);
-    try {
-      const newItems = await Promise.all(
-        filesToUpload.map(async (file) => {
-          const compressed = await compressImage(file, 800, 0.7);
-          const dataUrl = await fileToDataUrl(compressed);
-          const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-          return { path: fileName, previewUrl: dataUrl };
-        })
-      );
-      setUploadedImages((prev) => [...prev, ...newItems]);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to process selected photo");
-    } finally {
-      setUploadingImage(false);
+
+    const newItems: { path: string; previewUrl: string }[] = [];
+    const failures: string[] = [];
+
+    for (const file of filesToUpload) {
+      try {
+        const compressed = await compressImage(file, 800, 0.7);
+        const dataUrl = await fileToDataUrl(compressed);
+        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        newItems.push({ path: fileName, previewUrl: dataUrl });
+      } catch (err: any) {
+        console.warn(`Failed to process "${file.name}":`, err);
+        failures.push(err?.message || `Couldn't process "${file.name}"`);
+      }
     }
+
+    if (newItems.length > 0) {
+      setUploadedImages((prev) => [...prev, ...newItems]);
+    }
+
+    if (failures.length > 0) {
+      const uniqueMessages = Array.from(new Set(failures)).slice(0, 3);
+      uniqueMessages.forEach((msg) => toast.error(msg));
+    }
+
+    setUploadingImage(false);
   };
 
   const handleImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -491,7 +502,7 @@ export default function AccommodationComposer({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*,image/heic,image/heif,image/webp,.jpg,.jpeg,.png,.webp"
+                    accept="image/*"
                     multiple
                     className="hidden"
                     onChange={handleImages}
