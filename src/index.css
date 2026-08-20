@@ -98,9 +98,10 @@
   --color-bg: #0F172A;
   --color-surface: #1E293B;
 
-  --color-text: #F1F5F9;
-  --color-text-secondary: #94A3B8;
-  --color-text-muted: #64748B;
+  /* Boosted contrast — was too muted for glassmorphism overlays */
+  --color-text: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #94A3B8;
 
   --color-border: #334155;
 
@@ -242,6 +243,7 @@ img {
   color: var(--color-text);
 }
 .input-field::placeholder { color: #64748B; font-size: 0.8125rem; font-weight: 400; }
+.dark .input-field { color: #F8FAFC; background: rgba(30,41,59,0.95); }
 .dark .input-field::placeholder { color: #94A3B8; }
 .input-field:focus {
   border-color: var(--color-primary);
@@ -306,7 +308,13 @@ img {
 }
 
 .dark .field-label {
-  color: #F1F5F9;
+  color: #F8FAFC;
+}
+
+/* Ensure textarea also gets explicit dark mode text */
+.dark textarea.input-field {
+  color: #F8FAFC;
+  background: rgba(30,41,59,0.95);
 }
 
 /* ===== DIVIDER ===== */

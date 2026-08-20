@@ -94,12 +94,14 @@ export default function BottomNav() {
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              {/* Active Pill Highlight - Fully Dark/Light Mode Aware */}
+              {/* Active Pill Highlight */}
               {active && (
                 <motion.span
                   layoutId="bottom-nav-pill"
                   className="absolute inset-x-1.5 inset-y-1.5 rounded-2xl"
-                  style={{ background: "var(--color-accent-light)" }}
+                  style={{
+                    background: "color-mix(in srgb, var(--color-primary) 15%, transparent)",
+                  }}
                   transition={{ type: "spring", stiffness: 420, damping: 32 }}
                 />
               )}
@@ -116,7 +118,7 @@ export default function BottomNav() {
                     size={21}
                     strokeWidth={active ? 2.5 : 1.9}
                     style={{
-                      color: active ? "var(--color-primary)" : "var(--color-text-muted)",
+                      color: active ? "var(--color-primary)" : "var(--color-text-secondary)",
                       transition: "color 0.2s ease",
                     }}
                   />
@@ -155,7 +157,7 @@ export default function BottomNav() {
                 }}
                 className="relative z-10 text-[10px] leading-none"
                 style={{
-                  color: active ? "var(--color-primary)" : "var(--color-text-muted)",
+                  color: active ? "var(--color-primary)" : "var(--color-text-secondary)",
                   fontWeight: active ? 700 : 500,
                   transition: "color 0.2s ease",
                 }}

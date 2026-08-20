@@ -90,12 +90,24 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   // Instant local preview generation: Zero network dependency, survives process reclaims
   const handleSelectedFiles = async (files: File[]) => {
     if (files.length === 0 || !user) return;
+
+    // Enforce per-session cap — accumulate across multiple picks
+    const slotsLeft = MAX_PHOTOS - uploadedImages.length;
+    if (slotsLeft <= 0) {
+      toast.error(`Maximum ${MAX_PHOTOS} photos allowed.`);
+      return;
+    }
+    const filesToProcess = files.slice(0, slotsLeft);
+    if (files.length > slotsLeft) {
+      toast(`Only ${slotsLeft} more photo${slotsLeft === 1 ? "" : "s"} can be added.`, { icon: "ℹ️" });
+    }
+
     setUploadingImage(true);
 
     const newItems: { path: string; previewUrl: string }[] = [];
     const failures: string[] = [];
 
-    for (const file of files) {
+    for (const file of filesToProcess) {
       try {
         const compressed = await compressImage(file, 800, 0.7);
         const dataUrl = await fileToDataUrl(compressed);
@@ -112,8 +124,6 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
     }
 
     if (failures.length > 0) {
-      // Show a distinct toast per unique failure reason, capped so a big
-      // multi-select failure doesn't spam the screen with duplicate toasts.
       const uniqueMessages = Array.from(new Set(failures)).slice(0, 3);
       uniqueMessages.forEach((msg) => toast.error(msg));
     }
