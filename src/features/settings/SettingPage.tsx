@@ -80,18 +80,37 @@ export default function SettingsPage() {
     triggerHaptic();
     setTestingPush(true);
     try {
-      if (pushPerm === "granted" && "Notification" in window) {
-        new Notification("PLAWZA Alert", {
+      // Request permission first if not yet granted
+      if ("Notification" in window && Notification.permission === "default") {
+        const perm = await Notification.requestPermission();
+        setPushPerm(perm);
+      }
+
+      if (!user) {
+        toast.error("You must be logged in to test notifications.");
+        return;
+      }
+
+      // Insert a real in-app notification so the bell badge lights up too
+      await supabase.from("notifications").insert({
+        user_id: user.id,
+        type: "system",
+        title: "Test Notification",
+        body: "🔔 Test notification — your notifications are working!",
+        is_read: false,
+      });
+
+      // Fire a browser-level push if permission is granted
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("PLAWZA", {
           body: "🔔 Push notifications are working perfectly on this device!",
           icon: "/icons/icon-192.png",
-          badge: "/icons/icon-72.png",
         });
-        toast.success("Test notification sent!");
-      } else {
-        toast.error("Please enable push notifications first.");
       }
+
+      toast.success("Test notification sent! Check your notifications tab.");
     } catch {
-      toast.error("Could not trigger notification.");
+      toast.error("Could not send test notification.");
     } finally {
       setTestingPush(false);
     }

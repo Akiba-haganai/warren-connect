@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { MapPin, Plus, X, Loader2, Building2, DoorClosed, BedDouble } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { accommodationService } from "@/services/accommodation/accommodationService";
@@ -30,7 +30,6 @@ export default function AccommodationComposer({
   initialParentId,
 }: Props) {
   const user = useAuthStore((s) => s.user);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showImageModal, setShowImageModal] = useState(false);
 
   // Basic fields
@@ -164,12 +163,6 @@ export default function AccommodationComposer({
     }
 
     setUploadingImage(false);
-  };
-
-  const handleImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    await handleSelectedFiles(files);
-    e.target.value = "";
   };
 
   const removeImage = (index: number) => {
@@ -475,41 +468,30 @@ export default function AccommodationComposer({
                 </div>
               ))}
               {uploadedImages.length < 5 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setShowImageModal(true)}
-                    disabled={uploadingImage}
-                    className="flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-medium cursor-pointer disabled:opacity-50"
-                    style={{
-                      background: "var(--color-bg)",
-                      border: "1.5px dashed var(--color-border)",
-                      color: "var(--color-text-secondary)",
-                    }}
-                  >
-                    {uploadingImage ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin text-primary" />
-                        <span>Uploading…</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={16} />
-                        <span>Add photo</span>
-                      </>
-                    )}
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*,image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic"
-                    multiple
-                    className="hidden"
-                    onChange={handleImages}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label="Select accommodation images"
-                  />
-                </>
+                <button
+                  type="button"
+                  onClick={() => !uploadingImage && setShowImageModal(true)}
+                  disabled={uploadingImage}
+                  className="flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-medium cursor-pointer disabled:opacity-50 transition-colors"
+                  style={{
+                    background: "var(--color-bg)",
+                    border: "1.5px dashed var(--color-border)",
+                    color: "var(--color-text-secondary)",
+                  }}
+                  aria-label="Add photo"
+                >
+                  {uploadingImage ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin text-primary" />
+                      <span>Processing…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={16} />
+                      <span>{uploadedImages.length === 0 ? "Add photo" : "Add more"}</span>
+                    </>
+                  )}
+                </button>
               )}
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { productService } from "@/services/products/productService";
@@ -25,8 +25,8 @@ interface UploadedImageItem {
 
 export default function ProductComposer({ onClose, onCreated, initialShopId }: Props) {
   const user = useAuthStore((s) => s.user);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showImageModal, setShowImageModal] = useState(false);
+  const MAX_PHOTOS = 5;
   
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -119,12 +119,6 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
     }
 
     setUploadingImage(false);
-  };
-
-  const handleImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    await handleSelectedFiles(files);
-    e.target.value = "";
   };
 
   const removeImage = (index: number) => {
@@ -315,48 +309,55 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
             <TagInput selectedTags={tags} onChange={setTags} />
           </div>
           <div>
-            <label className="field-label">Photos (optional)</label>
-            {uploadedImages.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-2 py-2">
-                {uploadedImages.map((imgItem, i) => (
-                  <div key={imgItem.path || i} className="relative flex-shrink-0 w-20 h-20">
-                    <img src={imgItem.previewUrl} alt="" className="w-full h-full rounded-lg object-cover" />
-                    <button type="button" onClick={() => removeImage(i)} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center">
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setShowImageModal(true)}
-              disabled={uploadingImage}
-              className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-sm font-medium cursor-pointer disabled:opacity-50"
-              style={{ background: "var(--color-bg)", border: "1.5px dashed var(--color-border)", color: "var(--color-text-secondary)" }}
-            >
-              {uploadingImage ? (
-                <>
-                  <Loader2 size={16} className="animate-spin text-primary" />
-                  <span>Uploading photos…</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={16} />
-                  <span>Add photos</span>
-                </>
+            <label className="field-label">
+              Photos ({uploadedImages.length}/{MAX_PHOTOS})
+            </label>
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              {/* Existing Photo Slots */}
+              {uploadedImages.map((imgItem, i) => (
+                <div key={imgItem.path || i} className="relative rounded-xl overflow-hidden aspect-video border border-border bg-slate-100 dark:bg-slate-800">
+                  <img src={imgItem.previewUrl} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(i)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center bg-black/60 text-white"
+                    aria-label="Remove image"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add Photo Slot (visible while under limit) */}
+              {uploadedImages.length < MAX_PHOTOS && (
+                <button
+                  type="button"
+                  onClick={() => !uploadingImage && setShowImageModal(true)}
+                  disabled={uploadingImage}
+                  className="flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-medium cursor-pointer disabled:opacity-50 transition-colors"
+                  style={{
+                    background: "var(--color-bg)",
+                    border: "1.5px dashed var(--color-border)",
+                    color: "var(--color-text-secondary)",
+                  }}
+                  aria-label="Add photo"
+                >
+                  {uploadingImage ? (
+                    <Loader2 size={16} className="animate-spin text-primary" />
+                  ) : (
+                    <>
+                      <Plus size={16} />
+                      <span>{uploadedImages.length === 0 ? "Add photo" : "Add more"}</span>
+                    </>
+                  )}
+                </button>
               )}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic"
-              multiple
-              className="hidden"
-              onChange={handleImages}
-              onClick={(e) => e.stopPropagation()}
-              aria-label="Select product images"
-            />
+            </div>
+            {uploadingImage && (
+              <p className="text-xs text-center" style={{ color: "var(--color-text-muted)" }}>
+                Processing photo…
+              </p>
+            )}
           </div>
           {priceHint && (
             <div className="px-1">
