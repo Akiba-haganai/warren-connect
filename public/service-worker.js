@@ -9,7 +9,7 @@
  * from it, so stale caches get cleaned up automatically.
  */
 
-const CACHE_VERSION = "v1.0.2";
+const CACHE_VERSION = "v1.0.3";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 
@@ -155,8 +155,12 @@ self.addEventListener("fetch", (event) => {
       } catch {
         const cached = await caches.match(request);
         if (cached) return cached;
-        // Never return Response.error(); delegate to default browser fetch behavior
-        return fetch(request);
+        // Network down and no cache — return a clean 503 so the
+        // browser logs a normal failed-fetch, not an unhandled rejection.
+        return new Response("Network error: offline", {
+          status: 503,
+          statusText: "Service Unavailable",
+        });
       }
     })()
   );
