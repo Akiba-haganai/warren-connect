@@ -34,7 +34,7 @@ export default function PortalTenantsTab({ listings }: Props) {
     if (!user) return;
     const fetchTenants = async () => {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("offline_tenants")
         .select("*")
         .eq("landlord_id", user.id)
@@ -62,7 +62,7 @@ export default function PortalTenantsTab({ listings }: Props) {
         start_date: startDate || new Date().toISOString().split("T")[0],
       };
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("offline_tenants")
         .insert(newTenant)
         .select()
@@ -84,7 +84,7 @@ export default function PortalTenantsTab({ listings }: Props) {
 
   const handleRemoveTenant = async (id: string) => {
     try {
-      const { error } = await supabase.from("offline_tenants").delete().eq("id", id);
+      const { error } = await (supabase as any).from("offline_tenants").delete().eq("id", id);
       if (error) throw error;
       
       setTenants(tenants.filter(t => t.id !== id));
