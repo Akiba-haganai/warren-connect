@@ -1,68 +1,106 @@
 import { useState, useEffect } from "react";
-import { Users, UserPlus, Trash2, Calendar, Building2 } from "lucide-react";
+import { Users, UserPlus, Trash2, Calendar, Building2, Loader2 } from "lucide-react";
 import type { Tables } from "@/types/database/database.types";
+import { supabase } from "@/lib/supabase/client";
+import { useAuthStore } from "@/store/auth/authStore";
 import toast from "react-hot-toast";
 
 type Accommodation = Tables<"accommodations">;
 
-interface TenantRecord {
-  accommodationId: string;
+interface OfflineTenant {
+  id: string;
+  accommodation_id: string;
   name: string;
-  phone?: string;
-  startDate: string;
+  phone: string | null;
+  start_date: string;
 }
 
 interface Props {
   listings: Accommodation[];
 }
 
-const STORAGE_KEY = "plawza_landlord_tenants";
-
 export default function PortalTenantsTab({ listings }: Props) {
-  const [tenants, setTenants] = useState<Record<string, TenantRecord>>({});
+  const user = useAuthStore((s) => s.user);
+  const [tenants, setTenants] = useState<OfflineTenant[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const [selectedUnitId, setSelectedUnitId] = useState("");
   const [tenantName, setTenantName] = useState("");
   const [tenantPhone, setTenantPhone] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setTenants(JSON.parse(saved));
-    } catch (e) {}
-  }, []);
-
-  const saveTenants = (updated: Record<string, TenantRecord>) => {
-    setTenants(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  };
-
-  const handleAddTenant = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUnitId || !tenantName.trim()) return;
-
-    const updated = {
-      ...tenants,
-      [selectedUnitId]: {
-        accommodationId: selectedUnitId,
-        name: tenantName.trim(),
-        phone: tenantPhone.trim(),
-        startDate: startDate || new Date().toISOString().split("T")[0],
-      },
+    if (!user) return;
+    const fetchTenants = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("offline_tenants")
+        .select("*")
+        .eq("landlord_id", user.id)
+        .order("created_at", { ascending: false });
+        
+      if (!error && data) {
+        setTenants(data);
+      }
+      setLoading(false);
     };
-    saveTenants(updated);
-    toast.success("Tenant record registered!");
-    setSelectedUnitId("");
-    setTenantName("");
-    setTenantPhone("");
+    fetchTenants();
+  }, [user]);
+
+  const handleAddTenant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUnitId || !tenantName.trim() || !user) return;
+    setSubmitting(true);
+
+    try {
+      const newTenant = {
+        landlord_id: user.id,
+        accommodation_id: selectedUnitId,
+        name: tenantName.trim(),
+        phone: tenantPhone.trim() || null,
+        start_date: startDate || new Date().toISOString().split("T")[0],
+      };
+
+      const { data, error } = await supabase
+        .from("offline_tenants")
+        .insert(newTenant)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setTenants([data, ...tenants]);
+      toast.success("Tenant record registered!");
+      setSelectedUnitId("");
+      setTenantName("");
+      setTenantPhone("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add tenant");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleRemoveTenant = (unitId: string) => {
-    const updated = { ...tenants };
-    delete updated[unitId];
-    saveTenants(updated);
-    toast.success("Tenant record removed.");
+  const handleRemoveTenant = async (id: string) => {
+    try {
+      const { error } = await supabase.from("offline_tenants").delete().eq("id", id);
+      if (error) throw error;
+      
+      setTenants(tenants.filter(t => t.id !== id));
+      toast.success("Tenant record removed.");
+    } catch (err: any) {
+      toast.error("Failed to remove tenant");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -70,7 +108,7 @@ export default function PortalTenantsTab({ listings }: Props) {
         <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
           <Users size={16} className="text-primary" /> Tenant Registry
         </h3>
-        <p className="text-xs text-slate-400">Keep track of active tenants across your rented units.</p>
+        <p className="text-xs text-slate-400">Keep track of active tenants across your rented units (synced to all your devices).</p>
       </div>
 
       {/* Add Tenant Form */}
@@ -131,26 +169,26 @@ export default function PortalTenantsTab({ listings }: Props) {
           </div>
         </div>
 
-        <button type="submit" className="btn-primary py-2 text-xs font-bold">
-          Save Tenant Record
+        <button type="submit" disabled={submitting} className="btn-primary py-2 text-xs font-bold flex justify-center items-center">
+          {submitting ? <Loader2 size={16} className="animate-spin" /> : "Save Tenant Record"}
         </button>
       </form>
 
       {/* Active Tenants List */}
       <div className="space-y-2">
         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">
-          Active Rented Units ({Object.keys(tenants).length})
+          Active Rented Units ({tenants.length})
         </h4>
 
-        {Object.keys(tenants).length === 0 ? (
+        {tenants.length === 0 ? (
           <p className="text-xs text-slate-400 italic px-1 py-4 text-center">
             No tenants registered yet. Select a unit above to add records.
           </p>
         ) : (
-          Object.values(tenants).map((t) => {
-            const unit = listings.find((l) => l.id === t.accommodationId);
+          tenants.map((t) => {
+            const unit = listings.find((l) => l.id === t.accommodation_id);
             return (
-              <div key={t.accommodationId} className="card p-3 flex items-center justify-between gap-3 text-xs">
+              <div key={t.id} className="card p-3 flex items-center justify-between gap-3 text-xs">
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-slate-900 dark:text-white truncate">{t.name}</p>
                   <p className="text-[11px] text-primary font-semibold truncate flex items-center gap-1">
@@ -158,12 +196,13 @@ export default function PortalTenantsTab({ listings }: Props) {
                   </p>
                   <p className="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5">
                     {t.phone && <span>📞 {t.phone}</span>}
-                    <span className="flex items-center gap-1"><Calendar size={10} /> Since {t.startDate}</span>
+                    <span className="flex items-center gap-1"><Calendar size={10} /> Since {t.start_date}</span>
                   </p>
                 </div>
 
                 <button
-                  onClick={() => handleRemoveTenant(t.accommodationId)}
+                  type="button"
+                  onClick={() => handleRemoveTenant(t.id)}
                   className="p-1.5 text-red-400 hover:text-red-600 rounded hover:bg-red-50 dark:hover:bg-red-950/40"
                   title="Remove tenant record"
                 >

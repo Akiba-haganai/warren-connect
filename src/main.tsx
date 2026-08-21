@@ -4,6 +4,26 @@ import App from "./App";
 import "./index.css";
 import { registerServiceWorker } from "@/utils/pwa-register";
 import { PWAInstaller } from "@/utils/install-prompt";
+import * as Sentry from "@sentry/react";
+
+// Initialize Sentry for Live Error Tracking
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.PROD ? "production" : "development",
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
+    ],
+    tracesSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+  });
+}
+
+// Eruda Mobile DevTools for testing
+if (import.meta.env.DEV || window.location.search.includes('debug=1')) {
+  import('eruda').then((eruda) => eruda.default.init());
+}
 
 // Intercept Vite dynamic import chunk loading errors (occurs on new deployment)
 window.addEventListener("vite:preloadError", (event) => {
