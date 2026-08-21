@@ -128,12 +128,7 @@ export default function MarketplacePage() {
   const { data: productTagMap } = useQuery({
     queryKey: ["product-tags", allProducts.map((p) => p.id).join(",")],
     queryFn: async () => {
-      const map: Record<string, string[]> = {};
-      await Promise.all(allProducts.map(async (p) => {
-        const tags = await tagService.getTagsForProduct(p.id);
-        map[p.id] = tags;
-      }));
-      return map;
+      return await tagService.getTagsForProducts(allProducts.map(p => p.id));
     },
     enabled: allProducts.length > 0 && viewMode === "products",
   });

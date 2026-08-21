@@ -6,6 +6,7 @@ import { ArrowLeft, Lock, Loader2, ShieldCheck, BellRing, Check, Smartphone } fr
 import toast from "react-hot-toast";
 import { useVersionCheck } from "@/hooks/useVersionCheck";
 import { triggerHaptic } from "@/utils/haptic";
+import { webPushService } from "@/services/notifications/webPushService";
 
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
@@ -59,17 +60,21 @@ export default function SettingsPage() {
 
   const handleEnablePush = async () => {
     triggerHaptic();
-    if (!("Notification" in window)) {
+    if (!user) {
+      toast.error("Please log in to manage push notifications.");
+      return;
+    }
+    if (!webPushService.isSupported()) {
       toast.error("Web Push is not supported on this browser.");
       return;
     }
     try {
-      const perm = await Notification.requestPermission();
-      setPushPerm(perm);
-      if (perm === "granted") {
+      const res = await webPushService.subscribe(user.id);
+      if (res.success) {
+        setPushPerm("granted");
         toast.success("Web push notifications enabled!");
-      } else if (perm === "denied") {
-        toast.error("Notification permission denied in browser settings.");
+      } else {
+        toast.error(res.error || "Failed to subscribe to notifications.");
       }
     } catch {
       toast.error("Failed to request notification permission.");

@@ -29,7 +29,7 @@ export default function AuthLayout() {
       </div>
 
       {/* Page content */}
-      <div className="flex-1 flex flex-col px-5 pb-safe pb-10">
+      <div className="flex-1 flex flex-col px-5 pb-safe pb-10 overflow-y-auto min-h-0">
         <Outlet />
       </div>
     </div>

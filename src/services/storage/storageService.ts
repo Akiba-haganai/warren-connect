@@ -1,6 +1,16 @@
 import { supabase } from "@/lib/supabase/client";
 import { compressImage } from "@/utils/compressImage";
 
+function uuid(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 export const storageService = {
   async uploadFile(
     bucket: string,
@@ -32,8 +42,8 @@ export const storageService = {
     const filePath = customPath
       ? customPath
       : userId
-      ? `${userId}/${crypto.randomUUID()}.${finalExtension}`
-      : `${crypto.randomUUID()}.${finalExtension}`;
+      ? `${userId}/${uuid()}.${finalExtension}`
+      : `${uuid()}.${finalExtension}`;
 
     const { error } = await supabase.storage
       .from(bucket)
@@ -47,8 +57,8 @@ export const storageService = {
     if (generateThumb) {
       const thumbFile = await compressImage(file, 200, 0.7);
       const thumbPath = userId
-        ? `${userId}/thumb_${crypto.randomUUID()}.${extension}`
-        : `thumb_${crypto.randomUUID()}.${extension}`;
+        ? `${userId}/thumb_${uuid()}.${finalExtension}`
+        : `thumb_${uuid()}.${finalExtension}`;
 
       const { error: thumbErr } = await supabase.storage
         .from(bucket)
@@ -84,8 +94,8 @@ export const storageService = {
     }
 
     const filePath = userId
-      ? `${userId}/${crypto.randomUUID()}.${finalExtension}`
-      : `${crypto.randomUUID()}.${finalExtension}`;
+      ? `${userId}/${uuid()}.${finalExtension}`
+      : `${uuid()}.${finalExtension}`;
 
     const { error } = await supabase.storage
       .from(bucket)

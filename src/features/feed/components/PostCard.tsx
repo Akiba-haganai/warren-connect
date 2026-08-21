@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Send, Loader2, Flag, Minus } from "lucide-react";
+import { Heart, MessageCircle, Send, Loader2, Flag, Minus, Share2 } from "lucide-react";
+import { shareToWhatsApp } from "@/utils/whatsappShare";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { likeService } from "@/services/posts/likeService";
@@ -193,6 +194,21 @@ export default function PostCard({ post }: { post: FeedPost }) {
         </button>
         <button onClick={handleReport} className="flex items-center gap-1" aria-label="Report post">
           <Flag size={14} /> Report
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            shareToWhatsApp({
+              title: post.content.slice(0, 80),
+              type: "post",
+              id: post.id,
+            });
+          }}
+          className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold hover:opacity-80 transition-opacity ml-auto"
+          aria-label="Share to WhatsApp"
+        >
+          <Share2 size={13} /> Share
         </button>
       </div>
 

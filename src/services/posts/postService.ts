@@ -43,7 +43,7 @@ export const postService = {
       .select("*")
       .eq("is_hidden", false)
       .eq("moderation_status", "approved")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }).limit(100);
 
     if (error) throw error;
     if (!posts) return [];

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { notificationService } from "@/services/notifications/notificationService";
+import { webPushService } from "@/services/notifications/webPushService";
 import { useAuthStore } from "@/store/auth/authStore";
 import { useNotifications } from "@/hooks/useNotifications";
 import NotificationItem from "@/features/notifications/components/NotificationItem";
@@ -45,18 +46,19 @@ export default function NotificationsPage() {
 
   const handleEnablePush = async () => {
     triggerHaptic();
-    if (!("Notification" in window)) {
+    if (!user) return;
+    if (!webPushService.isSupported()) {
       toast.error("Web Push is not supported on this browser.");
       return;
     }
     try {
-      const perm = await Notification.requestPermission();
-      setPushPerm(perm);
-      if (perm === "granted") {
+      const res = await webPushService.subscribe(user.id);
+      if (res.success) {
+        setPushPerm("granted");
         toast.success("Push notifications enabled!");
         setShowPushBanner(false);
       } else {
-        toast.error("Notification permission denied.");
+        toast.error(res.error || "Failed to enable notifications.");
       }
     } catch {
       toast.error("Could not request notification permission.");

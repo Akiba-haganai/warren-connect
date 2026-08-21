@@ -54,6 +54,19 @@ export default defineConfig({
             urlPattern: /version\.json/,
             handler: "NetworkOnly",
           },
+          {
+            urlPattern: ({ url }) =>
+              url.hostname.endsWith(".supabase.co") &&
+              url.pathname.includes("/storage/v1/object/public/"),
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "supabase-images",
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+              },
+            },
+          },
         ],
       },
       manifest: {
@@ -73,6 +86,26 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom") || id.includes("node_modules/react-router-dom")) {
+            return "vendor-react";
+          }
+          if (id.includes("node_modules/@supabase")) {
+            return "vendor-supabase";
+          }
+          if (id.includes("node_modules/@tanstack")) {
+            return "vendor-query";
+          }
+          if (id.includes("node_modules/lucide-react") || id.includes("node_modules/framer-motion") || id.includes("node_modules/react-hot-toast")) {
+            return "vendor-ui";
+          }
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

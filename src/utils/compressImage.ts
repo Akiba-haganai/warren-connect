@@ -55,19 +55,18 @@ async function compressViaBitmap(file: File, maxDimension: number, quality: numb
 }
 
 async function compressViaFileReader(file: File, maxDimension: number, quality: number): Promise<File> {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error("Could not read this file"));
-    reader.readAsDataURL(file);
-  });
-
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = () => reject(new Error("This photo format isn't supported on your device/browser"));
-    el.src = dataUrl;
-  });
+  const objectUrl = URL.createObjectURL(file);
+  let img: HTMLImageElement;
+  try {
+    img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("This photo format isn't supported on your device/browser"));
+      el.src = objectUrl;
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 
   let { width, height } = img;
   if (width > maxDimension || height > maxDimension) {

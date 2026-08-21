@@ -1,35 +1,18 @@
 import { notificationService } from "./notificationService";
-import { supabase } from "@/lib/supabase/client";
 
-const SEND_PUSH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-push`;
 
 async function sendPush(userId: string, title: string, message: string, url?: string) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch(SEND_PUSH_URL, {
+    await fetch("/api/push/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({ userId, title, message, url }),
+      body: JSON.stringify({ userId, title, body: message, url }),
     });
-    if (!res.ok) {
-      console.warn("Push failed, will retry once");
-      // Retry once after 1 second
-      setTimeout(async () => {
-        await fetch(SEND_PUSH_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ userId, title, message, url }),
-        });
-      }, 1000);
-    }
   } catch (err) {
-    console.error("Push send failed", err);
+    // Non-blocking: push failures should never break the in-app experience
+    console.debug("Push send skipped or failed", err);
   }
 }
 

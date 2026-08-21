@@ -165,6 +165,7 @@ export default function AccommodationDetailPage() {
       navigate(`/messages?conversation=${convId}`);
     } catch (error) {
       console.error(error);
+      toast.error("Could not start conversation. Please try again.");
     } finally {
       setContacting(false);
     }
@@ -197,6 +198,7 @@ export default function AccommodationDetailPage() {
       navigate(`/messages?conversation=${convId}`);
     } catch (err) {
       console.error(err);
+      toast.error("Could not send booking request. Please try again.");
     }
   };
 

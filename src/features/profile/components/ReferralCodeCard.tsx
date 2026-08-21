@@ -24,10 +24,16 @@ export default function ReferralCodeCard() {
         </p>
       </div>
       <button
-        onClick={() => {
-          navigator.clipboard.writeText(profile.referral_code!);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(profile.referral_code!);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          } catch {
+            import("react-hot-toast").then((module) => {
+              module.default.error("Could not copy — please copy the code manually.");
+            });
+          }
         }}
         className="btn-ghost text-xs px-3 py-1"
       >

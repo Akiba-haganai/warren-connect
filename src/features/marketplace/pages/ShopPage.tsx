@@ -277,8 +277,12 @@ export default function ShopPage() {
 
     if (navigator.share) await navigator.share(shareData);
     else {
-      navigator.clipboard.writeText(window.location.href);
+      try {
+      await navigator.clipboard.writeText(window.location.href);
       toast.success("Shop link copied!");
+    } catch {
+      toast.error("Could not copy — please copy the link manually.");
+    }
     }
   };
 

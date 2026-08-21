@@ -71,7 +71,7 @@ export const profileService = {
       .from("posts")
       .select("*")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }).limit(100);
     if (error) throw error;
     return data;
   },
@@ -81,7 +81,7 @@ export const profileService = {
       .from("products")
       .select("*")
       .eq("seller_id", userId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }).limit(100);
     if (error) throw error;
     return data;
   },
@@ -103,7 +103,7 @@ export const profileService = {
       .from("accommodations")
       .select("*")
       .eq("owner_id", userId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }).limit(100);
     if (error) throw error;
     return data;
   },

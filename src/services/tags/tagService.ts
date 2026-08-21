@@ -65,6 +65,22 @@ export const tagService = {
   if (error) return [];
   return data?.map((t: any) => t.tags?.name).filter(Boolean) || [];
 },
+  async getTagsForProducts(productIds: string[]): Promise<Record<string, string[]>> {
+    if (!productIds.length) return {};
+    const { data, error } = await supabase
+      .from("product_tags")
+      .select("product_id, tags(name)")
+      .in("product_id", productIds);
+    if (error) return {};
+    const map: Record<string, string[]> = {};
+    productIds.forEach(id => map[id] = []);
+    data?.forEach((row: any) => {
+      if (row.tags?.name) {
+        map[row.product_id].push(row.tags.name);
+      }
+    });
+    return map;
+  },
 async getTagsForProduct(productId: string): Promise<string[]> {
   const { data, error } = await supabase
     .from("product_tags")

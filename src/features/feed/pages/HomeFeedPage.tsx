@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { unifiedFeedService, type UnifiedFeedItem } from "@/services/feed/unifiedFeedService";
 import { tagService } from "@/services/tags/tagService";
-import { PlusCircle, MessageCircle } from "lucide-react";
+import { PlusCircle, MessageCircle, Sparkles, ArrowUp } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
 
 import PostCard from "@/features/feed/components/PostCard";
 import ProductCard from "@/features/marketplace/components/ProductCard";
 import AccommodationCard from "@/features/accommodation/components/AccommodationCard";
 import PostComposer from "@/features/feed/components/PostComposer";
+import ProductComposer from "@/features/marketplace/components/ProductComposer";
+import AccommodationComposer from "@/features/accommodation/components/AccomodationComposer";
+import CreateActionSheet from "@/features/feed/components/CreateActionSheet";
 import TrendingRow from "@/features/feed/components/TrendingRow";
 import RecentlyViewedSection from "@/components/ui/RecentlyViewedSection";
 import type { FeedPost } from "@/services/posts/postService";
@@ -17,13 +21,21 @@ import { useMutedUsers } from "@/hooks/safety/useMuteUser";
 import { PostCardSkeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PullToRefresh } from "@/components/ui/PullToRefresh";
+import { triggerHaptic } from "@/utils/haptic";
 
 export default function HomeFeedPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
-  const [showComposer, setShowComposer] = useState(false);
+  const profile = useAuthStore((s) => s.profile);
+
+  // Filters & State
   const [typeFilter, setTypeFilter] = useState<"all" | "post" | "product" | "accommodation">("all");
   const [selectedTag, setSelectedTag] = useState("");
+  const [newUpdatesCount, setNewUpdatesCount] = useState(0);
+
+  // Composer Modals
+  const [showActionSheet, setShowActionSheet] = useState(false);
+  const [activeComposer, setActiveComposer] = useState<"post" | "product" | "accommodation" | null>(null);
 
   const { data: mutedUsers } = useMutedUsers(user?.id);
 
@@ -37,39 +49,60 @@ export default function HomeFeedPage() {
     queryFn: () => unifiedFeedService.getUnifiedFeed(50),
   });
 
+  // Realtime listener for new posts / products / housing
+  useEffect(() => {
+    const channel = supabase
+      .channel("feed-realtime-updates")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, () => {
+        setNewUpdatesCount((prev) => prev + 1);
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "products" }, () => {
+        setNewUpdatesCount((prev) => prev + 1);
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "accommodations" }, () => {
+        setNewUpdatesCount((prev) => prev + 1);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const handleRefresh = async () => {
+    setNewUpdatesCount(0);
     await queryClient.invalidateQueries({ queryKey: ["unified-feed"] });
   };
 
-  // Filter by type AND tag AND muted status
+  const handleLoadNewUpdates = () => {
+    triggerHaptic();
+    handleRefresh();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Filter items
   const filtered = (items || []).filter((item) => {
-    // 1. Muted check
     let authorId = "";
     if (item.type === "post") authorId = item.data?.user_id;
     else if (item.type === "product") authorId = item.data?.seller_id;
     else if (item.type === "accommodation") authorId = item.data?.owner_id;
-    
+
     if (authorId && mutedUsers?.includes(authorId)) {
       return false;
     }
     if (typeFilter !== "all" && item.type !== typeFilter) return false;
     if (selectedTag) {
-      // For products and accommodations, we need to check tags
-      // We'll skip tag filtering for posts for now (they already show their tags)
       if (item.type === "product" || item.type === "accommodation") {
         const tags = item.data?.tags || [];
         return tags.includes(selectedTag);
       }
-      // For posts, check if the post has the tag via its tag list
-      // This requires fetching tags for each post, which we can do client‑side
-      // For simplicity, we'll allow all posts to pass (tag filtering on posts is a future enhancement)
       return true;
     }
     return true;
   });
 
-  const handlePostCreated = () => {
-    queryClient.invalidateQueries({ queryKey: ["unified-feed"] });
+  const handleCreated = () => {
+    handleRefresh();
   };
 
   const renderItem = (item: UnifiedFeedItem) => {
@@ -85,140 +118,199 @@ export default function HomeFeedPage() {
     }
   };
 
-  const profile = useAuthStore((s) => s.profile);
-
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
-      {/* Ultra-Compact 1-Line Glassmorphic Sticky Header */}
-      <div className="sticky top-0 z-20 px-3 py-1.5 flex items-center gap-2 backdrop-blur-md bg-surface/85 border-b border-border/80 shadow-xs h-11">
-        {/* Brand Badge */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <div className="w-6 h-6 rounded-md bg-primary text-white flex items-center justify-center text-[11px] font-black shadow-xs">
-            P
-          </div>
-          <span className="text-xs font-extrabold text-slate-900 dark:text-white hidden sm:inline">Feed</span>
-        </div>
+      {/* Sleek Segmented Header with 1-Tap Category Filters */}
+      <div className="sticky top-0 z-20 px-3 py-2 flex flex-col gap-1.5 backdrop-blur-md bg-surface/90 border-b border-border/80 shadow-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar flex-nowrap w-full">
+          {/* Segmented Filter Pills */}
+          {[
+            { id: "all", label: "🔥 All" },
+            { id: "post", label: "💬 Campus" },
+            { id: "product", label: "🛍️ Market" },
+            { id: "accommodation", label: "🏠 Housing" },
+          ].map((tab) => {
+            const isActive = typeFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  setTypeFilter(tab.id as any);
+                }}
+                className={`text-xs px-3 py-1 rounded-full font-bold transition-all shrink-0 border select-none ${
+                  isActive
+                    ? "bg-primary text-white border-primary shadow-xs scale-100"
+                    : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
 
-        {/* Content Type Selector */}
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as any)}
-          className="glass-select text-[11px] font-bold py-1 px-2.5 rounded-full shrink-0 border-border"
-        >
-          <option value="all">All</option>
-          <option value="post">Posts</option>
-          <option value="product">Market</option>
-          <option value="accommodation">Housing</option>
-        </select>
+          <div className="w-px h-4 bg-border/80 shrink-0 mx-0.5" />
 
-        {/* Side-Scrolling Feed Topic Pills */}
-        {allTags && allTags.length > 0 && (
-          <div
-            className="flex items-center gap-1 overflow-x-auto hide-scrollbar flex-nowrap flex-1 py-0.5 min-w-0"
-            style={{ WebkitOverflowScrolling: "touch" }}
+          {/* Topic Tags */}
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic();
+              setSelectedTag("");
+            }}
+            className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium transition-all shrink-0 border ${
+              !selectedTag
+                ? "bg-primary/15 text-primary font-bold border-primary/30"
+                : "bg-surface text-slate-600 dark:text-slate-300 border-border hover:border-slate-300"
+            }`}
           >
-            <button
-              type="button"
-              onClick={() => setSelectedTag("")}
-              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold transition-all shrink-0 border ${
-                !selectedTag
-                  ? "bg-primary text-white border-primary shadow-xs"
-                  : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
-              }`}
-            >
-              All Topics
-            </button>
-            {allTags.map((tag: any) => {
-              const isActive = selectedTag === tag.name;
-              return (
-                <button
-                  key={tag.id}
-                  type="button"
-                  onClick={() => setSelectedTag(isActive ? "" : tag.name)}
-                  className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium transition-all shrink-0 border flex items-center gap-0.5 ${
-                    isActive
-                      ? "bg-primary text-white border-primary shadow-xs font-bold"
-                      : "bg-surface text-slate-700 dark:text-slate-200 border-border hover:border-slate-300"
-                  }`}
-                >
-                  <span>#{tag.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+            All Topics
+          </button>
+          {allTags?.map((tag: any) => {
+            const isActive = selectedTag === tag.name;
+            return (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  setSelectedTag(isActive ? "" : tag.name);
+                }}
+                className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium transition-all shrink-0 border flex items-center gap-0.5 ${
+                  isActive
+                    ? "bg-primary/20 text-primary font-bold border-primary/40"
+                    : "bg-surface text-slate-600 dark:text-slate-300 border-border hover:border-slate-300"
+                }`}
+              >
+                #{tag.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <PullToRefresh onRefresh={handleRefresh}>
-      {/* Interactive Feed Composer Trigger Box */}
-      <div className="px-4 pt-3 pb-1">
-        <div
-          onClick={() => setShowComposer(true)}
-          className="p-3 rounded-2xl bg-surface border border-border flex items-center gap-3 cursor-pointer shadow-2xs hover:border-slate-300 transition-colors"
-        >
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} className="w-9 h-9 rounded-full object-cover shrink-0" alt="" />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs shrink-0">
-              {(profile?.full_name?.[0] || user?.email?.[0] || "?").toUpperCase()}
-            </div>
-          )}
-          <span className="text-xs text-slate-400 font-medium flex-1 truncate">
-            What's happening on campus, {profile?.full_name?.split(" ")[0] || "student"}?
-          </span>
-          <span className="btn-primary text-xs px-3 py-1 rounded-full shrink-0">
-            Post
-          </span>
-        </div>
-      </div>
-
-      {/* Trending */}
-      <TrendingRow />
-
-      {/* Recently Viewed */}
-      <div className="px-4">
-        <RecentlyViewedSection title="Pick Up Where You Left Off" />
-      </div>
-
-      {/* Feed items */}
-      <div className="px-4 pt-2 pb-8">
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => <PostCardSkeleton key={i} />)}
-          </div>
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            icon={MessageCircle}
-            title="Nothing to show"
-            description={selectedTag ? "No items with this tag." : typeFilter !== "all" ? `No ${typeFilter}s yet.` : "Be the first to post, sell, or list a property!"}
-            actionLabel={!selectedTag && typeFilter === "all" ? "Create a post" : undefined}
-            onAction={!selectedTag && typeFilter === "all" ? () => setShowComposer(true) : undefined}
-          />
-        ) : (
-          <div className="flex flex-col gap-4">
-            {filtered.map((item) => (
-              <div key={`${item.type}-${item.id}`} className="relative">
-                {item.featured && (
-                  <span className="absolute top-2 left-2 z-10 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full">Featured</span>
-                )}
-                {renderItem(item)}
-              </div>
-            ))}
+        {/* Floating "✨ New Updates Available" Chip */}
+        {newUpdatesCount > 0 && (
+          <div className="sticky top-14 z-30 flex justify-center px-4 pt-2 animate-in slide-in-from-top-4 duration-200">
+            <button
+              type="button"
+              onClick={handleLoadNewUpdates}
+              className="px-4 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-lg flex items-center gap-1.5 cursor-pointer transform active:scale-95 transition-all"
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              <span>
+                {newUpdatesCount} new update{newUpdatesCount > 1 ? "s" : ""} • Tap to view
+              </span>
+              <ArrowUp size={13} />
+            </button>
           </div>
         )}
-      </div>
+
+        {/* Interactive Multi-Action Feed Composer Trigger Box */}
+        <div className="px-4 pt-3 pb-1">
+          <div
+            onClick={() => {
+              triggerHaptic();
+              setShowActionSheet(true);
+            }}
+            className="p-3 rounded-2xl bg-surface border border-border flex items-center gap-3 cursor-pointer shadow-2xs hover:border-slate-300 transition-colors active:scale-[0.99]"
+          >
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} className="w-9 h-9 rounded-full object-cover shrink-0" alt="" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs shrink-0">
+                {(profile?.full_name?.[0] || user?.email?.[0] || "?").toUpperCase()}
+              </div>
+            )}
+            <span className="text-xs text-slate-400 font-medium flex-1 truncate">
+              What's happening on campus, {profile?.full_name?.split(" ")[0] || "student"}?
+            </span>
+            <span className="btn-primary text-xs px-3 py-1 rounded-full shrink-0">
+              Create +
+            </span>
+          </div>
+        </div>
+
+        {/* Trending */}
+        <TrendingRow />
+
+        {/* Recently Viewed */}
+        <div className="px-4">
+          <RecentlyViewedSection title="Pick Up Where You Left Off" />
+        </div>
+
+        {/* Feed items */}
+        <div className="px-4 pt-2 pb-8">
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <PostCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              icon={MessageCircle}
+              title="Nothing to show"
+              description={
+                selectedTag
+                  ? "No items with this tag."
+                  : typeFilter !== "all"
+                  ? `No ${typeFilter}s yet.`
+                  : "Be the first to post, sell, or list a property!"
+              }
+              actionLabel={!selectedTag && typeFilter === "all" ? "Create something" : undefined}
+              onAction={!selectedTag && typeFilter === "all" ? () => setShowActionSheet(true) : undefined}
+            />
+          ) : (
+            <div className="flex flex-col gap-4">
+              {filtered.map((item) => (
+                <div key={`${item.type}-${item.id}`} className="relative">
+                  {item.featured && (
+                    <span className="absolute top-2 left-2 z-10 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      Featured
+                    </span>
+                  )}
+                  {renderItem(item)}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </PullToRefresh>
 
-      {/* FAB */}
+      {/* Floating Action Button (Opens Action Sheet) */}
       <button
-        onClick={() => setShowComposer(true)}
-        className="fixed bottom-28 right-5 z-[100] w-14 h-14 rounded-full flex items-center justify-center fab-glow fab-float active:scale-90 transition-transform"
+        type="button"
+        onClick={() => {
+          triggerHaptic();
+          setShowActionSheet(true);
+        }}
+        className="fixed bottom-28 right-5 z-[100] w-14 h-14 rounded-full flex items-center justify-center fab-glow fab-float active:scale-90 transition-transform shadow-xl"
         style={{ background: "var(--color-primary)", color: "#fff" }}
-        aria-label="Create post"
+        aria-label="Create new item"
       >
         <PlusCircle size={28} />
       </button>
-      {showComposer && <PostComposer onClose={() => setShowComposer(false)} onCreated={handlePostCreated} />}
+
+      {/* Multi-Action Bottom Sheet Modal */}
+      <CreateActionSheet
+        isOpen={showActionSheet}
+        onClose={() => setShowActionSheet(false)}
+        onSelectAction={(action) => setActiveComposer(action)}
+      />
+
+      {/* Composer Overlays */}
+      {activeComposer === "post" && (
+        <PostComposer onClose={() => setActiveComposer(null)} onCreated={handleCreated} />
+      )}
+      {activeComposer === "product" && (
+        <ProductComposer onClose={() => setActiveComposer(null)} onCreated={handleCreated} />
+      )}
+      {activeComposer === "accommodation" && (
+        <AccommodationComposer onClose={() => setActiveComposer(null)} onCreated={handleCreated} />
+      )}
     </div>
   );
 }

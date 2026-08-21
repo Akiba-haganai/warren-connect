@@ -108,7 +108,6 @@ self.addEventListener("fetch", (event) => {
 
   // 2. Bypass API calls, Supabase endpoints, version checks, and backend functions
   if (
-    request.url.includes("supabase.co") ||
     request.url.includes("/api/") ||
     request.url.includes("/version.json")
   ) {
@@ -165,3 +164,68 @@ self.addEventListener("fetch", (event) => {
     })()
   );
 });
+
+// ---------------------------------------------------------------
+// PUSH — handle incoming Web Push notifications in background
+// ---------------------------------------------------------------
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  try {
+    const payload = event.data.json();
+    const title = payload.title || "PLAWZA Notification";
+    const options = {
+      body: payload.body || payload.message || "",
+      icon: payload.icon || "/icons/icon-192.png",
+      badge: "/icons/icon-72.png",
+      data: payload.data || { url: payload.url || "/" },
+      vibrate: [100, 50, 100],
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (err) {
+    // Fallback for plain text push payloads
+    const text = event.data.text();
+    event.waitUntil(
+      self.registration.showNotification("PLAWZA", {
+        body: text,
+        icon: "/icons/icon-192.png",
+        data: { url: "/" },
+      })
+    );
+  }
+});
+
+// ---------------------------------------------------------------
+// NOTIFICATION CLICK — focus open tab or navigate to notification URL
+// ---------------------------------------------------------------
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    (async () => {
+      const windowClients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+
+      // If an existing tab is open, focus it and navigate
+      for (const client of windowClients) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          await client.focus();
+          if ("navigate" in client) {
+            return client.navigate(targetUrl);
+          }
+          return;
+        }
+      }
+
+      // Otherwise open a new window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })()
+  );
+});
+

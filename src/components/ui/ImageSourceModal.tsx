@@ -17,14 +17,35 @@ interface ImageSourceModalProps {
  * the input is still mounted, we avoid that race condition entirely.
  */
 async function materializeFile(file: File): Promise<File | null> {
-  try {
-    const ab = await file.arrayBuffer();
-    const mime = file.type || "image/jpeg";
-    const safeName = file.name || `photo_${Date.now()}.jpg`;
-    return new File([ab], safeName, { type: mime });
-  } catch {
-    return null;
+  // Primary: arrayBuffer() — fast, modern
+  if (typeof file.arrayBuffer === "function") {
+    try {
+      const ab = await file.arrayBuffer();
+      const mime = file.type || "image/jpeg";
+      const safeName = file.name || `photo_${Date.now()}.jpg`;
+      return new File([ab], safeName, { type: mime });
+    } catch {
+      // fall through to FileReader fallback below
+    }
   }
+
+  // Fallback: FileReader — works on iOS Safari 11+, all Android WebViews
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const ab = reader.result;
+        if (!ab) throw new Error("Null array buffer");
+        const mime = file.type || "image/jpeg";
+        const safeName = file.name || `photo_${Date.now()}.jpg`;
+        resolve(new File([ab as BlobPart], safeName, { type: mime }));
+      } catch {
+        resolve(null);
+      }
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 export default function ImageSourceModal({
@@ -47,6 +68,15 @@ export default function ImageSourceModal({
       // input unmounts. This is the fix for Android content:// URI invalidation.
       const materialized = await Promise.all(raw.map(materializeFile));
       const valid = materialized.filter((f): f is File => f !== null);
+
+      if (valid.length === 0 && raw.length > 0) {
+        import("react-hot-toast").then((module) => {
+          module.default.error("Could not read the selected photos on this device. Try the QR upload option instead.");
+        });
+        setLoading(false);
+        onClose();
+        return;
+      }
 
       if (valid.length > 0) {
         onSelectImages(valid);
@@ -146,6 +176,15 @@ export default function ImageSourceModal({
                   onChange={handleFilesSelected}
                 />
               </div>
+            </div>
+
+            <div className="mt-3.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-2.5 text-left">
+              <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 text-xs">
+                💡
+              </div>
+              <p className="text-[11px] leading-relaxed text-emerald-800 dark:text-emerald-200">
+                <strong>Got photos on WhatsApp?</strong> Save them to your phone's <em>Gallery / Photos</em> app first so Android grants permission to upload them.
+              </p>
             </div>
 
             <p className="text-[11px] text-center mt-3" style={{ color: "var(--color-text-muted)" }}>
