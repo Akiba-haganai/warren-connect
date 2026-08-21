@@ -10,6 +10,7 @@ import { tagService } from "@/services/tags/tagService";
 import { priceEngine } from "@/services/pricing/priceEngine";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
 import ImageSourceModal from "@/components/ui/ImageSourceModal";
+import CrossDeviceUploadPanel from "@/components/ui/CrossDeviceUploadPanel";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -368,6 +369,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
                 Processing photo…
               </p>
             )}
+            <CrossDeviceUploadPanel onFilesReceived={handleSelectedFiles} />
           </div>
           {priceHint && (
             <div className="px-1">

@@ -10,6 +10,7 @@ import { ALL_AMENITIES } from "@/constants/amenities";
 import toast from "react-hot-toast";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
 import ImageSourceModal from "@/components/ui/ImageSourceModal";
+import CrossDeviceUploadPanel from "@/components/ui/CrossDeviceUploadPanel";
 
 interface Props {
   onClose: () => void;
@@ -494,6 +495,7 @@ export default function AccommodationComposer({
                 </button>
               )}
             </div>
+            <CrossDeviceUploadPanel onFilesReceived={handleSelectedFiles} />
           </div>
 
           <button type="submit" disabled={posting || uploadingImage} className="btn-primary cursor-pointer disabled:opacity-50" aria-label="Publish listing">

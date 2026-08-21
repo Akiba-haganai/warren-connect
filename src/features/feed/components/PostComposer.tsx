@@ -9,6 +9,7 @@ import TagInput from "@/components/ui/TagInput";
 import { tagService } from "@/services/tags/tagService";
 import { sendPushNotification } from "@/lib/notifications";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
+import CrossDeviceUploadPanel from "@/components/ui/CrossDeviceUploadPanel";
 
 interface Props {
   onClose: () => void;
@@ -57,8 +58,7 @@ export default function PostComposer({ onClose, onCreated }: Props) {
     }
   );
 
-  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const processFile = async (file: File) => {
     if (!file || !user) return;
     setUploadingImage(true);
 
@@ -80,7 +80,18 @@ export default function PostComposer({ onClose, onCreated }: Props) {
       toast.error(err.message || "Failed to upload image preview");
     } finally {
       setUploadingImage(false);
-      e.target.value = "";
+    }
+  };
+
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await processFile(file);
+    e.target.value = "";
+  };
+
+  const handleCrossDeviceFiles = async (files: File[]) => {
+    if (files.length > 0) {
+      await processFile(files[0]);
     }
   };
 
@@ -182,6 +193,10 @@ export default function PostComposer({ onClose, onCreated }: Props) {
             </button>
           </div>
         )}
+
+        <div className="mt-3">
+          <CrossDeviceUploadPanel onFilesReceived={handleCrossDeviceFiles} />
+        </div>
 
         <div className="flex justify-between items-center mt-4">
           <button

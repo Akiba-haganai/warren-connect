@@ -57,6 +57,9 @@ const OfflinePage = lazy(() => import("@/pages/OfflinePage"));
 // Landing page (public)
 const LandingPage = lazy(() => import("@/features/landing/LandingPage"));
 
+// Cross-device session upload (public)
+const SessionUploadPage = lazy(() => import("@/pages/SessionUploadPage"));
+
 // Tag page
 const TagPage = lazy(() => import("@/features/tags/TagPage"));
 
@@ -171,6 +174,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageLoader />}>
             <OfflinePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/upload/session/:sessionId",
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <SessionUploadPage />
           </Suspense>
         ),
       },
