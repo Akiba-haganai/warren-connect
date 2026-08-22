@@ -1,15 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export function useDraftPersistence<T extends Record<string, any>>(
   storageKey: string,
   currentValue?: T,
   onRestore?: (saved: T) => void
 ) {
+  const isRestored = useRef(false);
+
   // On mount, restore draft if available
   useEffect(() => {
     if (!storageKey || !onRestore) return;
     try {
-      const saved = sessionStorage.getItem(storageKey);
+      // Check localStorage first (survives Android process kills & reloads), fallback to sessionStorage
+      const saved = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === "object") {
@@ -18,12 +21,15 @@ export function useDraftPersistence<T extends Record<string, any>>(
       }
     } catch (e) {
       console.warn("Failed to restore draft from storage:", e);
+    } finally {
+      // Mark as restored so the save effect can start syncing safely without wiping on mount
+      isRestored.current = true;
     }
   }, [storageKey]);
 
-  // Sync current value to sessionStorage on update
+  // Sync current value to localStorage on update (ONLY after initial restore!)
   useEffect(() => {
-    if (!storageKey || !currentValue) return;
+    if (!storageKey || !currentValue || !isRestored.current) return;
     try {
       const hasValue = Object.values(currentValue).some((val) => {
         if (Array.isArray(val)) return val.length > 0;
@@ -32,8 +38,9 @@ export function useDraftPersistence<T extends Record<string, any>>(
       });
 
       if (hasValue) {
-        sessionStorage.setItem(storageKey, JSON.stringify(currentValue));
+        localStorage.setItem(storageKey, JSON.stringify(currentValue));
       } else {
+        localStorage.removeItem(storageKey);
         sessionStorage.removeItem(storageKey);
       }
     } catch (e) {
@@ -43,6 +50,7 @@ export function useDraftPersistence<T extends Record<string, any>>(
 
   const clearDraft = () => {
     try {
+      localStorage.removeItem(storageKey);
       sessionStorage.removeItem(storageKey);
     } catch {}
   };
@@ -51,3 +59,4 @@ export function useDraftPersistence<T extends Record<string, any>>(
     clearDraft,
   };
 }
+

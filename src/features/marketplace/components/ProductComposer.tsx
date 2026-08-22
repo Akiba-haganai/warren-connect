@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Camera, ImagePlus, X, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { productService } from "@/services/products/productService";
 import { storageService } from "@/services/storage/storageService";
@@ -9,7 +9,6 @@ import TagInput from "@/components/ui/TagInput";
 import { tagService } from "@/services/tags/tagService";
 import { priceEngine } from "@/services/pricing/priceEngine";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
-import ImageSourceModal from "@/components/ui/ImageSourceModal";
 import CrossDeviceUploadPanel from "@/components/ui/CrossDeviceUploadPanel";
 import toast from "react-hot-toast";
 
@@ -26,8 +25,8 @@ interface UploadedImageItem {
 
 export default function ProductComposer({ onClose, onCreated, initialShopId }: Props) {
   const user = useAuthStore((s) => s.user);
-  const [showImageModal, setShowImageModal] = useState(false);
   const MAX_PHOTOS = 5;
+
   
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -342,34 +341,54 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
                 </div>
               ))}
 
-              {/* Add Photo Slot (visible while under limit) */}
+              {/* Direct 1-Tap Camera & Gallery Slots (visible while under limit) */}
               {uploadedImages.length < MAX_PHOTOS && (
-                <button
-                  type="button"
-                  onClick={() => !uploadingImage && setShowImageModal(true)}
-                  disabled={uploadingImage}
-                  className="flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-medium cursor-pointer disabled:opacity-50 transition-colors"
-                  style={{
-                    background: "var(--color-bg)",
-                    border: "1.5px dashed var(--color-border)",
-                    color: "var(--color-text-secondary)",
-                  }}
-                  aria-label="Add photo"
-                >
-                  {uploadingImage ? (
-                    <Loader2 size={16} className="animate-spin text-primary" />
-                  ) : (
-                    <>
-                      <Plus size={16} />
-                      <span>{uploadedImages.length === 0 ? "Add photo" : "Add more"}</span>
-                    </>
-                  )}
-                </button>
+                <>
+                  <div
+                    className="relative flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-semibold cursor-pointer transition-all border border-dashed border-teal-500/50 bg-teal-500/10 hover:bg-teal-500/15 text-teal-700 dark:text-teal-300"
+                    title="Take photo with camera"
+                  >
+                    <Camera size={18} className="text-teal-600 dark:text-teal-400" />
+                    <span className="text-[11px]">Camera</span>
+                    <input
+                      type="file"
+                      accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
+                      capture="environment"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length) handleSelectedFiles(files);
+                        e.target.value = "";
+                      }}
+                      disabled={uploadingImage}
+                    />
+                  </div>
+
+                  <div
+                    className="relative flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-semibold cursor-pointer transition-all border border-dashed border-blue-500/50 bg-blue-500/10 hover:bg-blue-500/15 text-blue-700 dark:text-blue-300"
+                    title="Select from Gallery or Files"
+                  >
+                    <ImagePlus size={18} className="text-blue-600 dark:text-blue-400" />
+                    <span className="text-[11px]">Gallery</span>
+                    <input
+                      type="file"
+                      accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
+                      multiple
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length) handleSelectedFiles(files);
+                        e.target.value = "";
+                      }}
+                      disabled={uploadingImage}
+                    />
+                  </div>
+                </>
               )}
             </div>
             {uploadingImage && (
-              <p className="text-xs text-center" style={{ color: "var(--color-text-muted)" }}>
-                Processing photo…
+              <p className="text-xs text-center flex items-center justify-center gap-1.5 py-1 text-primary font-medium">
+                <Loader2 size={13} className="animate-spin" /> Processing photos…
               </p>
             )}
             <CrossDeviceUploadPanel onFilesReceived={handleSelectedFiles} />
@@ -399,13 +418,6 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
 
         </form>
       </div>
-
-      <ImageSourceModal
-        isOpen={showImageModal}
-        onClose={() => setShowImageModal(false)}
-        onSelectImages={handleSelectedFiles}
-        multiple={true}
-      />
     </div>
   );
 }

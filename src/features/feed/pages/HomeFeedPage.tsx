@@ -33,9 +33,27 @@ export default function HomeFeedPage() {
   const [selectedTag, setSelectedTag] = useState("");
   const [newUpdatesCount, setNewUpdatesCount] = useState(0);
 
-  // Composer Modals
+  // Composer Modals (Persist active composer to localStorage to survive Android LMK reloads)
   const [showActionSheet, setShowActionSheet] = useState(false);
-  const [activeComposer, setActiveComposer] = useState<"post" | "product" | "accommodation" | null>(null);
+  const [activeComposer, setActiveComposer] = useState<"post" | "product" | "accommodation" | null>(() => {
+    try {
+      const saved = localStorage.getItem("plawza_active_composer");
+      if (saved === "post" || saved === "product" || saved === "accommodation") {
+        return saved;
+      }
+    } catch {}
+    return null;
+  });
+
+  useEffect(() => {
+    try {
+      if (activeComposer) {
+        localStorage.setItem("plawza_active_composer", activeComposer);
+      } else {
+        localStorage.removeItem("plawza_active_composer");
+      }
+    } catch {}
+  }, [activeComposer]);
 
   const { data: mutedUsers } = useMutedUsers(user?.id);
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MapPin, Plus, X, Loader2, Building2, DoorClosed, BedDouble } from "lucide-react";
+import { MapPin, Camera, ImagePlus, X, Loader2, Building2, DoorClosed, BedDouble } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { accommodationService } from "@/services/accommodation/accommodationService";
 import { locationService } from "@/services/locations/locationService";
@@ -9,7 +9,6 @@ import { ZAMBIA_LOCATIONS } from "@/constants/locations";
 import { ALL_AMENITIES } from "@/constants/amenities";
 import toast from "react-hot-toast";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
-import ImageSourceModal from "@/components/ui/ImageSourceModal";
 import CrossDeviceUploadPanel from "@/components/ui/CrossDeviceUploadPanel";
 
 interface Props {
@@ -31,7 +30,7 @@ export default function AccommodationComposer({
   initialParentId,
 }: Props) {
   const user = useAuthStore((s) => s.user);
-  const [showImageModal, setShowImageModal] = useState(false);
+
 
   // Basic fields
   const [title, setTitle] = useState("");
@@ -471,33 +470,56 @@ export default function AccommodationComposer({
                   </button>
                 </div>
               ))}
+              {/* Direct 1-Tap Camera & Gallery Slots (visible while under limit) */}
               {uploadedImages.length < 5 && (
-                <button
-                  type="button"
-                  onClick={() => !uploadingImage && setShowImageModal(true)}
-                  disabled={uploadingImage}
-                  className="flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-medium cursor-pointer disabled:opacity-50 transition-colors"
-                  style={{
-                    background: "var(--color-bg)",
-                    border: "1.5px dashed var(--color-border)",
-                    color: "var(--color-text-secondary)",
-                  }}
-                  aria-label="Add photo"
-                >
-                  {uploadingImage ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin text-primary" />
-                      <span>Processing…</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={16} />
-                      <span>{uploadedImages.length === 0 ? "Add photo" : "Add more"}</span>
-                    </>
-                  )}
-                </button>
+                <>
+                  <div
+                    className="relative flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-semibold cursor-pointer transition-all border border-dashed border-teal-500/50 bg-teal-500/10 hover:bg-teal-500/15 text-teal-700 dark:text-teal-300"
+                    title="Take photo with camera"
+                  >
+                    <Camera size={18} className="text-teal-600 dark:text-teal-400" />
+                    <span className="text-[11px]">Camera</span>
+                    <input
+                      type="file"
+                      accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
+                      capture="environment"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length) handleSelectedFiles(files);
+                        e.target.value = "";
+                      }}
+                      disabled={uploadingImage}
+                    />
+                  </div>
+
+                  <div
+                    className="relative flex flex-col items-center justify-center gap-1 w-full aspect-video rounded-xl text-xs font-semibold cursor-pointer transition-all border border-dashed border-blue-500/50 bg-blue-500/10 hover:bg-blue-500/15 text-blue-700 dark:text-blue-300"
+                    title="Select from Gallery or Files"
+                  >
+                    <ImagePlus size={18} className="text-blue-600 dark:text-blue-400" />
+                    <span className="text-[11px]">Gallery</span>
+                    <input
+                      type="file"
+                      accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
+                      multiple
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length) handleSelectedFiles(files);
+                        e.target.value = "";
+                      }}
+                      disabled={uploadingImage}
+                    />
+                  </div>
+                </>
               )}
             </div>
+            {uploadingImage && (
+              <p className="text-xs text-center flex items-center justify-center gap-1.5 py-1 text-primary font-medium">
+                <Loader2 size={13} className="animate-spin" /> Processing photos…
+              </p>
+            )}
             <CrossDeviceUploadPanel onFilesReceived={handleSelectedFiles} />
           </div>
 
@@ -518,13 +540,6 @@ export default function AccommodationComposer({
           </button>
         </form>
       </div>
-
-      <ImageSourceModal
-        isOpen={showImageModal}
-        onClose={() => setShowImageModal(false)}
-        onSelectImages={handleSelectedFiles}
-        multiple={true}
-      />
     </div>
   );
 }

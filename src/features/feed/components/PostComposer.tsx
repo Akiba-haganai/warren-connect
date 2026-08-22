@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import toast from "react-hot-toast";
-import { X, ImagePlus, Loader2 } from "lucide-react";
+import { X, Camera, ImagePlus, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { postService } from "@/services/posts/postService";
 import { storageService } from "@/services/storage/storageService";
@@ -29,7 +29,6 @@ export default function PostComposer({ onClose, onCreated }: Props) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
   const lastPostTime = useRef<number>(0);
 
   const draftKey = user ? `draft:post-composer:${user.id}` : "draft:post-composer";
@@ -201,25 +200,56 @@ export default function PostComposer({ onClose, onCreated }: Props) {
           <CrossDeviceUploadPanel onFilesReceived={handleCrossDeviceFiles} />
         </div>
 
-        <div className="flex justify-between items-center mt-4">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploadingImage}
-            className="btn-ghost p-2 cursor-pointer disabled:opacity-50"
-            aria-label="Add image"
-          >
-            {uploadingImage ? <Loader2 size={20} className="animate-spin text-primary" /> : <ImagePlus size={20} />}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
-            className="hidden"
-            onChange={handleImage}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Select image file"
-          />
+        <div className="flex justify-between items-center mt-4 pt-2 border-t border-border/50">
+          <div className="flex items-center gap-2">
+            {/* Direct 1-Tap Camera */}
+            <div
+              className="relative p-2 rounded-xl bg-teal-500/10 hover:bg-teal-500/15 text-teal-700 dark:text-teal-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+              title="Take Photo"
+            >
+              <Camera size={18} className="text-teal-600 dark:text-teal-400" />
+              <span className="hidden sm:inline text-[11px]">Camera</span>
+              <input
+                type="file"
+                accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
+                capture="environment"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onChange={handleImage}
+                disabled={uploadingImage}
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Take photo with camera"
+              />
+            </div>
+
+            {/* Direct 1-Tap Gallery */}
+            <div
+              className="relative p-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/15 text-blue-700 dark:text-blue-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+              title="Add from Gallery"
+            >
+              {uploadingImage ? (
+                <Loader2 size={18} className="animate-spin text-primary" />
+              ) : (
+                <ImagePlus size={18} className="text-blue-600 dark:text-blue-400" />
+              )}
+              <span className="hidden sm:inline text-[11px]">Gallery</span>
+              <input
+                type="file"
+                accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onChange={handleImage}
+                disabled={uploadingImage}
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Select image from gallery"
+              />
+            </div>
+
+            {uploadingImage && (
+              <span className="text-[11px] text-primary flex items-center gap-1 font-medium">
+                <Loader2 size={12} className="animate-spin" /> Processing…
+              </span>
+            )}
+          </div>
+
           <button
             type="button"
             className="btn-primary w-auto px-6 cursor-pointer"
