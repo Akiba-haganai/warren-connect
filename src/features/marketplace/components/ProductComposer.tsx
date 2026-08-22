@@ -21,13 +21,13 @@ interface Props {
 interface UploadedImageItem {
   path: string;
   previewUrl: string;
+  file?: File;
 }
 
 export default function ProductComposer({ onClose, onCreated, initialShopId }: Props) {
   const user = useAuthStore((s) => s.user);
   const MAX_PHOTOS = 5;
 
-  
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -45,7 +45,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   // Persist form draft in sessionStorage (survives OS memory reclaims mid-flow)
   const { clearDraft } = useDraftPersistence(
     draftKey,
-    { title, description, price, condition, category, tags, uploadedImages, selectedShopId },
+    { title, description, price, condition, category, tags, uploadedImages: uploadedImages.filter(img => img.previewUrl.startsWith('http')), selectedShopId },
     (draft: any) => {
       if (draft.title !== undefined) setTitle(draft.title);
       if (draft.description !== undefined) setDescription(draft.description);
@@ -65,28 +65,6 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
     shopService.getShopsForUser(user.id).then(setShops).catch(() => {});
   }, [user]);
 
-  // Helper to convert File to Data URL for zero-latency local preview & draft persistence
-  const fileToDataUrl = (file: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const dataUrlToFile = (dataUrl: string, fileName: string): File => {
-    const arr = dataUrl.split(",");
-    const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], fileName, { type: mime });
-  };
-
   // Instant local preview generation: Zero network dependency, survives process reclaims
   const handleSelectedFiles = async (files: File[]) => {
     if (files.length === 0 || !user) return;
@@ -104,15 +82,16 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
 
     setUploadingImage(true);
 
-    const newItems: { path: string; previewUrl: string }[] = [];
+    const newItems: { path: string; previewUrl: string; file?: File }[] = [];
     const failures: string[] = [];
 
     for (const file of filesToProcess) {
       try {
         const compressed = await compressImage(file, 800, 0.7);
-        const dataUrl = await fileToDataUrl(compressed);
+        // SMALL SAFE FIX: Use ObjectURL instead of Base64
+        const previewUrl = URL.createObjectURL(compressed);
         const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        newItems.push({ path: fileName, previewUrl: dataUrl });
+        newItems.push({ path: fileName, previewUrl, file: compressed });
       } catch (err: any) {
         import("@sentry/react").then((Sentry) => {
           Sentry.captureException(err);
@@ -215,10 +194,9 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
       // 2. Upload primary image to Supabase if present
       if (uploadedImages.length > 0) {
         let primaryPublicUrl = uploadedImages[0].previewUrl;
-        if (primaryPublicUrl.startsWith("data:")) {
+        if (uploadedImages[0].file) {
           try {
-            const file = dataUrlToFile(primaryPublicUrl, `product_${createdProductId}.jpg`);
-            const uploadRes = await storageService.uploadFile("public-images", file, user.id);
+            const uploadRes = await storageService.uploadFile("public-images", uploadedImages[0].file, user.id);
             primaryPublicUrl = uploadRes.publicUrl;
           } catch (uploadErr) {
             console.warn("Failed to upload primary image file:", uploadErr);

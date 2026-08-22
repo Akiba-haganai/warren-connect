@@ -21,6 +21,7 @@ interface Props {
 interface UploadedImageItem {
   path: string;
   previewUrl: string;
+  file?: File;
 }
 
 export default function AccommodationComposer({
@@ -78,7 +79,7 @@ export default function AccommodationComposer({
       listingType,
       parentPropertyId,
       capacity,
-      uploadedImages,
+      uploadedImages: uploadedImages.filter(img => img.previewUrl.startsWith('http')),
     },
     (draft: any) => {
       if (draft.title !== undefined) setTitle(draft.title);
@@ -105,28 +106,6 @@ export default function AccommodationComposer({
       .catch(() => {});
   }, [user]);
 
-  // Helpers for instant Data URL previews
-  const fileToDataUrl = (file: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const dataUrlToFile = (dataUrl: string, fileName: string): File => {
-    const arr = dataUrl.split(",");
-    const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], fileName, { type: mime });
-  };
-
   const handleSelectedFiles = async (files: File[]) => {
     if (files.length === 0 || !user) return;
 
@@ -138,15 +117,16 @@ export default function AccommodationComposer({
 
     setUploadingImage(true);
 
-    const newItems: { path: string; previewUrl: string }[] = [];
+    const newItems: { path: string; previewUrl: string; file?: File }[] = [];
     const failures: string[] = [];
 
     for (const file of filesToUpload) {
       try {
         const compressed = await compressImage(file, 800, 0.7);
-        const dataUrl = await fileToDataUrl(compressed);
+        // SMALL SAFE FIX: Use ObjectURL instead of Base64 to prevent main thread lockups
+        const previewUrl = URL.createObjectURL(compressed);
         const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        newItems.push({ path: fileName, previewUrl: dataUrl });
+        newItems.push({ path: fileName, previewUrl, file: compressed });
       } catch (err: any) {
         import("@sentry/react").then((Sentry) => {
           Sentry.captureException(err);
@@ -187,17 +167,19 @@ export default function AccommodationComposer({
       // Upload images to Supabase on submit
       const uploadedPublicUrls: string[] = [];
       for (let i = 0; i < uploadedImages.length; i++) {
-        let url = uploadedImages[i].previewUrl;
-        if (url.startsWith("data:")) {
+        const img = uploadedImages[i];
+        let url = img.previewUrl;
+        
+        if (img.file) {
           try {
-            const file = dataUrlToFile(url, `accom_${user.id}_${i}.jpg`);
-            const uploadRes = await storageService.uploadFile("accommodation-images", file, user.id);
+            const uploadRes = await storageService.uploadFile("accommodation-images", img.file, user.id);
             url = uploadRes.publicUrl;
           } catch (uploadErr) {
             console.warn("Failed to upload accommodation image:", uploadErr);
             url = "";
           }
         }
+        
         if (url && url.startsWith("http")) {
           uploadedPublicUrls.push(url);
         }
