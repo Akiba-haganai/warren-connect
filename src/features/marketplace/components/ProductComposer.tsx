@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Camera, ImagePlus, X, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { productService } from "@/services/products/productService";
@@ -10,6 +10,7 @@ import { tagService } from "@/services/tags/tagService";
 import { priceEngine } from "@/services/pricing/priceEngine";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
 import CrossDeviceUploadPanel from "@/components/ui/CrossDeviceUploadPanel";
+import { uploadTelemetry } from "@/utils/uploadTelemetry";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -27,6 +28,7 @@ interface UploadedImageItem {
 export default function ProductComposer({ onClose, onCreated, initialShopId }: Props) {
   const user = useAuthStore((s) => s.user);
   const MAX_PHOTOS = 5;
+  const instanceId = useRef(`ProductComposer_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`).current;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -40,6 +42,40 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   const [selectedShopId, setSelectedShopId] = useState<string>(initialShopId ?? "");
   const [category, setCategory] = useState("");
 
+  const uploadedImagesRef = useRef(uploadedImages);
+  uploadedImagesRef.current = uploadedImages;
+
+  // Track mount and unmount
+  useEffect(() => {
+    uploadTelemetry.log("composer_mounted", "ProductComposer mounted", { instanceId });
+    return () => {
+      uploadTelemetry.log("composer_unmounted", "ProductComposer unmounted", {
+        instanceId,
+        uploadedImagesCountAtUnmount: uploadedImagesRef.current.length,
+      });
+    };
+  }, [instanceId]);
+
+  // Track uploadedImages state transitions
+  useEffect(() => {
+    uploadTelemetry.log("images_state_updated", `uploadedImages changed: now ${uploadedImages.length} item(s)`, {
+      instanceId,
+      count: uploadedImages.length,
+      images: uploadedImages.map((img, i) => ({
+        index: i,
+        path: img.path,
+        hasFile: Boolean(img.file),
+        fileSize: img.file?.size,
+        previewUrlType: img.previewUrl.startsWith("blob:")
+          ? "blob"
+          : img.previewUrl.startsWith("http")
+          ? "http"
+          : "other",
+        previewPrefix: img.previewUrl.substring(0, 30),
+      })),
+    });
+  }, [uploadedImages, instanceId]);
+
   const draftKey = user ? `draft:product-composer:${user.id}` : "draft:product-composer";
 
   // Persist form draft in sessionStorage (survives OS memory reclaims mid-flow)
@@ -47,6 +83,11 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
     draftKey,
     { title, description, price, condition, category, tags, uploadedImages: uploadedImages.filter(img => img.previewUrl.startsWith('http')), selectedShopId },
     (draft: any) => {
+      uploadTelemetry.log("draft_restored", "ProductComposer draft restored", {
+        instanceId,
+        hasTitle: Boolean(draft.title),
+        restoredImagesCount: draft.uploadedImages?.length || 0,
+      });
       if (draft.title !== undefined) setTitle(draft.title);
       if (draft.description !== undefined) setDescription(draft.description);
       if (draft.price !== undefined) setPrice(draft.price);
@@ -67,6 +108,13 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
 
   // Instant local preview generation: Zero network dependency, survives process reclaims
   const handleSelectedFiles = async (files: File[]) => {
+    uploadTelemetry.log("selection_event_fired", `handleSelectedFiles called with ${files.length} file(s)`, {
+      instanceId,
+      fileCount: files.length,
+      currentUploadedCount: uploadedImages.length,
+      files: files.map((f) => ({ name: f.name, size: f.size, type: f.type })),
+    });
+
     if (files.length === 0 || !user) return;
 
     // Enforce per-session cap — accumulate across multiple picks
@@ -87,12 +135,32 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
 
     for (const file of filesToProcess) {
       try {
+        uploadTelemetry.log("processing_single_file_start", `Compressing ${file.name}`, {
+          instanceId,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        });
+
         const compressed = await compressImage(file, 800, 0.7);
         // SMALL SAFE FIX: Use ObjectURL instead of Base64
         const previewUrl = URL.createObjectURL(compressed);
         const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        
+        uploadTelemetry.log("processing_single_file_success", `Object URL created for ${file.name}`, {
+          instanceId,
+          fileName,
+          compressedSize: compressed.size,
+          previewUrlType: previewUrl.startsWith("blob:") ? "blob" : "other",
+          previewPrefix: previewUrl.substring(0, 30),
+        });
+
         newItems.push({ path: fileName, previewUrl, file: compressed });
       } catch (err: any) {
+        uploadTelemetry.reportError("processing_single_file_failed", err, {
+          instanceId,
+          fileName: file.name,
+        });
         import("@sentry/react").then((Sentry) => {
           Sentry.captureException(err);
         });
@@ -100,6 +168,13 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
         failures.push(err?.message || `Couldn't process "${file.name}"`);
       }
     }
+
+    uploadTelemetry.log("set_uploaded_images_call", `Calling setUploadedImages with ${newItems.length} new item(s)`, {
+      instanceId,
+      newItemsCount: newItems.length,
+      currentCount: uploadedImages.length,
+      expectedTotal: uploadedImages.length + newItems.length,
+    });
 
     if (newItems.length > 0) {
       setUploadedImages((prev) => [...prev, ...newItems]);
@@ -114,6 +189,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
   };
 
   const removeImage = (index: number) => {
+    uploadTelemetry.log("remove_image", `Removing image at index ${index}`, { instanceId, index });
     setUploadedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -160,7 +236,24 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !title.trim() || !price) return;
+    uploadTelemetry.log("submit_start", "Form submit triggered", {
+      instanceId,
+      title,
+      price,
+      uploadedImagesCount: uploadedImages.length,
+      imagesSnapshot: uploadedImages.map((img, i) => ({
+        index: i,
+        path: img.path,
+        hasFile: Boolean(img.file),
+        fileSize: img.file?.size,
+        previewPrefix: img.previewUrl.substring(0, 30),
+      })),
+    });
+
+    if (!user || !title.trim() || !price) {
+      uploadTelemetry.log("submit_validation_failed", "Missing required fields", { instanceId, hasUser: !!user, title, price });
+      return;
+    }
     
     const parsedPrice = Number(String(price).replace(/,/g, "."));
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
@@ -170,6 +263,13 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
 
     setPosting(true);
     try {
+      uploadTelemetry.log("database_insert_started", "Creating product in database", {
+        instanceId,
+        title: title.trim(),
+        price: parsedPrice,
+        hasImage: uploadedImages.length > 0,
+      });
+
       // 1. Create Product (Synchronous text moderation)
       const newProduct = await productService.createProduct(
         user.id,
@@ -187,6 +287,11 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
         newProduct?.data?.id ||
         (typeof newProduct === "string" ? newProduct : null);
 
+      uploadTelemetry.log("database_insert_success", `Product created with ID ${createdProductId}`, {
+        instanceId,
+        createdProductId,
+      });
+
       if (!createdProductId || createdProductId === "undefined") {
         throw new Error("Failed to retrieve product ID");
       }
@@ -194,19 +299,50 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
       // 2. Upload primary image to Supabase if present
       if (uploadedImages.length > 0) {
         let primaryPublicUrl = uploadedImages[0].previewUrl;
+        uploadTelemetry.log("image_upload_check", "Evaluating primary image for Supabase upload", {
+          instanceId,
+          hasFile: Boolean(uploadedImages[0].file),
+          fileSize: uploadedImages[0].file?.size,
+          initialUrlPrefix: primaryPublicUrl.substring(0, 30),
+        });
+
         if (uploadedImages[0].file) {
           try {
+            uploadTelemetry.log("storage_upload_started", "Uploading image file to public-images bucket", {
+              instanceId,
+              fileName: uploadedImages[0].file.name,
+              fileSize: uploadedImages[0].file.size,
+            });
+
             const uploadRes = await storageService.uploadFile("public-images", uploadedImages[0].file, user.id);
             primaryPublicUrl = uploadRes.publicUrl;
-          } catch (uploadErr) {
+
+            uploadTelemetry.log("storage_upload_success", `Storage upload succeeded: ${primaryPublicUrl}`, {
+              instanceId,
+              publicUrl: primaryPublicUrl,
+            });
+          } catch (uploadErr: any) {
+            uploadTelemetry.reportError("storage_upload_failed", uploadErr, {
+              instanceId,
+              bucket: "public-images",
+            });
             console.warn("Failed to upload primary image file:", uploadErr);
             primaryPublicUrl = ""; // Prevent base64 payload from polluting the database
           }
         }
+
         if (primaryPublicUrl && primaryPublicUrl.startsWith("http")) {
+          uploadTelemetry.log("product_update_image_started", "Updating product with image URL", {
+            instanceId,
+            createdProductId,
+            primaryPublicUrl,
+          });
+
           await productService.updateProduct(createdProductId, {
             image_url: primaryPublicUrl,
-          }).catch(() => {});
+          }).catch((err) => {
+            uploadTelemetry.reportError("product_update_image_failed", err, { instanceId });
+          });
         }
       }
 
@@ -223,10 +359,16 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
         await shopService.addProductToShop(createdProductId, selectedShopId);
       }
 
+      uploadTelemetry.log("publish_complete", `Product ${createdProductId} published successfully`, {
+        instanceId,
+        createdProductId,
+      });
+
       clearDraft();
       onCreated();
       onClose();
     } catch (e: any) {
+      uploadTelemetry.reportError("publish_failed", e, { instanceId });
       toast.error(e.message || "Failed to list item");
     } finally {
       setPosting(false);
@@ -333,6 +475,10 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
                       accept="image/*"
                       capture="environment"
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        uploadTelemetry.startAttempt("ProductComposer_Camera");
+                      }}
                       onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         if (files.length) handleSelectedFiles(files);
@@ -353,6 +499,10 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
                       accept="image/*"
                       multiple
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        uploadTelemetry.startAttempt("ProductComposer_Gallery");
+                      }}
                       onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         if (files.length) handleSelectedFiles(files);

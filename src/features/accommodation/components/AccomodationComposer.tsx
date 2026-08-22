@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { MapPin, Camera, ImagePlus, X, Loader2, Building2, DoorClosed, BedDouble } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { accommodationService } from "@/services/accommodation/accommodationService";
@@ -10,6 +10,7 @@ import { ALL_AMENITIES } from "@/constants/amenities";
 import toast from "react-hot-toast";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
 import CrossDeviceUploadPanel from "@/components/ui/CrossDeviceUploadPanel";
+import { uploadTelemetry } from "@/utils/uploadTelemetry";
 
 interface Props {
   onClose: () => void;
@@ -31,7 +32,7 @@ export default function AccommodationComposer({
   initialParentId,
 }: Props) {
   const user = useAuthStore((s) => s.user);
-
+  const instanceId = useRef(`AccomodationComposer_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`).current;
 
   // Basic fields
   const [title, setTitle] = useState("");
@@ -65,6 +66,40 @@ export default function AccommodationComposer({
   // My properties (for parent selector)
   const [myProperties, setMyProperties] = useState<any[]>([]);
 
+  const uploadedImagesRef = useRef(uploadedImages);
+  uploadedImagesRef.current = uploadedImages;
+
+  // Track mount and unmount
+  useEffect(() => {
+    uploadTelemetry.log("composer_mounted", "AccomodationComposer mounted", { instanceId });
+    return () => {
+      uploadTelemetry.log("composer_unmounted", "AccomodationComposer unmounted", {
+        instanceId,
+        uploadedImagesCountAtUnmount: uploadedImagesRef.current.length,
+      });
+    };
+  }, [instanceId]);
+
+  // Track uploadedImages state transitions
+  useEffect(() => {
+    uploadTelemetry.log("images_state_updated", `uploadedImages changed: now ${uploadedImages.length} item(s)`, {
+      instanceId,
+      count: uploadedImages.length,
+      images: uploadedImages.map((img, i) => ({
+        index: i,
+        path: img.path,
+        hasFile: Boolean(img.file),
+        fileSize: img.file?.size,
+        previewUrlType: img.previewUrl.startsWith("blob:")
+          ? "blob"
+          : img.previewUrl.startsWith("http")
+          ? "http"
+          : "other",
+        previewPrefix: img.previewUrl.substring(0, 30),
+      })),
+    });
+  }, [uploadedImages, instanceId]);
+
   const draftKey = user ? `draft:accommodation-composer:${user.id}` : "draft:accommodation-composer";
 
   // Draft persistence (survives OS WebView memory reclaims during file picker switch)
@@ -82,6 +117,11 @@ export default function AccommodationComposer({
       uploadedImages: uploadedImages.filter(img => img.previewUrl.startsWith('http')),
     },
     (draft: any) => {
+      uploadTelemetry.log("draft_restored", "AccomodationComposer draft restored", {
+        instanceId,
+        hasTitle: Boolean(draft.title),
+        restoredImagesCount: draft.uploadedImages?.length || 0,
+      });
       if (draft.title !== undefined) setTitle(draft.title);
       if (draft.location !== undefined) setLocation(draft.location);
       if (draft.monthly_rent !== undefined) setRent(draft.monthly_rent);
@@ -107,6 +147,13 @@ export default function AccommodationComposer({
   }, [user]);
 
   const handleSelectedFiles = async (files: File[]) => {
+    uploadTelemetry.log("selection_event_fired", `handleSelectedFiles called with ${files.length} file(s)`, {
+      instanceId,
+      fileCount: files.length,
+      currentUploadedCount: uploadedImages.length,
+      files: files.map((f) => ({ name: f.name, size: f.size, type: f.type })),
+    });
+
     if (files.length === 0 || !user) return;
 
     if (uploadedImages.length + files.length > 5) {
@@ -122,12 +169,32 @@ export default function AccommodationComposer({
 
     for (const file of filesToUpload) {
       try {
+        uploadTelemetry.log("processing_single_file_start", `Compressing ${file.name}`, {
+          instanceId,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        });
+
         const compressed = await compressImage(file, 800, 0.7);
         // SMALL SAFE FIX: Use ObjectURL instead of Base64 to prevent main thread lockups
         const previewUrl = URL.createObjectURL(compressed);
         const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+
+        uploadTelemetry.log("processing_single_file_success", `Object URL created for ${file.name}`, {
+          instanceId,
+          fileName,
+          compressedSize: compressed.size,
+          previewUrlType: previewUrl.startsWith("blob:") ? "blob" : "other",
+          previewPrefix: previewUrl.substring(0, 30),
+        });
+
         newItems.push({ path: fileName, previewUrl, file: compressed });
       } catch (err: any) {
+        uploadTelemetry.reportError("processing_single_file_failed", err, {
+          instanceId,
+          fileName: file.name,
+        });
         import("@sentry/react").then((Sentry) => {
           Sentry.captureException(err);
         });
@@ -135,6 +202,13 @@ export default function AccommodationComposer({
         failures.push(err?.message || `Couldn't process "${file.name}"`);
       }
     }
+
+    uploadTelemetry.log("set_uploaded_images_call", `Calling setUploadedImages with ${newItems.length} new item(s)`, {
+      instanceId,
+      newItemsCount: newItems.length,
+      currentCount: uploadedImages.length,
+      expectedTotal: uploadedImages.length + newItems.length,
+    });
 
     if (newItems.length > 0) {
       setUploadedImages((prev) => [...prev, ...newItems]);
@@ -149,12 +223,37 @@ export default function AccommodationComposer({
   };
 
   const removeImage = (index: number) => {
+    uploadTelemetry.log("remove_image", `Removing image at index ${index}`, { instanceId, index });
     setUploadedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !title.trim() || !location.trim() || !monthly_rent) return;
+    uploadTelemetry.log("submit_start", "Form submit triggered", {
+      instanceId,
+      title,
+      monthly_rent,
+      location,
+      uploadedImagesCount: uploadedImages.length,
+      imagesSnapshot: uploadedImages.map((img, i) => ({
+        index: i,
+        path: img.path,
+        hasFile: Boolean(img.file),
+        fileSize: img.file?.size,
+        previewPrefix: img.previewUrl.substring(0, 30),
+      })),
+    });
+
+    if (!user || !title.trim() || !location.trim() || !monthly_rent) {
+      uploadTelemetry.log("submit_validation_failed", "Missing required fields", {
+        instanceId,
+        hasUser: !!user,
+        title,
+        location,
+        monthly_rent,
+      });
+      return;
+    }
 
     const parsedRent = Number(String(monthly_rent).replace(/,/g, "."));
     if (isNaN(parsedRent) || parsedRent <= 0) {
@@ -164,6 +263,11 @@ export default function AccommodationComposer({
 
     setPosting(true);
     try {
+      uploadTelemetry.log("images_upload_process_started", `Processing ${uploadedImages.length} images for accommodation`, {
+        instanceId,
+        count: uploadedImages.length,
+      });
+
       // Upload images to Supabase on submit
       const uploadedPublicUrls: string[] = [];
       for (let i = 0; i < uploadedImages.length; i++) {
@@ -172,9 +276,28 @@ export default function AccommodationComposer({
         
         if (img.file) {
           try {
+            uploadTelemetry.log("storage_upload_started", `Uploading accommodation image ${i + 1}`, {
+              instanceId,
+              index: i,
+              fileName: img.file.name,
+              fileSize: img.file.size,
+              bucket: "accommodation-images",
+            });
+
             const uploadRes = await storageService.uploadFile("accommodation-images", img.file, user.id);
             url = uploadRes.publicUrl;
-          } catch (uploadErr) {
+
+            uploadTelemetry.log("storage_upload_success", `Accommodation image ${i + 1} uploaded: ${url}`, {
+              instanceId,
+              index: i,
+              publicUrl: url,
+            });
+          } catch (uploadErr: any) {
+            uploadTelemetry.reportError("storage_upload_failed", uploadErr, {
+              instanceId,
+              index: i,
+              bucket: "accommodation-images",
+            });
             console.warn("Failed to upload accommodation image:", uploadErr);
             url = "";
           }
@@ -185,7 +308,20 @@ export default function AccommodationComposer({
         }
       }
 
+      uploadTelemetry.log("images_upload_process_complete", `Finished uploading images: ${uploadedPublicUrls.length} valid URL(s)`, {
+        instanceId,
+        count: uploadedPublicUrls.length,
+      });
+
       const primaryImageUrl = uploadedPublicUrls.length > 0 ? uploadedPublicUrls[0] : undefined;
+
+      uploadTelemetry.log("database_insert_started", "Creating accommodation record in DB", {
+        instanceId,
+        title: title.trim(),
+        rent: parsedRent,
+        hasPrimaryImage: Boolean(primaryImageUrl),
+        totalImages: uploadedPublicUrls.length,
+      });
 
       const newAcc = await accommodationService.createAccommodation(
         user.id,
@@ -201,6 +337,11 @@ export default function AccommodationComposer({
           : undefined
       );
 
+      uploadTelemetry.log("database_insert_success", `Accommodation created with ID ${newAcc.id}`, {
+        instanceId,
+        accommodationId: newAcc.id,
+      });
+
       for (let i = 1; i < uploadedPublicUrls.length; i++) {
         await accommodationService.addImage(newAcc.id, uploadedPublicUrls[i]);
       }
@@ -209,11 +350,17 @@ export default function AccommodationComposer({
         await accommodationService.setAmenities(newAcc.id, selectedAmenities);
       }
 
+      uploadTelemetry.log("publish_complete", `Accommodation ${newAcc.id} published successfully`, {
+        instanceId,
+        accommodationId: newAcc.id,
+      });
+
       clearDraft();
       toast.success("Listing created!");
       onCreated();
       onClose();
     } catch (err: any) {
+      uploadTelemetry.reportError("publish_failed", err, { instanceId });
       toast.error(err.message || "Could not create listing.");
     } finally {
       setPosting(false);
@@ -466,6 +613,10 @@ export default function AccommodationComposer({
                       accept="image/*"
                       capture="environment"
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        uploadTelemetry.startAttempt("AccomodationComposer_Camera");
+                      }}
                       onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         if (files.length) handleSelectedFiles(files);
@@ -486,6 +637,10 @@ export default function AccommodationComposer({
                       accept="image/*"
                       multiple
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        uploadTelemetry.startAttempt("AccomodationComposer_Gallery");
+                      }}
                       onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         if (files.length) handleSelectedFiles(files);
