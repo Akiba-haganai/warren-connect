@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import { X, Camera, ImagePlus, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
