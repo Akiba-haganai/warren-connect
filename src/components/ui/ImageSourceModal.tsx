@@ -56,7 +56,9 @@ export default function ImageSourceModal({
 }: ImageSourceModalProps) {
   const [loading, setLoading] = useState(false);
 
-  if (!isOpen) return null;
+  const containerClass = isOpen
+    ? "fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/65 backdrop-blur-sm animate-in fade-in duration-200"
+    : "hidden";
 
   const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = Array.from(e.target.files || []);
@@ -90,7 +92,7 @@ export default function ImageSourceModal({
 
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/65 backdrop-blur-sm animate-in fade-in duration-200"
+      className={containerClass}
       onClick={loading ? undefined : onClose}
     >
       <div
@@ -152,7 +154,7 @@ export default function ImageSourceModal({
                     security requirement that file picker activation comes from a direct user gesture. */}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
                   capture="environment"
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   onChange={handleFilesSelected}
@@ -170,7 +172,7 @@ export default function ImageSourceModal({
                 </div>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
                   multiple={multiple}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   onChange={handleFilesSelected}

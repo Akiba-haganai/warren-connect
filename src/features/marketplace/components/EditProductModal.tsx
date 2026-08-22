@@ -230,7 +230,7 @@ export default function EditProductModal({ product, onClose, onUpdated }: Props)
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
                   multiple
                   className="hidden"
                   onChange={(e) => handleAddFiles(e.target.files)}

@@ -104,7 +104,7 @@ export default function ProfileHeader({ uploading, setUploading }: Props) {
       <input
         ref={coverRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
         className="hidden"
         onChange={handleCoverUpload}
         aria-label="Upload cover photo"
@@ -151,7 +151,7 @@ export default function ProfileHeader({ uploading, setUploading }: Props) {
           <input
             ref={avatarRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
             className="hidden"
             onChange={handleAvatarUpload}
             aria-label="Upload profile photo"

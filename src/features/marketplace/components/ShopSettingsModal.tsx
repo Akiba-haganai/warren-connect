@@ -88,7 +88,7 @@ export default function ShopSettingsModal({ shop, onClose, onSaved }: Props) {
               </div>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
                 className="hidden"
                 onChange={handleLogoChange}
               />

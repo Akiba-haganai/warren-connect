@@ -77,6 +77,9 @@ export default function PostComposer({ onClose, onCreated }: Props) {
       const signedUrl = await storageService.getSignedUrl("pending-uploads", path, 3600);
       setUploadedImage({ path, previewUrl: signedUrl });
     } catch (err: any) {
+      import("@sentry/react").then((Sentry) => {
+        Sentry.captureException(err);
+      });
       toast.error(err.message || "Failed to upload image preview");
     } finally {
       setUploadingImage(false);
@@ -211,7 +214,7 @@ export default function PostComposer({ onClose, onCreated }: Props) {
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
             className="hidden"
             onChange={handleImage}
             onClick={(e) => e.stopPropagation()}

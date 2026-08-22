@@ -70,7 +70,7 @@ export default function SessionUploadPage() {
           <input
             ref={inputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
             multiple
             onChange={handleFiles}
             disabled={status === "uploading"}

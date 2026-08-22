@@ -217,7 +217,7 @@ export default function VerificationRequestPage() {
                   <span className="font-semibold text-slate-700 dark:text-slate-300">Upload Student ID Photo</span>
                 </button>
               )}
-              <input ref={idFileRef} type="file" accept="image/*" className="hidden" onChange={handleIdSelect} />
+              <input ref={idFileRef} type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" className="hidden" onChange={handleIdSelect} />
             </div>
 
             {/* Document 2: NRC Card */}
@@ -246,7 +246,7 @@ export default function VerificationRequestPage() {
                   <span className="font-semibold text-slate-700 dark:text-slate-300">Upload NRC Card Photo</span>
                 </button>
               )}
-              <input ref={nrcFileRef} type="file" accept="image/*" className="hidden" onChange={handleNrcSelect} />
+              <input ref={nrcFileRef} type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" className="hidden" onChange={handleNrcSelect} />
             </div>
 
             {/* Anti-fraud Certification */}

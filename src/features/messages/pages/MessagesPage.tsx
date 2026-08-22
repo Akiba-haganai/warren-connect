@@ -340,7 +340,7 @@ export default function MessagesPage() {
           >
             <ImagePlus size={22} />
           </button>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+          <input ref={fileInputRef} type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" className="hidden" onChange={handleFileSelect} />
           
           <div className="flex-1 rounded-3xl bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30 transition-all flex items-end min-h-[44px]">
             <input

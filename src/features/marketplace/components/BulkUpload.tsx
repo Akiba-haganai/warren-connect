@@ -227,7 +227,7 @@ export default function BulkUpload({ onClose, onCreated }: Props) {
                 <input
                   ref={imageInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
                   multiple
                   className="hidden"
                   onChange={handleImagesSelect}

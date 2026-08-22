@@ -98,6 +98,21 @@ export async function compressImage(file: File, maxDimension = 1200, quality = 0
   if (!file) throw new Error("No file provided");
   if (file.type === "application/pdf") return file;
 
+  if (file.size === 0) {
+    throw new Error(
+      "The selected file is empty (0 bytes). This often happens when selecting from 'Browse' or 'Internal Storage' on some Android devices. Try selecting from 'Recents' or 'Gallery' instead."
+    );
+  }
+
+  const isImageFile = (f: File) => {
+    if (f.type && f.type.startsWith("image/")) return true;
+    return /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(f.name);
+  };
+
+  if (!isImageFile(file)) {
+    throw new Error("The selected file doesn't appear to be a supported image format.");
+  }
+
   if (file.size > MAX_INPUT_SIZE) {
     throw new Error(
       `This photo is too large (${Math.round(file.size / 1024 / 1024)}MB). Please choose a smaller photo.`

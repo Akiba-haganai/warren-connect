@@ -261,7 +261,7 @@ export default function SettingsPage() {
                   {uploadingId ? <Loader2 size={14} className="animate-spin mr-1 inline" /> : null}
                   Verify with Student ID
                 </button>
-                <input id="id-upload" type="file" accept="image/*" className="hidden" onChange={handleUploadId} disabled={uploadingId} />
+                <input id="id-upload" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" className="hidden" onChange={handleUploadId} disabled={uploadingId} />
               </div>
             ) : (
               <>
@@ -269,7 +269,7 @@ export default function SettingsPage() {
                   {uploadingId ? <Loader2 size={14} className="animate-spin mr-1 inline" /> : null}
                   Verify with Student ID
                 </button>
-                <input id="id-upload" type="file" accept="image/*" className="hidden" onChange={handleUploadId} disabled={uploadingId} />
+                <input id="id-upload" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" className="hidden" onChange={handleUploadId} disabled={uploadingId} />
               </>
             )}
             <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>

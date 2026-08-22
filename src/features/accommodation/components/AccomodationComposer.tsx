@@ -149,6 +149,9 @@ export default function AccommodationComposer({
         const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
         newItems.push({ path: fileName, previewUrl: dataUrl });
       } catch (err: any) {
+        import("@sentry/react").then((Sentry) => {
+          Sentry.captureException(err);
+        });
         console.warn(`Failed to process "${file.name}":`, err);
         failures.push(err?.message || `Couldn't process "${file.name}"`);
       }
