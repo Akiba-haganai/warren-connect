@@ -9,6 +9,7 @@
  * silently returning the original (possibly undecodable) file. Callers must
  * catch per-file so one bad photo doesn't take down the whole batch/composer.
  */
+import { uploadTelemetry } from "./uploadTelemetry";
 
 const MAX_INPUT_SIZE = 25 * 1024 * 1024; // 25MB — reject absurdly large originals up front
 const PROCESSING_TIMEOUT_MS = 15_000; // fail fast instead of hanging on older WebViews
@@ -119,33 +120,42 @@ export async function compressImage(file: File, maxDimension = 1200, quality = 0
     );
   }
 
-  // 1. Try createImageBitmap first — hardware-accelerated, handles very large photos
-  //    without the memory spike of loading a full base64 string.
+  uploadTelemetry.log("processing_started", `Started compressImage for ${file.name}`, {
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    maxDimension,
+    quality
+  });
+
   if (typeof createImageBitmap === "function") {
     try {
-      return await withTimeout(
+      uploadTelemetry.log("createImageBitmap_started", "Attempting createImageBitmap path");
+      const result = await withTimeout(
         compressViaBitmap(file, maxDimension, quality),
         PROCESSING_TIMEOUT_MS,
         "Image processing"
       );
-    } catch (bitmapErr) {
+      uploadTelemetry.log("createImageBitmap_success", "Successfully compressed via createImageBitmap");
+      return result;
+    } catch (bitmapErr: any) {
+      uploadTelemetry.log("createImageBitmap_failed", "createImageBitmap failed, falling back to FileReader", { error: bitmapErr?.message });
       console.warn("createImageBitmap failed, falling back to FileReader:", bitmapErr);
-      // fall through to the FileReader path below
     }
   }
 
-  // 2. Fallback: FileReader + <img> + canvas. If THIS also fails, we throw a
-  //    real, user-facing error instead of quietly handing back an unusable file.
   try {
-    return await withTimeout(
+    uploadTelemetry.log("fileReader_started", "Attempting FileReader fallback path");
+    const result = await withTimeout(
       compressViaFileReader(file, maxDimension, quality),
       PROCESSING_TIMEOUT_MS,
       "Image processing"
     );
+    uploadTelemetry.log("fileReader_success", "Successfully compressed via FileReader");
+    return result;
   } catch (fallbackErr: any) {
-    throw new Error(
-      fallbackErr?.message ||
-        "Couldn't process this photo on your device. Please try a different photo."
-    );
+    const errorMsg = fallbackErr?.message || "Couldn't process this photo on your device. Please try a different photo.";
+    uploadTelemetry.reportError("processing_failed", new Error(errorMsg), { originalError: fallbackErr?.message });
+    throw new Error(errorMsg);
   }
 }

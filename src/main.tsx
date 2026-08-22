@@ -5,8 +5,13 @@ import "./index.css";
 import { registerServiceWorker } from "@/utils/pwa-register";
 import { PWAInstaller } from "@/utils/install-prompt";
 import * as Sentry from "@sentry/react";
+import { initLifecycleTelemetry } from "@/utils/uploadTelemetry";
+
+// Initialize lifecycle tracking early
+initLifecycleTelemetry();
 
 // Initialize Sentry for Live Error Tracking
+
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,

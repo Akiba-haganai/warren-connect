@@ -10,6 +10,7 @@ import { tagService } from "@/services/tags/tagService";
 import { sendPushNotification } from "@/lib/notifications";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
 import CrossDeviceUploadPanel from "@/components/ui/CrossDeviceUploadPanel";
+import { uploadTelemetry } from "@/utils/uploadTelemetry";
 
 interface Props {
   onClose: () => void;
@@ -59,6 +60,13 @@ export default function PostComposer({ onClose, onCreated }: Props) {
 
   const processFile = async (file: File) => {
     if (!file || !user) return;
+    
+    uploadTelemetry.log("file_selected", `File selected: ${file.name}`, {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+    
     setUploadingImage(true);
 
     try {
@@ -66,6 +74,7 @@ export default function PostComposer({ onClose, onCreated }: Props) {
       const fileName = `${Date.now()}_${compressed.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const path = `posts/${user.id}/drafts/${fileName}`;
 
+      uploadTelemetry.log("upload_started", "Starting Supabase upload");
       await storageService.uploadFile(
         "pending-uploads",
         compressed,
@@ -73,9 +82,12 @@ export default function PostComposer({ onClose, onCreated }: Props) {
         true,
         path
       );
+      uploadTelemetry.log("upload_success", "Supabase upload completed");
+      
       const signedUrl = await storageService.getSignedUrl("pending-uploads", path, 3600);
       setUploadedImage({ path, previewUrl: signedUrl });
     } catch (err: any) {
+      uploadTelemetry.reportError("upload_failed", err);
       import("@sentry/react").then((Sentry) => {
         Sentry.captureException(err);
       });
@@ -216,7 +228,7 @@ export default function PostComposer({ onClose, onCreated }: Props) {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 onChange={handleImage}
                 disabled={uploadingImage}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); uploadTelemetry.startAttempt("PostComposer_Camera"); }}
                 aria-label="Take photo with camera"
               />
             </div>
@@ -238,7 +250,7 @@ export default function PostComposer({ onClose, onCreated }: Props) {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 onChange={handleImage}
                 disabled={uploadingImage}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); uploadTelemetry.startAttempt("PostComposer_Gallery"); }}
                 aria-label="Select image from gallery"
               />
             </div>
