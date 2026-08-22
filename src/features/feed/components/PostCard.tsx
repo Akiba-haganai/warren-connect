@@ -11,7 +11,6 @@ import { triggerNotification } from "@/services/notifications/triggerService";
 import { reportService } from "@/services/reports/reportService";
 import { tagService } from "@/services/tags/tagService";                // ✅ new
 import type { FeedPost } from "@/services/posts/postService";
-import type { Tables } from "@/types/database/database.types";
 import CommentItem from "@/features/feed/components/CommentItem";
 import { triggerHaptic } from "@/utils/haptic";
 
