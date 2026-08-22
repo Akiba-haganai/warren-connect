@@ -66,6 +66,14 @@ export default function AuthProvider({
         return;
       }
 
+      // CRITICAL FIX: If user is ALREADY authenticated in state (e.g. tab focus / visibility change re-check),
+      // do NOT set loading: true because it causes ProtectedRoute to unmount all active composers & UI!
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser && currentUser.id === session.user.id) {
+        setState({ user: session.user, session });
+        return;
+      }
+
       // New sign-in or initial session
       setState({ user: session.user, session, loading: true });
       const profile = await fetchProfileSafely(session.user.id);
