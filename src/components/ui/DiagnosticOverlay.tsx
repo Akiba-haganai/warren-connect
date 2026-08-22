@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
 import { uploadTelemetry, type TelemetryEvent } from "@/utils/uploadTelemetry";
+import { useAuthStore } from "@/store/auth/authStore";
 import { X, Copy, Trash2, Activity } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function DiagnosticOverlay() {
+  const profile = useAuthStore((s) => s.profile);
   const [isOpen, setIsOpen] = useState(false);
   const [logs, setLogs] = useState<TelemetryEvent[]>([]);
+
+  // Restrict to admins, development mode, or explicit ?debug=1 URL parameter
+  const isDebugUrl = typeof window !== "undefined" && window.location.search.includes("debug=1");
+  const isDev = import.meta.env.DEV;
+  const isAdmin = profile?.is_admin === true;
 
   useEffect(() => {
     if (isOpen) {
@@ -17,6 +24,10 @@ export default function DiagnosticOverlay() {
       return () => clearInterval(interval);
     }
   }, [isOpen]);
+
+  if (!isAdmin && !isDebugUrl && !isDev) {
+    return null;
+  }
 
   if (!isOpen) {
     return (
