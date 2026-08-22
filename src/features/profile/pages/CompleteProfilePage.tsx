@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
 import { profileService } from "@/services/profiles/profileService";
 import { generateReferralCode } from "@/utils/referral";
@@ -9,6 +9,8 @@ const STEPS = ["Personal", "Academic"];
 
 export default function CompleteProfilePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/";
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
@@ -82,7 +84,7 @@ export default function CompleteProfilePage() {
       }
 
       await refreshProfile(user.id);
-      navigate("/");
+      navigate(redirectUrl);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Save failed";
       setError(msg.includes("unique") || msg.includes("duplicate") ? "That username is already taken. Try another." : msg);

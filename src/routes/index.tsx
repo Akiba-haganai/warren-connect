@@ -120,33 +120,41 @@ export const router = createBrowserRouter([
       },
 
       // =========================
-      // MAIN APP ROUTES (protected)
+      // MAIN APP ROUTES (Mixed Public / Protected)
       // =========================
       {
-        element: (
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        ),
+        element: <MainLayout />,
         children: [
+          // PUBLIC ROUTES (Read-only for guests)
           { path: "/feed", element: withBoundary(HomeFeedPage) },
           { path: "/user/:id", element: withBoundary(PublicProfilePage) },
-          { path: "/profile", element: withBoundary(ProfilePage) },
-          { path: "/complete-profile", element: withBoundary(CompleteProfilePage) },
           { path: "/marketplace/:id", element: withBoundary(ProductDetailPage) },
           { path: "/marketplace", element: withBoundary(MarketplacePage) },
           { path: "/accommodation/:id", element: withBoundary(AccommodationDetailPage) },
           { path: "/accommodation", element: withBoundary(AccommodationPage) },
-          { path: "/roommates", element: withBoundary(RoommateFinderPage) },
-          { path: "/messages", element: withBoundary(MessagesPage) },
-          { path: "/notifications", element: withBoundary(NotificationsPage) },
-          { path: "/verification", element: withBoundary(VerificationRequestPage) },
-          { path: "/saved", element: withBoundary(SavedItemsPage) },
-          { path: "/shop/:id", element: withBoundary(ShopPage) },
-          { path: "/shop/:id/join", element: withBoundary(ShopJoinPage) },
           { path: "/post/:id", element: withBoundary(PostDetailPage) },
+          { path: "/shop/:id", element: withBoundary(ShopPage) },
           { path: "/tag/:tagName", element: withBoundary(TagPage) },
-          { path: "/settings", element: withBoundary(SettingsPage) },
+
+          // PROTECTED ROUTES (Require Login)
+          {
+            element: (
+              <ProtectedRoute>
+                <Outlet />
+              </ProtectedRoute>
+            ),
+            children: [
+              { path: "/profile", element: withBoundary(ProfilePage) },
+              { path: "/complete-profile", element: withBoundary(CompleteProfilePage) },
+              { path: "/roommates", element: withBoundary(RoommateFinderPage) },
+              { path: "/messages", element: withBoundary(MessagesPage) },
+              { path: "/notifications", element: withBoundary(NotificationsPage) },
+              { path: "/verification", element: withBoundary(VerificationRequestPage) },
+              { path: "/saved", element: withBoundary(SavedItemsPage) },
+              { path: "/shop/:id/join", element: withBoundary(ShopJoinPage) },
+              { path: "/settings", element: withBoundary(SettingsPage) },
+            ],
+          },
         ],
       },
 

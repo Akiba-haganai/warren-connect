@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Heart, MessageCircle, Send, Loader2, Flag, Minus, Share2 } from "lucide-react";
 import { shareToWhatsApp } from "@/utils/whatsappShare";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -21,6 +21,8 @@ export default function PostCard({ post }: { post: FeedPost }) {
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [liked, setLiked] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -32,6 +34,14 @@ export default function PostCard({ post }: { post: FeedPost }) {
     tagService.getTagsForPost(post.id).then(setTags);
   }, [post.id]);
 
+  const requireAuth = () => {
+    if (!user) {
+      navigate(`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`);
+      return false;
+    }
+    return true;
+  };
+
   // Fetch comments with profiles
   const { data: comments, isLoading: commentsLoading } = useQuery({
     queryKey: ["comments", post.id],
@@ -42,11 +52,10 @@ export default function PostCard({ post }: { post: FeedPost }) {
       const userIds = [...new Set(comments.map((c) => c.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name, avatar_url")
+        .select("id, full_name, avatar_url, is_verified")
         .in("id", userIds);
 
-      const profileMap = new Map<string, Pick<Profile, "full_name" | "avatar_url">>();
-      profiles?.forEach((p) => profileMap.set(p.id, p));
+      const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
 
       return comments.map((comment) => ({
         ...comment,
@@ -59,15 +68,16 @@ export default function PostCard({ post }: { post: FeedPost }) {
   // Like mutation
   const likeMutation = useMutation({
     mutationFn: async () => {
-      if (!user) return;
+      if (!requireAuth()) return;
       triggerHaptic();
       if (liked) {
-        await likeService.unlikePost(post.id, user.id);
+        await likeService.unlikePost(post.id, user!.id);
       } else {
-        await likeService.likePost(post.id, user.id);
+        await likeService.likePost(post.id, user!.id);
       }
     },
     onSuccess: () => {
+      if (!user) return; // Prevent onSuccess if requireAuth returned early
       setLiked(!liked);
       queryClient.invalidateQueries({ queryKey: ["feed"] });
       if (!liked && post.user_id !== user?.id) {
@@ -79,8 +89,8 @@ export default function PostCard({ post }: { post: FeedPost }) {
   // Add comment mutation
   const commentMutation = useMutation({
     mutationFn: async (content: string) => {
-      if (!user) throw new Error("Not logged in");
-      await commentService.createComment(post.id, user.id, content);
+      if (!requireAuth()) throw new Error("Not logged in");
+      await commentService.createComment(post.id, user!.id, content);
     },
     onSuccess: (_data, content) => {
       queryClient.invalidateQueries({ queryKey: ["comments", post.id] });
@@ -99,14 +109,15 @@ export default function PostCard({ post }: { post: FeedPost }) {
 
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!requireAuth()) return;
     if (!newComment.trim()) return;
     commentMutation.mutate(newComment.trim());
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!user) return;
+    if (!requireAuth()) return;
     try {
-      await commentService.deleteComment(commentId, user.id);
+      await commentService.deleteComment(commentId, user!.id);
       queryClient.invalidateQueries({ queryKey: ["comments", post.id] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     } catch (err) {
@@ -115,11 +126,11 @@ export default function PostCard({ post }: { post: FeedPost }) {
   };
 
   const handleReport = async () => {
-    if (!user) return;
+    if (!requireAuth()) return;
     const reason = prompt("Why are you reporting this post?");
     if (reason) {
       try {
-        await reportService.submitReport(user.id, "post", post.id, reason);
+        await reportService.submitReport(user!.id, "post", post.id, reason);
         alert("Report submitted. Thank you.");
       } catch (err) {
         console.error(err);

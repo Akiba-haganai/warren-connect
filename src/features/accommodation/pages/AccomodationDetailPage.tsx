@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { accommodationService } from "@/services/accommodation/accommodationService";
 import { messageService } from "@/services/messages/messageService";
 import { useAuthStore } from "@/store/auth/authStore";
@@ -49,6 +49,7 @@ const AMENITY_ICONS: Record<string, React.ReactNode> = {
 export default function AccommodationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
   const { confirm, ConfirmDialog } = useConfirm();
@@ -143,19 +144,27 @@ export default function AccommodationDetailPage() {
 
   const isOwner = user?.id === accommodation?.owner_id;
 
+  const requireAuth = (actionName: string) => {
+    if (!user) {
+      navigate(`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`);
+      return false;
+    }
+    return true;
+  };
+
   const handleContactLandlord = async () => {
-    if (!user || !accommodation) return;
+    if (!requireAuth("Contact Landlord") || !accommodation) return;
     setContacting(true);
     try {
-      const existingConvos = await messageService.getConversations(user.id);
+      const existingConvos = await messageService.getConversations(user!.id);
       const existing = existingConvos.find(
         (c) =>
-          (c.user1_id === user.id && c.user2_id === accommodation.owner_id) ||
-          (c.user2_id === user.id && c.user1_id === accommodation.owner_id)
+          (c.user1_id === user!.id && c.user2_id === accommodation.owner_id) ||
+          (c.user2_id === user!.id && c.user1_id === accommodation.owner_id)
       );
       let convId = existing?.id;
       if (!convId) {
-        const newConv = await messageService.createConversation(user.id, accommodation.owner_id);
+        const newConv = await messageService.createConversation(user!.id, accommodation.owner_id);
         convId = newConv.id;
       }
       triggerNotification.accommodationInterest(
@@ -172,27 +181,27 @@ export default function AccommodationDetailPage() {
   };
 
   const handleRequestBooking = async () => {
-    if (!user || !accommodation) return;
+    if (!requireAuth("Request Booking") || !accommodation) return;
     try {
       triggerNotification.accommodationInterest(
         accommodation.owner_id, accommodation.id,
         accommodation.title, profile?.full_name ?? "Someone"
       );
-      const existingConvos = await messageService.getConversations(user.id);
+      const existingConvos = await messageService.getConversations(user!.id);
       const existing = existingConvos.find(
         (c) =>
-          (c.user1_id === user.id && c.user2_id === accommodation.owner_id) ||
-          (c.user2_id === user.id && c.user1_id === accommodation.owner_id)
+          (c.user1_id === user!.id && c.user2_id === accommodation.owner_id) ||
+          (c.user2_id === user!.id && c.user1_id === accommodation.owner_id)
       );
       let convId = existing?.id;
       if (!convId) {
-        const newConv = await messageService.createConversation(user.id, accommodation.owner_id);
+        const newConv = await messageService.createConversation(user!.id, accommodation.owner_id);
         convId = newConv.id;
       }
       // Always send booking message (whether new or existing conversation)
       await messageService.sendMessage(
         convId,
-        user.id,
+        user!.id,
         `Hi, I'm interested in booking "${accommodation.title}". Is it still available?`
       );
       navigate(`/messages?conversation=${convId}`);
@@ -208,7 +217,7 @@ export default function AccommodationDetailPage() {
   const [reportReason, setReportReason] = useState("");
 
   const handleReport = async () => {
-    if (!user) return;
+    if (!requireAuth("Report")) return;
     const ok = await confirm({
       title: "Report this listing?",
       message: "Do you want to report this content to the administrators?",
@@ -218,11 +227,11 @@ export default function AccommodationDetailPage() {
   };
 
   const submitReport = async () => {
-    if (!user || !accommodation) return;
+    if (!requireAuth("Submit Report") || !accommodation) return;
     if (!reportReason.trim()) return;
     try {
       await reportService.submitReport(
-        user.id,
+        user!.id,
         "accommodation",
         accommodation.id,
         reportReason.trim()

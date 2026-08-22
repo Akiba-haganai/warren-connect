@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { useProduct } from "@/hooks/useProduct";
 import { useToggleProductStock } from "@/hooks/useToggleProductStock";
 import { useDeleteProduct } from "@/hooks/useDeleteProduct";
@@ -34,6 +34,7 @@ export default function ProductDetailPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [showEditModal, setShowEditModal] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const location = useLocation();
 
   useSEOHead({
     title: product ? `${product.title} — K${Number(product.price).toLocaleString()}` : undefined,
@@ -67,16 +68,24 @@ export default function ProductDetailPage() {
     }
   }, [product, addToRecent]);
 
+  const requireAuth = (actionName: string) => {
+    if (!user) {
+      navigate(`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`);
+      return false;
+    }
+    return true;
+  };
+
   const handleContactSeller = async () => {
-    if (!user || !product) return;
+    if (!requireAuth("Contact Seller") || !product) return;
     setContacting(true);
     try {
-      const existing = (await messageService.getConversations(user.id))
-        .find(c => (c.user1_id === user.id && c.user2_id === product.seller_id) ||
-                   (c.user2_id === user.id && c.user1_id === product.seller_id));
+      const existing = (await messageService.getConversations(user!.id))
+        .find(c => (c.user1_id === user!.id && c.user2_id === product.seller_id) ||
+                   (c.user2_id === user!.id && c.user1_id === product.seller_id));
       let convId = existing?.id;
       if (!convId) {
-        const newConv = await messageService.createConversation(user.id, product.seller_id);
+        const newConv = await messageService.createConversation(user!.id, product.seller_id);
         convId = newConv.id;
       }
       triggerNotification.accommodationInterest(
@@ -90,11 +99,11 @@ export default function ProductDetailPage() {
   };
 
   const handleReport = async () => {
-    if (!user) return;
+    if (!requireAuth("Report") || !product) return;
     const reason = prompt("Why are you reporting this listing?");
     if (reason) {
       try {
-        await reportService.submitReport(user.id, "product", product!.id, reason);
+        await reportService.submitReport(user!.id, "product", product!.id, reason);
         alert("Report submitted. Thank you.");
       } catch (err) {
         console.error(err);

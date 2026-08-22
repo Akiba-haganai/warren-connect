@@ -1,9 +1,10 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
 import { Loader2 } from "lucide-react";
 
 export default function GuestRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuthStore();
+  const [searchParams] = useSearchParams();
 
   if (loading) {
     return (
@@ -14,7 +15,8 @@ export default function GuestRoute({ children }: { children: React.ReactNode }) 
   }
 
   if (user) {
-    return <Navigate to="/" replace />;
+    const redirect = searchParams.get("redirect") || "/feed";
+    return <Navigate to={redirect} replace />;
   }
 
   return <>{children}</>;

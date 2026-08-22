@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
 import { Bell, Search, UserCircle, Heart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import SearchOverlay from "@/components/search/SearchOverlay";
 
 export default function Navbar() {
+  const location = useLocation();
   const { profile } = useAuthStore();
   const user = useAuthStore((s) => s.user);
   const [showSearch, setShowSearch] = useState(false);
@@ -59,52 +60,66 @@ export default function Navbar() {
           </button>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Saved Items Link */}
-            <Link
-              to="/saved"
-              className="relative p-2 rounded-xl hover:bg-white/10 transition"
-              aria-label={`Saved items${savedCount > 0 ? ` (${savedCount} items)` : ""}`}
-            >
-              <Heart size={20} className="text-white fill-white/20 hover:fill-white/40 transition-colors" />
-              {savedCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center px-1 border border-white/30 shadow-xs">
-                  {savedCount > 99 ? "99+" : savedCount}
-                </span>
-              )}
-            </Link>
+            {user ? (
+              <>
+                {/* Saved Items Link */}
+                <Link
+                  to="/saved"
+                  className="relative p-2 rounded-xl hover:bg-white/10 transition"
+                  aria-label={`Saved items${savedCount > 0 ? ` (${savedCount} items)` : ""}`}
+                >
+                  <Heart size={20} className="text-white fill-white/20 hover:fill-white/40 transition-colors" />
+                  {savedCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center px-1 border border-white/30 shadow-xs">
+                      {savedCount > 99 ? "99+" : savedCount}
+                    </span>
+                  )}
+                </Link>
 
-            {/* Notifications */}
-            <Link
-              to="/notifications"
-              className="relative p-2 rounded-xl hover:bg-white/10 transition"
-              aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
-            >
-              <Bell size={20} className="text-white" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-amber-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center px-1 border border-white/30 shadow-xs animate-pulse">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </Link>
+                {/* Notifications */}
+                <Link
+                  to="/notifications"
+                  className="relative p-2 rounded-xl hover:bg-white/10 transition"
+                  aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+                >
+                  <Bell size={20} className="text-white" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-amber-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center px-1 border border-white/30 shadow-xs animate-pulse">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </Link>
 
-            <ThemeToggle />
+                <ThemeToggle />
 
-            {/* Profile */}
-            <Link
-              to="/profile"
-              className="p-0.5 rounded-full hover:bg-white/10 transition"
-              aria-label="Profile"
-            >
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt={profile.full_name ?? "Profile"}
-                  className="w-8 h-8 rounded-full object-cover border-2 border-white/30"
-                />
-              ) : (
-                <UserCircle size={28} className="text-white" />
-              )}
-            </Link>
+                {/* Profile */}
+                <Link
+                  to="/profile"
+                  className="p-0.5 rounded-full hover:bg-white/10 transition"
+                  aria-label="Profile"
+                >
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={profile.full_name ?? "Profile"}
+                      className="w-8 h-8 rounded-full object-cover border-2 border-white/30"
+                    />
+                  ) : (
+                    <UserCircle size={28} className="text-white" />
+                  )}
+                </Link>
+              </>
+            ) : (
+              <>
+                <ThemeToggle />
+                <Link
+                  to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
+                  className="text-sm font-bold text-white bg-white/20 px-4 py-1.5 rounded-full hover:bg-white/30 transition shadow-sm"
+                >
+                  Sign In
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>

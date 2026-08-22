@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import Spinner from "@/components/shared/Spinner";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const signUp = useAuthStore((s) => s.signUp);
+  const redirectUrl = searchParams.get("redirect") || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +35,7 @@ export default function RegisterPage() {
 
     try {
       await signUp(email.trim(), password);
-      navigate("/complete-profile");
+      navigate(`/complete-profile${redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Registration failed";
       setError(
@@ -173,7 +175,7 @@ export default function RegisterPage() {
       <p className="text-center text-sm" style={{ color: "var(--color-text-secondary)" }}>
         Already a member?{" "}
         <Link
-          to="/login"
+          to={`/login${redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
           className="font-bold"
           style={{ color: "var(--color-primary)" }}
         >

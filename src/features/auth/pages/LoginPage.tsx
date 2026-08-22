@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/auth/authStore";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import Spinner from "@/components/shared/Spinner";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const signIn = useAuthStore((s) => s.signIn);
+  const redirectUrl = searchParams.get("redirect") || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +23,7 @@ export default function LoginPage() {
 
     try {
       await signIn(email.trim(), password);
-      navigate("/");
+      navigate(redirectUrl);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Sign in failed";
       setError(
@@ -141,7 +143,7 @@ export default function LoginPage() {
       <p className="text-center text-sm" style={{ color: "var(--color-text-secondary)" }}>
         New here?{" "}
         <Link
-          to="/register"
+          to={`/register${redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
           className="font-bold"
           style={{ color: "var(--color-primary)" }}
         >
