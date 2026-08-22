@@ -25,12 +25,40 @@ interface UploadedImageItem {
 export default function PostComposer({ onClose, onCreated }: Props) {
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
+  const instanceId = useRef(`PostComposer_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`).current;
+
   const [content, setContent] = useState("");
   const [uploadedImage, setUploadedImage] = useState<UploadedImageItem | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
   const lastPostTime = useRef<number>(0);
+
+  const uploadedImageRef = useRef(uploadedImage);
+  uploadedImageRef.current = uploadedImage;
+
+  // Track mount and unmount
+  useEffect(() => {
+    uploadTelemetry.log("composer_mounted", "PostComposer mounted", { instanceId });
+    return () => {
+      uploadTelemetry.log("composer_unmounted", "PostComposer unmounted", {
+        instanceId,
+        hasUploadedImageAtUnmount: Boolean(uploadedImageRef.current),
+      });
+    };
+  }, [instanceId]);
+
+  // Track image state transitions
+  useEffect(() => {
+    uploadTelemetry.log("images_state_updated", `uploadedImage changed: now ${uploadedImage ? "present" : "null"}`, {
+      instanceId,
+      hasImage: Boolean(uploadedImage),
+      image: uploadedImage ? {
+        path: uploadedImage.path,
+        previewPrefix: uploadedImage.previewUrl?.substring(0, 30),
+      } : null,
+    });
+  }, [uploadedImage, instanceId]);
 
   const draftKey = user ? `draft:post-composer:${user.id}` : "draft:post-composer";
 
@@ -39,6 +67,11 @@ export default function PostComposer({ onClose, onCreated }: Props) {
     draftKey,
     { content, tags, uploadedImage },
     (draft: any) => {
+      uploadTelemetry.log("draft_restored", "PostComposer draft restored", {
+        instanceId,
+        hasContent: Boolean(draft.content),
+        hasUploadedImage: Boolean(draft.uploadedImage),
+      });
       if (draft.content !== undefined) setContent(draft.content);
       if (draft.tags !== undefined) setTags(draft.tags);
       if (draft.uploadedImage !== undefined) {
@@ -59,22 +92,36 @@ export default function PostComposer({ onClose, onCreated }: Props) {
   );
 
   const processFile = async (file: File) => {
-    if (!file || !user) return;
-    
-    uploadTelemetry.log("file_selected", `File selected: ${file.name}`, {
-      name: file.name,
-      size: file.size,
-      type: file.type
+    uploadTelemetry.log("selection_event_fired", `processFile called with ${file?.name}`, {
+      instanceId,
+      name: file?.name,
+      size: file?.size,
+      type: file?.type,
     });
+
+    if (!file || !user) return;
     
     setUploadingImage(true);
 
     try {
+      uploadTelemetry.log("processing_single_file_start", `Compressing ${file.name}`, {
+        instanceId,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
+
       const compressed = await compressImage(file);
       const fileName = `${Date.now()}_${compressed.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const path = `posts/${user.id}/drafts/${fileName}`;
 
-      uploadTelemetry.log("upload_started", "Starting Supabase upload");
+      uploadTelemetry.log("storage_upload_started", "Starting Supabase upload to pending-uploads", {
+        instanceId,
+        path,
+        fileName,
+        compressedSize: compressed.size,
+      });
+
       await storageService.uploadFile(
         "pending-uploads",
         compressed,
@@ -82,12 +129,18 @@ export default function PostComposer({ onClose, onCreated }: Props) {
         true,
         path
       );
-      uploadTelemetry.log("upload_success", "Supabase upload completed");
+      uploadTelemetry.log("storage_upload_success", "Supabase upload completed", { instanceId, path });
       
       const signedUrl = await storageService.getSignedUrl("pending-uploads", path, 3600);
+      uploadTelemetry.log("signed_url_generated", "Signed preview URL obtained", {
+        instanceId,
+        path,
+        urlPrefix: signedUrl.substring(0, 30),
+      });
+
       setUploadedImage({ path, previewUrl: signedUrl });
     } catch (err: any) {
-      uploadTelemetry.reportError("upload_failed", err);
+      uploadTelemetry.reportError("storage_upload_failed", err, { instanceId, fileName: file.name });
       import("@sentry/react").then((Sentry) => {
         Sentry.captureException(err);
       });
@@ -110,6 +163,13 @@ export default function PostComposer({ onClose, onCreated }: Props) {
   };
 
   const handleSubmit = async () => {
+    uploadTelemetry.log("submit_start", "PostComposer submit triggered", {
+      instanceId,
+      hasContent: Boolean(content.trim()),
+      hasUploadedImage: Boolean(uploadedImage),
+      imagePath: uploadedImage?.path,
+    });
+
     if (!user || !content.trim()) return;
 
     if (Date.now() - lastPostTime.current < 5000) {
@@ -120,12 +180,16 @@ export default function PostComposer({ onClose, onCreated }: Props) {
 
     setPosting(true);
     try {
+      uploadTelemetry.log("database_insert_started", "Creating post record in DB", { instanceId, hasImage: !!uploadedImage });
+
       // 1. Create post (Synchronous text moderation happens here)
       const newPost = await postService.createPost(user.id, content.trim(), !!uploadedImage);
       
       if (!newPost) {
         throw new Error("Failed to create post");
       }
+
+      uploadTelemetry.log("database_insert_success", `Post created with ID ${newPost.id}`, { instanceId, postId: newPost.id });
 
       // Save tags
       if (tags.length > 0) {
@@ -142,10 +206,13 @@ export default function PostComposer({ onClose, onCreated }: Props) {
         sendPushNotification(newPost.user_id, "New Post", `${username} posted: ${newPost.content.slice(0, 60)}`, `/post/${newPost.id}`);
       }
 
+      uploadTelemetry.log("publish_complete", `Post ${newPost.id} published successfully`, { instanceId, postId: newPost.id });
+
       clearDraft();
       onCreated();
       onClose();
     } catch (err: any) {
+      uploadTelemetry.reportError("publish_failed", err, { instanceId });
       console.error(err);
       toast.error(err.message || "Failed to create post.");
     } finally {
