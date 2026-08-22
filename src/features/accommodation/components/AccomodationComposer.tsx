@@ -463,7 +463,7 @@ export default function AccommodationComposer({
                     <span className="text-[11px]">Camera</span>
                     <input
                       type="file"
-                      accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
+                      accept="image/*"
                       capture="environment"
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       onChange={(e) => {
@@ -483,7 +483,7 @@ export default function AccommodationComposer({
                     <span className="text-[11px]">Gallery</span>
                     <input
                       type="file"
-                      accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
+                      accept="image/*"
                       multiple
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       onChange={(e) => {

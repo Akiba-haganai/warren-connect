@@ -223,7 +223,7 @@ export default function PostComposer({ onClose, onCreated }: Props) {
               <span className="hidden sm:inline text-[11px]">Camera</span>
               <input
                 type="file"
-                accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
+                accept="image/*"
                 capture="environment"
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 onChange={handleImage}
@@ -246,7 +246,7 @@ export default function PostComposer({ onClose, onCreated }: Props) {
               <span className="hidden sm:inline text-[11px]">Gallery</span>
               <input
                 type="file"
-                accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
+                accept="image/*"
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 onChange={handleImage}
                 disabled={uploadingImage}
