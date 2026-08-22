@@ -144,7 +144,7 @@ export default function AccommodationDetailPage() {
 
   const isOwner = user?.id === accommodation?.owner_id;
 
-  const requireAuth = (actionName: string) => {
+  const requireAuth = () => {
     if (!user) {
       navigate(`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`);
       return false;
@@ -153,7 +153,7 @@ export default function AccommodationDetailPage() {
   };
 
   const handleContactLandlord = async () => {
-    if (!requireAuth("Contact Landlord") || !accommodation) return;
+    if (!requireAuth() || !accommodation) return;
     setContacting(true);
     try {
       const existingConvos = await messageService.getConversations(user!.id);
@@ -181,7 +181,7 @@ export default function AccommodationDetailPage() {
   };
 
   const handleRequestBooking = async () => {
-    if (!requireAuth("Request Booking") || !accommodation) return;
+    if (!requireAuth() || !accommodation) return;
     try {
       triggerNotification.accommodationInterest(
         accommodation.owner_id, accommodation.id,
@@ -217,7 +217,7 @@ export default function AccommodationDetailPage() {
   const [reportReason, setReportReason] = useState("");
 
   const handleReport = async () => {
-    if (!requireAuth("Report")) return;
+    if (!requireAuth()) return;
     const ok = await confirm({
       title: "Report this listing?",
       message: "Do you want to report this content to the administrators?",
@@ -227,7 +227,7 @@ export default function AccommodationDetailPage() {
   };
 
   const submitReport = async () => {
-    if (!requireAuth("Submit Report") || !accommodation) return;
+    if (!requireAuth() || !accommodation) return;
     if (!reportReason.trim()) return;
     try {
       await reportService.submitReport(

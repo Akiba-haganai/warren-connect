@@ -15,8 +15,6 @@ import type { Tables } from "@/types/database/database.types";
 import CommentItem from "@/features/feed/components/CommentItem";
 import { triggerHaptic } from "@/utils/haptic";
 
-type Profile = Tables<"profiles">;
-
 export default function PostCard({ post }: { post: FeedPost }) {
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);

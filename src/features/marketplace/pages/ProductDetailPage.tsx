@@ -68,7 +68,7 @@ export default function ProductDetailPage() {
     }
   }, [product, addToRecent]);
 
-  const requireAuth = (actionName: string) => {
+  const requireAuth = () => {
     if (!user) {
       navigate(`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`);
       return false;
@@ -77,7 +77,7 @@ export default function ProductDetailPage() {
   };
 
   const handleContactSeller = async () => {
-    if (!requireAuth("Contact Seller") || !product) return;
+    if (!requireAuth() || !product) return;
     setContacting(true);
     try {
       const existing = (await messageService.getConversations(user!.id))
@@ -99,7 +99,7 @@ export default function ProductDetailPage() {
   };
 
   const handleReport = async () => {
-    if (!requireAuth("Report") || !product) return;
+    if (!requireAuth() || !product) return;
     const reason = prompt("Why are you reporting this listing?");
     if (reason) {
       try {
