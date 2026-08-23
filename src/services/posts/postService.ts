@@ -8,6 +8,7 @@ export interface FeedPost extends Post {
   comments_count: number;
   user_name: string;
   user_avatar: string | null;
+  is_liked: boolean;
 }
 
 import { handleSupabaseError } from "@/utils/supabaseErrorHandler";
@@ -23,10 +24,8 @@ export const postService = {
     });
     
     if (error) {
-      // Supabase Edge Functions store custom JSON errors in error.context or we can check data
       const customMessage = error.context?.json?.error || error.message;
       if (customMessage) {
-         // Create a synthetic error object that handleSupabaseError can parse, or just throw it
          if (customMessage.includes("community guidelines")) {
              throw new Error("Your content violates community guidelines and cannot be posted.");
          }
@@ -37,45 +36,15 @@ export const postService = {
     return data;
   },
 
-  async getFeed(): Promise<FeedPost[]> {
-    const { data: posts, error } = await supabase
-      .from("posts")
-      .select("*")
-      .eq("is_hidden", false)
-      .eq("moderation_status", "approved")
-      .order("created_at", { ascending: false }).limit(100);
+  async getFeed(userId: string | undefined, limit = 100, offset = 0): Promise<FeedPost[]> {
+    const { data: posts, error } = await supabase.rpc("get_feed_with_stats", {
+      caller_id: userId || null,
+      page_limit: limit,
+      page_offset: offset
+    });
 
     if (error) throw error;
-    if (!posts) return [];
-
-    // Get unique user IDs
-    const userIds = [...new Set(posts.map((p) => p.user_id))];
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, full_name, avatar_url")
-      .in("id", userIds);
-
-    const profileMap = new Map<string, Pick<Tables<"profiles">, "full_name" | "avatar_url">>();
-    profiles?.forEach((p) => profileMap.set(p.id, p));
-
-    const feed = await Promise.all(
-      posts.map(async (post) => {
-        const [{ count: likes }, { count: comments }] = await Promise.all([
-          supabase.from("post_likes").select("*", { count: "exact", head: true }).eq("post_id", post.id),
-          supabase.from("post_comments").select("*", { count: "exact", head: true }).eq("post_id", post.id),
-        ]);
-
-        return {
-          ...post,
-          user_name: profileMap.get(post.user_id)?.full_name ?? "Unknown",
-          user_avatar: profileMap.get(post.user_id)?.avatar_url ?? null,
-          likes_count: likes ?? 0,
-          comments_count: comments ?? 0,
-        };
-      })
-    );
-
-    return feed;
+    return posts as FeedPost[] || [];
   },
 
   async deletePost(id: string) {

@@ -682,7 +682,16 @@ export default function ShopPage() {
         />
       )}
       {showSettings && (
-        <ShopSettingsModal shop={shop} onClose={() => setShowSettings(false)} onSaved={refreshAll} />
+        <ShopSettingsModal 
+          shop={shop} 
+          onClose={() => setShowSettings(false)} 
+          onSaved={refreshAll} 
+          onDeleted={() => {
+            setShowSettings(false);
+            queryClient.invalidateQueries({ queryKey: ["all-shops"] });
+            navigate("/profile", { replace: true });
+          }}
+        />
       )}
       {showComposer && shop && (
         <ProductComposer

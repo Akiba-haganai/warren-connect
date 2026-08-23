@@ -21,6 +21,9 @@ import InterestQueue from "@/features/accommodation/components/InterestQueue";
 import { ALL_AMENITIES } from "@/constants/amenities";
 import EditAccommodationModal from "@/features/accommodation/components/EditAccommodationModal";
 import ShareModal from "@/components/share/ShareModal";
+import ItemSocialBar from "@/components/shared/ItemSocialBar";
+import { triggerNotification } from "@/services/notifications/triggerService";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSEOHead } from "@/hooks/useSEOHead";
 import { timeAgo } from "@/utils/timeAgo";
 import { Pencil } from "lucide-react";
@@ -323,7 +326,7 @@ export default function AccommodationDetailPage() {
     : (accommodation.image_url ? [{ id: "main", image_url: accommodation.image_url }] : []);
 
   return (
-    <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
+    <div className="pb-24" style={{ background: "var(--color-bg)", minHeight: "100%" }}>
       {/* Header */}
       <div
         className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
@@ -773,6 +776,24 @@ export default function AccommodationDetailPage() {
           imageUrl={accommodation.image_url || undefined}
           location={accommodation.location}
           category="accommodation"
+        />
+      )}
+
+      {accommodation && (
+        <ItemSocialBar
+          itemId={accommodation.id}
+          type="accommodation"
+          onShare={() => setShareModalOpen(true)}
+          getStats={accommodationService.getSocialStats}
+          toggleLike={accommodationService.toggleLike}
+          getComments={accommodationService.getComments}
+          createComment={accommodationService.createComment}
+          requireAuth={requireAuth}
+          onCommentAdded={() => {
+            if (accommodation.owner_id !== user?.id) {
+              triggerNotification.comment(accommodation.owner_id, accommodation.id, profile?.full_name ?? "Someone");
+            }
+          }}
         />
       )}
     </div>

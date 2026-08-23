@@ -10,38 +10,36 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  isChunkError: boolean;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, isChunkError: false };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    const isChunkError = error.name === "ChunkLoadError" || error.message.includes("Failed to fetch dynamically imported module");
+    return { hasError: true, error, isChunkError };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("ErrorBoundary caught:", error, errorInfo);
     
-    // Auto-reload on dynamic import failure (usually due to new deployment removing old chunks)
-    if (
-      error.name === "ChunkLoadError" ||
-      error.message.includes("Failed to fetch dynamically imported module")
-    ) {
+    if (this.state.isChunkError) {
       console.warn("Chunk load error detected. Unregistering SW and reloading...");
+      const reload = () => setTimeout(() => window.location.reload(), 1500);
+      
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.getRegistrations().then((registrations) => {
           for (const registration of registrations) {
             registration.unregister();
           }
-          window.location.reload();
-        }).catch(() => {
-          window.location.reload();
-        });
+          reload();
+        }).catch(reload);
       } else {
-        window.location.reload();
+        reload();
       }
       return;
     }
@@ -50,11 +48,25 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, isChunkError: false });
   };
 
   render() {
     if (this.state.hasError) {
+      if (this.state.isChunkError) {
+        return (
+          <div className="fixed inset-0 z-[9999] bg-white dark:bg-gray-900 flex flex-col items-center justify-center">
+            <RefreshCw size={40} className="animate-spin" style={{ color: "var(--color-accent)", marginBottom: 16 }} />
+            <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
+              Updating App...
+            </h2>
+            <p className="text-sm mt-2" style={{ color: "var(--color-text-secondary)" }}>
+              Fetching the latest version.
+            </p>
+          </div>
+        );
+      }
+
       if (this.props.fallback) return this.props.fallback;
 
       return (

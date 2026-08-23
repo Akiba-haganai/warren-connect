@@ -7,24 +7,51 @@ import { compressImage } from "@/utils/compressImage";
 import { useAuthStore } from "@/store/auth/authStore";
 
 interface Props {
-  shop: { id: string; name: string; description?: string; logo_url?: string };
+  shop: { id: string; name: string; description?: string; logo_url?: string; owner_id: string };
   onClose: () => void;
   onSaved: () => void;   // to refresh shop data
+  onDeleted?: () => void;
 }
 
-export default function ShopSettingsModal({ shop, onClose, onSaved }: Props) {
+import toast from "react-hot-toast";
+import { useConfirm } from "@/hooks/useConfirm";
+
+export default function ShopSettingsModal({ shop, onClose, onSaved, onDeleted }: Props) {
   const user = useAuthStore((s) => s.user);
+  const { confirm, ConfirmDialog } = useConfirm();
   const [name, setName] = useState(shop.name);
   const [description, setDescription] = useState(shop.description ?? "");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(shop.logo_url ?? null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setLogoFile(file);
     setLogoPreview(URL.createObjectURL(file));
+  };
+
+  const handleDelete = async () => {
+    if (!user) return;
+    const ok = await confirm({
+      title: "Delete Shop?",
+      message: "Are you sure you want to delete this shop? All products and reviews associated with it will be permanently deleted. This cannot be undone.",
+    });
+    if (!ok) return;
+
+    setDeleting(true);
+    try {
+      await shopService.deleteShop(shop.id, user.id);
+      toast.success("Shop deleted successfully");
+      if (onDeleted) onDeleted();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete shop");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,6 +77,8 @@ export default function ShopSettingsModal({ shop, onClose, onSaved }: Props) {
       });
       onSaved();
       onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save shop");
     } finally {
       setSaving(false);
     }
@@ -118,11 +147,22 @@ export default function ShopSettingsModal({ shop, onClose, onSaved }: Props) {
             />
           </div>
 
-          <button type="submit" disabled={saving || !name.trim()} className="btn-primary">
-            {saving ? <Loader2 size={16} className="animate-spin" /> : "Save"}
-          </button>
+          <div className="flex flex-col gap-2 mt-4">
+            <button type="submit" disabled={saving || !name.trim()} className="btn-primary">
+              {saving ? <Loader2 size={16} className="animate-spin mx-auto" /> : "Save Changes"}
+            </button>
+            <button 
+              type="button" 
+              onClick={handleDelete} 
+              disabled={deleting}
+              className="w-full py-3 rounded-xl font-bold text-sm bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+            >
+              {deleting ? <Loader2 size={16} className="animate-spin mx-auto" /> : "Delete Shop"}
+            </button>
+          </div>
         </form>
       </div>
+      {ConfirmDialog}
     </div>
   );
 }

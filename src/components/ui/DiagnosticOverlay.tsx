@@ -9,10 +9,15 @@ export default function DiagnosticOverlay() {
   const [isOpen, setIsOpen] = useState(false);
   const [logs, setLogs] = useState<TelemetryEvent[]>([]);
 
-  // Restrict to admins, development mode, or explicit ?debug=1 URL parameter
-  const isDebugUrl = typeof window !== "undefined" && window.location.search.includes("debug=1");
   const isDev = import.meta.env.DEV;
   const isAdmin = profile?.is_admin === true;
+
+  // Initialize Eruda Mobile DevTools for Admins / Devs
+  useEffect(() => {
+    if (isAdmin || isDev) {
+      import("eruda").then((eruda) => eruda.default.init());
+    }
+  }, [isAdmin, isDev]);
 
   useEffect(() => {
     if (isOpen) {
@@ -25,7 +30,7 @@ export default function DiagnosticOverlay() {
     }
   }, [isOpen]);
 
-  if (!isAdmin && !isDebugUrl && !isDev) {
+  if (!isAdmin && !isDev) {
     return null;
   }
 

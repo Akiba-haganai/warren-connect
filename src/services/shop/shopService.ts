@@ -179,4 +179,12 @@ export const shopService = {
       product_count: shop.products?.[0]?.count ?? 0,
     }));
   },
+  async deleteShop(shopId: string, ownerId: string) {
+    const { error } = await supabase
+      .from("shops")
+      .delete()
+      .eq("id", shopId)
+      .eq("owner_id", ownerId);
+    if (error) throw error;
+  },
 };

@@ -208,5 +208,58 @@ export const productService = {
       .eq("id", imageId);
     if (error) throw error;
   },
+
+  // Social Features
+  async toggleLike(productId: string, userId: string, isCurrentlyLiked: boolean) {
+    if (isCurrentlyLiked) {
+      const { error } = await supabase.from("product_likes").delete().eq("product_id", productId).eq("user_id", userId);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from("product_likes").insert({ product_id: productId, user_id: userId });
+      if (error) throw error;
+    }
+  },
+
+  async getSocialStats(productId: string, userId?: string) {
+    const [{ count: likes_count }, { count: comments_count }] = await Promise.all([
+      supabase.from("product_likes").select("*", { count: "exact", head: true }).eq("product_id", productId),
+      supabase.from("product_comments").select("*", { count: "exact", head: true }).eq("product_id", productId).eq("moderation_status", "approved"),
+    ]);
+
+    let is_liked = false;
+    if (userId) {
+      const { data } = await supabase.from("product_likes").select("id").eq("product_id", productId).eq("user_id", userId).single();
+      if (data) is_liked = true;
+    }
+
+    return {
+      likes_count: likes_count ?? 0,
+      comments_count: comments_count ?? 0,
+      is_liked
+    };
+  },
+
+  async getComments(productId: string) {
+    const { data: comments, error } = await supabase
+      .from("product_comments")
+      .select("*, profiles(full_name, avatar_url, is_verified)")
+      .eq("product_id", productId)
+      .eq("moderation_status", "approved")
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+    return comments || [];
+  },
+
+  async createComment(productId: string, userId: string, content: string) {
+    const { data, error } = await supabase
+      .from("product_comments")
+      .insert({ product_id: productId, user_id: userId, content })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
 };
 

@@ -9,15 +9,13 @@ export interface UnifiedFeedItem {
 }
 
 export const unifiedFeedService = {
-  async getUnifiedFeed(limit = 50): Promise<UnifiedFeedItem[]> {
+  async getUnifiedFeed(limit = 50, userId?: string): Promise<UnifiedFeedItem[]> {
     const [postsRes, productsRes, accRes] = await Promise.all([
-      supabase
-        .from("posts")
-        .select("*")
-        .eq("is_hidden", false)
-        .neq("moderation_status", "rejected")
-        .order("created_at", { ascending: false })
-        .limit(limit),
+      supabase.rpc("get_feed_with_stats", {
+        caller_id: userId || null,
+        page_limit: limit,
+        page_offset: 0
+      }),
       supabase
         .from("products")
         .select("*")

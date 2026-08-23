@@ -25,10 +25,6 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   });
 }
 
-// Eruda Mobile DevTools for testing
-if (import.meta.env.DEV || window.location.search.includes('debug=1')) {
-  import('eruda').then((eruda) => eruda.default.init());
-}
 
 // Intercept Vite dynamic import chunk loading errors (occurs on new deployment)
 window.addEventListener("vite:preloadError", (event) => {

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import EditProductModal from "@/features/marketplace/components/EditProductModal";
 import ShareModal from "@/components/share/ShareModal";
+import ItemSocialBar from "@/components/shared/ItemSocialBar";
 import { useSEOHead } from "@/hooks/useSEOHead";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -157,7 +158,7 @@ export default function ProductDetailPage() {
     : null;
 
   return (
-    <div style={{ background: "var(--color-bg)", minHeight: "100%" }}>
+    <div className="pb-24" style={{ background: "var(--color-bg)", minHeight: "100%" }}>
       <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-border bg-surface/90 backdrop-blur-md">
         <button onClick={() => navigate(-1)} aria-label="Go back">
           <ArrowLeft size={20} />
@@ -364,6 +365,22 @@ export default function ProductDetailPage() {
         price={product.price}
         imageUrl={primaryDisplayUrl || undefined}
         category="product"
+      />
+
+      <ItemSocialBar
+        itemId={product.id}
+        type="product"
+        onShare={() => setShareModalOpen(true)}
+        getStats={productService.getSocialStats}
+        toggleLike={productService.toggleLike}
+        getComments={productService.getComments}
+        createComment={productService.createComment}
+        requireAuth={requireAuth}
+        onCommentAdded={() => {
+          if (product.seller_id !== user?.id) {
+            triggerNotification.comment(product.seller_id, product.id, profile?.full_name ?? "Someone");
+          }
+        }}
       />
     </div>
   );

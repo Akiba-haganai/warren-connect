@@ -63,8 +63,8 @@ export default function HomeFeedPage() {
   });
 
   const { data: items, isLoading } = useQuery({
-    queryKey: ["unified-feed"],
-    queryFn: () => unifiedFeedService.getUnifiedFeed(50),
+    queryKey: ["unified-feed", user?.id],
+    queryFn: () => unifiedFeedService.getUnifiedFeed(50, user?.id),
   });
 
   // Realtime listener for new posts / products / housing

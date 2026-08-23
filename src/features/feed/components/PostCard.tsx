@@ -21,7 +21,14 @@ export default function PostCard({ post }: { post: FeedPost }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(post.is_liked ?? false);
+
+  useEffect(() => {
+    if (post.is_liked !== undefined) {
+      setLiked(post.is_liked);
+    }
+  }, [post.is_liked]);
+
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [tags, setTags] = useState<string[]>([]);                     // ✅ new
