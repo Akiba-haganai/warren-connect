@@ -11,7 +11,7 @@ export interface UnifiedFeedItem {
 export const unifiedFeedService = {
   async getUnifiedFeed(limit = 50, userId?: string): Promise<UnifiedFeedItem[]> {
     const [postsRes, productsRes, accRes] = await Promise.all([
-      supabase.rpc("get_feed_with_stats", {
+      (supabase.rpc as any)("get_feed_with_stats", {
         caller_id: userId || null,
         page_limit: limit,
         page_offset: 0
@@ -31,18 +31,18 @@ export const unifiedFeedService = {
         .limit(limit),
     ]);
 
-    const posts = postsRes.data || [];
+    const posts = (postsRes.data as any[]) || [];
     const products = productsRes.data || [];
     const accommodations = accRes.data || [];
 
     // Fetch profiles for all post authors
-    const userIds = [...new Set(posts.map((p) => p.user_id))];
+    const userIds = [...new Set(posts.map((p: any) => p.user_id as string))];
     const { data: profiles } = userIds.length > 0
       ? await supabase.from("profiles").select("id, full_name, avatar_url").in("id", userIds)
       : { data: [] };
     const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
-    const postItems: UnifiedFeedItem[] = posts.map((p) => ({
+    const postItems: UnifiedFeedItem[] = posts.map((p: any) => ({
       id: p.id,
       type: "post",
       created_at: p.created_at!,

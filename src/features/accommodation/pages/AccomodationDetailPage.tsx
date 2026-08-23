@@ -22,8 +22,6 @@ import { ALL_AMENITIES } from "@/constants/amenities";
 import EditAccommodationModal from "@/features/accommodation/components/EditAccommodationModal";
 import ShareModal from "@/components/share/ShareModal";
 import ItemSocialBar from "@/components/shared/ItemSocialBar";
-import { triggerNotification } from "@/services/notifications/triggerService";
-import { useQueryClient } from "@tanstack/react-query";
 import { useSEOHead } from "@/hooks/useSEOHead";
 import { timeAgo } from "@/utils/timeAgo";
 import { Pencil } from "lucide-react";
@@ -791,7 +789,7 @@ export default function AccommodationDetailPage() {
           requireAuth={requireAuth}
           onCommentAdded={() => {
             if (accommodation.owner_id !== user?.id) {
-              triggerNotification.comment(accommodation.owner_id, accommodation.id, profile?.full_name ?? "Someone");
+              triggerNotification.comment(accommodation.owner_id, accommodation.id, profile?.full_name ?? "Someone", "on your accommodation listing");
             }
           }}
         />

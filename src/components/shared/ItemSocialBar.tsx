@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Heart, MessageCircle, Send, X, Share2, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth/authStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { triggerHaptic } from "@/utils/haptic";
-import toast from "react-hot-toast";
 
 interface ItemSocialBarProps {
   itemId: string;

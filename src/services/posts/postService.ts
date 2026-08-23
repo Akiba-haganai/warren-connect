@@ -37,14 +37,14 @@ export const postService = {
   },
 
   async getFeed(userId: string | undefined, limit = 100, offset = 0): Promise<FeedPost[]> {
-    const { data: posts, error } = await supabase.rpc("get_feed_with_stats", {
+    const { data: posts, error } = await (supabase.rpc as any)("get_feed_with_stats", {
       caller_id: userId || null,
       page_limit: limit,
       page_offset: offset
     });
 
     if (error) throw error;
-    return posts as FeedPost[] || [];
+    return (posts as unknown as FeedPost[]) || [];
   },
 
   async deletePost(id: string) {

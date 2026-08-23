@@ -324,23 +324,23 @@ export const accommodationService = {
   // Social Features
   async toggleLike(accommodationId: string, userId: string, isCurrentlyLiked: boolean) {
     if (isCurrentlyLiked) {
-      const { error } = await supabase.from("accommodation_likes").delete().eq("accommodation_id", accommodationId).eq("user_id", userId);
+      const { error } = await supabase.from("accommodation_likes" as any).delete().eq("accommodation_id", accommodationId).eq("user_id", userId);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from("accommodation_likes").insert({ accommodation_id: accommodationId, user_id: userId });
+      const { error } = await supabase.from("accommodation_likes" as any).insert({ accommodation_id: accommodationId, user_id: userId } as any);
       if (error) throw error;
     }
   },
 
   async getSocialStats(accommodationId: string, userId?: string) {
     const [{ count: likes_count }, { count: comments_count }] = await Promise.all([
-      supabase.from("accommodation_likes").select("*", { count: "exact", head: true }).eq("accommodation_id", accommodationId),
-      supabase.from("accommodation_comments").select("*", { count: "exact", head: true }).eq("accommodation_id", accommodationId).eq("moderation_status", "approved"),
+      supabase.from("accommodation_likes" as any).select("*", { count: "exact", head: true }).eq("accommodation_id", accommodationId),
+      supabase.from("accommodation_comments" as any).select("*", { count: "exact", head: true }).eq("accommodation_id", accommodationId).eq("moderation_status", "approved"),
     ]);
 
     let is_liked = false;
     if (userId) {
-      const { data } = await supabase.from("accommodation_likes").select("id").eq("accommodation_id", accommodationId).eq("user_id", userId).single();
+      const { data } = await supabase.from("accommodation_likes" as any).select("id").eq("accommodation_id", accommodationId).eq("user_id", userId).single();
       if (data) is_liked = true;
     }
 
@@ -353,7 +353,7 @@ export const accommodationService = {
 
   async getComments(accommodationId: string) {
     const { data: comments, error } = await supabase
-      .from("accommodation_comments")
+      .from("accommodation_comments" as any)
       .select("*, profiles(full_name, avatar_url, is_verified)")
       .eq("accommodation_id", accommodationId)
       .eq("moderation_status", "approved")
@@ -365,8 +365,8 @@ export const accommodationService = {
 
   async createComment(accommodationId: string, userId: string, content: string) {
     const { data, error } = await supabase
-      .from("accommodation_comments")
-      .insert({ accommodation_id: accommodationId, user_id: userId, content })
+      .from("accommodation_comments" as any)
+      .insert({ accommodation_id: accommodationId, user_id: userId, content } as any)
       .select()
       .single();
 

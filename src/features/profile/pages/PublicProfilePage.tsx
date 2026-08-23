@@ -52,7 +52,7 @@ export default function PublicProfilePage() {
       try {
         const prof = await profileService.getProfile(id);
         setProfile(prof);
-        const allPosts = await postService.getFeed();
+        const allPosts = await postService.getFeed(undefined);
         setPosts(allPosts.filter((p) => p.user_id === id));
         const acc = await accommodationService.getMyAccommodations(id);
         setListings(acc);

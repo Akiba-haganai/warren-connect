@@ -12,7 +12,7 @@ export default function PostDetailPage() {
     queryKey: ["post", id],
     queryFn: async () => {
       if (!id) return null;
-      const all = await postService.getFeed();
+      const all = await postService.getFeed(undefined);
       return all.find((p) => p.id === id) ?? null;
     },
     enabled: !!id,

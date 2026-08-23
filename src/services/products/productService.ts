@@ -212,23 +212,23 @@ export const productService = {
   // Social Features
   async toggleLike(productId: string, userId: string, isCurrentlyLiked: boolean) {
     if (isCurrentlyLiked) {
-      const { error } = await supabase.from("product_likes").delete().eq("product_id", productId).eq("user_id", userId);
+      const { error } = await supabase.from("product_likes" as any).delete().eq("product_id", productId).eq("user_id", userId);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from("product_likes").insert({ product_id: productId, user_id: userId });
+      const { error } = await supabase.from("product_likes" as any).insert({ product_id: productId, user_id: userId } as any);
       if (error) throw error;
     }
   },
 
   async getSocialStats(productId: string, userId?: string) {
     const [{ count: likes_count }, { count: comments_count }] = await Promise.all([
-      supabase.from("product_likes").select("*", { count: "exact", head: true }).eq("product_id", productId),
-      supabase.from("product_comments").select("*", { count: "exact", head: true }).eq("product_id", productId).eq("moderation_status", "approved"),
+      supabase.from("product_likes" as any).select("*", { count: "exact", head: true }).eq("product_id", productId),
+      supabase.from("product_comments" as any).select("*", { count: "exact", head: true }).eq("product_id", productId).eq("moderation_status", "approved"),
     ]);
 
     let is_liked = false;
     if (userId) {
-      const { data } = await supabase.from("product_likes").select("id").eq("product_id", productId).eq("user_id", userId).single();
+      const { data } = await supabase.from("product_likes" as any).select("id").eq("product_id", productId).eq("user_id", userId).single();
       if (data) is_liked = true;
     }
 
@@ -241,7 +241,7 @@ export const productService = {
 
   async getComments(productId: string) {
     const { data: comments, error } = await supabase
-      .from("product_comments")
+      .from("product_comments" as any)
       .select("*, profiles(full_name, avatar_url, is_verified)")
       .eq("product_id", productId)
       .eq("moderation_status", "approved")
@@ -253,8 +253,8 @@ export const productService = {
 
   async createComment(productId: string, userId: string, content: string) {
     const { data, error } = await supabase
-      .from("product_comments")
-      .insert({ product_id: productId, user_id: userId, content })
+      .from("product_comments" as any)
+      .insert({ product_id: productId, user_id: userId, content } as any)
       .select()
       .single();
 

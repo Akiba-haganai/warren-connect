@@ -378,7 +378,7 @@ export default function ProductDetailPage() {
         requireAuth={requireAuth}
         onCommentAdded={() => {
           if (product.seller_id !== user?.id) {
-            triggerNotification.comment(product.seller_id, product.id, profile?.full_name ?? "Someone");
+            triggerNotification.comment(product.seller_id, product.id, profile?.full_name ?? "Someone", "on your marketplace listing");
           }
         }}
       />
