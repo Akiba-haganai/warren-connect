@@ -1,20 +1,27 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Heart, MessageCircle, Send, Loader2, Flag, Minus, Share2 } from "lucide-react";
+import { Heart, MessageCircle, Send, Loader2, Flag, Minus, Share2, MoreVertical, Trash2 } from "lucide-react";
 import { shareToWhatsApp } from "@/utils/whatsappShare";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { likeService } from "@/services/posts/likeService";
 import { commentService } from "@/services/posts/commentService";
+import { postService, type FeedPost } from "@/services/posts/postService";
 import { useAuthStore } from "@/store/auth/authStore";
 import { triggerNotification } from "@/services/notifications/triggerService";
 import { reportService } from "@/services/reports/reportService";
-import { tagService } from "@/services/tags/tagService";                // ✅ new
-import type { FeedPost } from "@/services/posts/postService";
+import { tagService } from "@/services/tags/tagService";
 import CommentItem from "@/features/feed/components/CommentItem";
+import ImageLightbox from "@/components/shared/ImageLightbox";
 import { triggerHaptic } from "@/utils/haptic";
+import toast from "react-hot-toast";
 
-export default function PostCard({ post }: { post: FeedPost }) {
+interface PostCardProps {
+  post: FeedPost;
+  isDetailView?: boolean;
+}
+
+export default function PostCard({ post, isDetailView = false }: PostCardProps) {
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
   const queryClient = useQueryClient();
@@ -31,7 +38,10 @@ export default function PostCard({ post }: { post: FeedPost }) {
 
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
-  const [tags, setTags] = useState<string[]>([]);                     // ✅ new
+  const [tags, setTags] = useState<string[]>([]);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch tags for this post
   useEffect(() => {
@@ -44,6 +54,25 @@ export default function PostCard({ post }: { post: FeedPost }) {
       return false;
     }
     return true;
+  };
+
+  const handleDeletePost = async () => {
+    if (!requireAuth()) return;
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+
+    setIsDeleting(true);
+    triggerHaptic();
+    try {
+      await postService.deletePost(post.id);
+      toast.success("Post deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["unified-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete post");
+    } finally {
+      setIsDeleting(false);
+      setShowMenu(false);
+    }
   };
 
   // Fetch comments with profiles
@@ -143,29 +172,77 @@ export default function PostCard({ post }: { post: FeedPost }) {
   };
 
   return (
-    <div className="card p-4" role="article" aria-label={`Post by ${post.user_name}`}>
-      {/* Poster info */}
-      <div className="flex items-center gap-2 mb-3">
-        <Link to={`/user/${post.user_id}`} aria-label={`View ${post.user_name}'s profile`}>
-          {post.user_avatar ? (
-            <img src={post.user_avatar} alt={`${post.user_name}'s avatar`} className="w-6 h-6 rounded-full object-cover" />
-          ) : (
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-              style={{ background: "var(--color-primary)" }}
-              aria-label={`${post.user_name}'s avatar`}
+    <div
+      className={`card p-4 transition-colors ${
+        !isDetailView ? "cursor-pointer active:bg-slate-50 dark:active:bg-slate-800/40 select-none" : ""
+      }`}
+      role="article"
+      aria-label={`Post by ${post.user_name}`}
+      onClick={() => {
+        if (!isDetailView) {
+          navigate(`/post/${post.id}`);
+        }
+      }}
+    >
+      {/* Poster info & Options Menu */}
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/user/${post.user_id}`}
+            aria-label={`View ${post.user_name}'s profile`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {post.user_avatar ? (
+              <img src={post.user_avatar} alt={`${post.user_name}'s avatar`} className="w-6 h-6 rounded-full object-cover" />
+            ) : (
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                style={{ background: "var(--color-primary)" }}
+                aria-label={`${post.user_name}'s avatar`}
+              >
+                {(post.user_name?.[0] ?? "?").toUpperCase()}
+              </div>
+            )}
+          </Link>
+          <Link
+            to={`/user/${post.user_id}`}
+            className="text-xs font-semibold hover:underline"
+            style={{ color: "var(--color-text)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {post.user_name}
+          </Link>
+        </div>
+
+        {/* 3-Dot Menu for Post Owner */}
+        {user?.id === post.user_id && (
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setShowMenu((prev) => !prev)}
+              className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Post options"
             >
-              {(post.user_name?.[0] ?? "?").toUpperCase()}
-            </div>
-          )}
-        </Link>
-        <Link
-          to={`/user/${post.user_id}`}
-          className="text-xs font-semibold"
-          style={{ color: "var(--color-text)" }}
-        >
-          {post.user_name}
-        </Link>
+              <MoreVertical size={16} />
+            </button>
+            {showMenu && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setShowMenu(false)} />
+                <div className="absolute right-0 top-7 z-30 min-w-[130px] bg-surface border border-border rounded-xl shadow-lg py-1 animate-in fade-in zoom-in-95 duration-100">
+                  <button
+                    type="button"
+                    onClick={handleDeletePost}
+                    disabled={isDeleting}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-500/10 flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                    <span>Delete post</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Post content */}
@@ -179,12 +256,29 @@ export default function PostCard({ post }: { post: FeedPost }) {
           <span className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>Scanning image...</span>
         </div>
       ) : post.image_url ? (
-        <img
-          src={post.image_url}
-          alt="Post image"
-          className="mt-3 rounded-xl w-full object-cover max-h-80"
-          loading="lazy"
-        />
+        <>
+          <div
+            className="mt-3 rounded-xl overflow-hidden cursor-pointer relative group"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxOpen(true);
+            }}
+            title="Tap to view full image"
+          >
+            <img
+              src={post.image_url}
+              alt="Post image"
+              className="w-full object-cover max-h-80 group-hover:opacity-95 transition-opacity"
+              loading="lazy"
+            />
+          </div>
+          <ImageLightbox
+            isOpen={lightboxOpen}
+            imageUrl={post.image_url}
+            altText={post.content.slice(0, 50) || "Post image"}
+            onClose={() => setLightboxOpen(false)}
+          />
+        </>
       ) : null}
 
       {/* Actions */}
@@ -193,21 +287,38 @@ export default function PostCard({ post }: { post: FeedPost }) {
           {new Date(post.created_at!).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
         </span>
         <button
-          onClick={() => likeMutation.mutate()}
-          className="flex items-center gap-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            likeMutation.mutate();
+          }}
+          className="flex items-center gap-1 cursor-pointer"
           style={{ color: liked ? "var(--color-accent)" : undefined }}
           aria-label={liked ? "Unlike post" : "Like post"}
         >
           <Heart size={16} fill={liked ? "var(--color-accent)" : "none"} /> {post.likes_count}
         </button>
         <button
-          onClick={() => setShowComments(!showComments)}
-          className="flex items-center gap-1"
-          aria-label="Toggle comments"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isDetailView) {
+              navigate(`/post/${post.id}`);
+            } else {
+              setShowComments(!showComments);
+            }
+          }}
+          className="flex items-center gap-1 cursor-pointer"
+          aria-label="View comments"
         >
           <MessageCircle size={16} /> {post.comments_count}
         </button>
-        <button onClick={handleReport} className="flex items-center gap-1" aria-label="Report post">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleReport();
+          }}
+          className="flex items-center gap-1 cursor-pointer"
+          aria-label="Report post"
+        >
           <Flag size={14} /> Report
         </button>
         <button
@@ -220,7 +331,7 @@ export default function PostCard({ post }: { post: FeedPost }) {
               id: post.id,
             });
           }}
-          className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold hover:opacity-80 transition-opacity ml-auto"
+          className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold hover:opacity-80 transition-opacity ml-auto cursor-pointer"
           aria-label="Share to WhatsApp"
         >
           <Share2 size={13} /> Share

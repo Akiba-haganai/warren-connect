@@ -1,4 +1,5 @@
-import { Outlet, Link } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import Navbar from "@/components/navigation/Navbar";
 import BottomNav from "@/components/navigation/BottomNav";
 import InstallBanner from "@/components/ui/InstallBanner";
@@ -8,6 +9,14 @@ import { useMarketplaceNotifications } from "@/hooks/useMarketplaceNotifications
 
 export default function MainLayout() {
   useMarketplaceNotifications();
+  const location = useLocation();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo(0, 0);
+    }
+  }, [location.pathname]);
 
   return (
     <div
@@ -19,6 +28,7 @@ export default function MainLayout() {
 
 
       <div
+        ref={scrollRef}
         className="flex-1 overflow-y-auto"
         style={{
           WebkitOverflowScrolling: "touch",

@@ -324,7 +324,7 @@ export default function AccommodationDetailPage() {
     : (accommodation.image_url ? [{ id: "main", image_url: accommodation.image_url }] : []);
 
   return (
-    <div className="pb-24" style={{ background: "var(--color-bg)", minHeight: "100%" }}>
+    <div className="pb-36" style={{ background: "var(--color-bg)", minHeight: "100%" }}>
       {/* Header */}
       <div
         className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"

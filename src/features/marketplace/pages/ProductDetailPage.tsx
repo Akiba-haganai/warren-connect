@@ -17,6 +17,7 @@ import {
 import EditProductModal from "@/features/marketplace/components/EditProductModal";
 import ShareModal from "@/components/share/ShareModal";
 import ItemSocialBar from "@/components/shared/ItemSocialBar";
+import ImageLightbox from "@/components/shared/ImageLightbox";
 import { useSEOHead } from "@/hooks/useSEOHead";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -35,6 +36,8 @@ export default function ProductDetailPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [showEditModal, setShowEditModal] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const location = useLocation();
 
   useSEOHead({
@@ -158,7 +161,7 @@ export default function ProductDetailPage() {
     : null;
 
   return (
-    <div className="pb-24" style={{ background: "var(--color-bg)", minHeight: "100%" }}>
+    <div className="pb-36" style={{ background: "var(--color-bg)", minHeight: "100%" }}>
       <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-border bg-surface/90 backdrop-blur-md">
         <button onClick={() => navigate(-1)} aria-label="Go back">
           <ArrowLeft size={20} />
@@ -183,19 +186,35 @@ export default function ProductDetailPage() {
 
       {/* Image Gallery */}
       {images.length > 0 ? (
-        <div className="relative bg-black">
+        <div className="relative bg-black cursor-pointer group">
           <img
             src={images[selectedImage]?.image_url}
             alt={product.title}
-            className="w-full h-72 object-contain"
+            className="w-full h-72 object-contain group-hover:opacity-95 transition-opacity"
             loading="lazy"
+            onClick={() => {
+              setLightboxUrl(images[selectedImage]?.image_url || null);
+              setLightboxOpen(true);
+            }}
           />
           {images.length > 1 && (
             <>
-              <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  prevImage();
+                }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center cursor-pointer shadow-md"
+              >
                 <ChevronLeft size={20} />
               </button>
-              <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  nextImage();
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center cursor-pointer shadow-md"
+              >
                 <ChevronRight size={20} />
               </button>
               <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
@@ -205,7 +224,19 @@ export default function ProductDetailPage() {
           )}
         </div>
       ) : primaryDisplayUrl ? (
-        <img src={primaryDisplayUrl} alt={product.title} className="w-full h-72 object-cover" />
+        <div
+          className="cursor-pointer group relative bg-black"
+          onClick={() => {
+            setLightboxUrl(primaryDisplayUrl);
+            setLightboxOpen(true);
+          }}
+        >
+          <img
+            src={primaryDisplayUrl}
+            alt={product.title}
+            className="w-full h-72 object-cover group-hover:opacity-95 transition-opacity"
+          />
+        </div>
       ) : (
         <div className="w-full h-72 flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))" }}>
           <ShoppingBag size={48} color="rgba(255,255,255,0.3)" />
@@ -380,6 +411,16 @@ export default function ProductDetailPage() {
           if (product.seller_id !== user?.id) {
             triggerNotification.comment(product.seller_id, product.id, profile?.full_name ?? "Someone", "on your marketplace listing");
           }
+        }}
+      />
+
+      <ImageLightbox
+        isOpen={lightboxOpen}
+        imageUrl={lightboxUrl}
+        altText={product.title}
+        onClose={() => {
+          setLightboxOpen(false);
+          setLightboxUrl(null);
         }}
       />
     </div>

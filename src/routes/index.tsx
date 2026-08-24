@@ -133,6 +133,7 @@ export const router = createBrowserRouter([
           { path: "/accommodation/:id", element: withBoundary(AccommodationDetailPage) },
           { path: "/accommodation", element: withBoundary(AccommodationPage) },
           { path: "/post/:id", element: withBoundary(PostDetailPage) },
+          { path: "/feed/:id", element: withBoundary(PostDetailPage) },
           { path: "/shop/:id", element: withBoundary(ShopPage) },
           { path: "/tag/:tagName", element: withBoundary(TagPage) },
 

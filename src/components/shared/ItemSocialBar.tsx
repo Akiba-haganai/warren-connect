@@ -87,7 +87,8 @@ export default function ItemSocialBar({
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-surface/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] z-40">
+      <div className="fixed left-0 right-0 border-t border-border bg-surface/95 backdrop-blur-md z-[55]" 
+           style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}>
         <div className="flex items-center justify-around p-3 max-w-lg mx-auto">
           <button onClick={handleLike} className="flex items-center gap-2 p-2" style={{ color: stats?.is_liked ? "var(--color-accent)" : "var(--color-text-secondary)" }}>
             <Heart size={22} fill={stats?.is_liked ? "var(--color-accent)" : "none"} />
