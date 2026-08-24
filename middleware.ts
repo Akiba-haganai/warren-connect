@@ -5,6 +5,8 @@
  * Regular human visitors pass through untouched directly to the Vite SPA.
  */
 
+declare const process: { env: Record<string, string | undefined> };
+
 export const config = {
   matcher: ["/marketplace/:id*", "/accommodation/:id*"],
 };
