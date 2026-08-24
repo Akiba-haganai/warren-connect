@@ -29,7 +29,19 @@ if (import.meta.env.VITE_SENTRY_DSN) {
 // Intercept Vite dynamic import chunk loading errors (occurs on new deployment)
 window.addEventListener("vite:preloadError", (event) => {
   console.warn("Vite preload error, hard reloading to fetch new chunks", event);
-  window.location.reload();
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      for (const reg of regs) {
+        reg.update();
+      }
+    });
+  }
+  const lastReload = sessionStorage.getItem("vite_chunk_reload");
+  const now = Date.now();
+  if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+    sessionStorage.setItem("vite_chunk_reload", String(now));
+    window.location.reload();
+  }
 });
 
 registerServiceWorker({
