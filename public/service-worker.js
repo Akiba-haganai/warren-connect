@@ -12,6 +12,11 @@
 const CACHE_VERSION = "v1.0.3";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
+const SUPABASE_IMAGE_CACHE = "supabase-images";
+const SUPABASE_IMAGE_MAX_ENTRIES = 200;
+
+// Manifest injected by VitePWA with injectManifest strategy
+const precacheManifest = self.__WB_MANIFEST || [];
 
 const PRECACHE_ASSETS = [
   "/",
@@ -20,7 +25,38 @@ const PRECACHE_ASSETS = [
   "/favicon.ico",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  ...precacheManifest.map((entry) => (typeof entry === "string" ? entry : entry.url)),
 ];
+
+function isSupabaseImageRequest(url) {
+  return (
+    url.hostname.endsWith(".supabase.co") &&
+    url.pathname.includes("/storage/v1/object/public/")
+  );
+}
+
+async function trimCache(cache, maxEntries) {
+  const keys = await cache.keys();
+  if (keys.length > maxEntries) {
+    await cache.delete(keys[0]);
+    await trimCache(cache, maxEntries);
+  }
+}
+
+async function staleWhileRevalidateSupabaseImage(request) {
+  const cache = await caches.open(SUPABASE_IMAGE_CACHE);
+  const cached = await cache.match(request);
+  const networkFetch = fetch(request)
+    .then(async (response) => {
+      if (response && response.status === 200) {
+        await cache.put(request, response.clone());
+        await trimCache(cache, SUPABASE_IMAGE_MAX_ENTRIES);
+      }
+      return response;
+    })
+    .catch(() => cached);
+  return cached || networkFetch;
+}
 
 // Helper: safe cache.put that never throws or breaks navigation
 async function safeCachePut(cacheName, request, response) {
@@ -76,7 +112,12 @@ self.addEventListener("activate", (event) => {
         const keys = await caches.keys();
         await Promise.all(
           keys
-            .filter((key) => key !== STATIC_CACHE && key !== RUNTIME_CACHE)
+            .filter(
+              (key) =>
+                key !== STATIC_CACHE &&
+                key !== RUNTIME_CACHE &&
+                key !== SUPABASE_IMAGE_CACHE
+            )
             .map((key) => caches.delete(key))
         );
         await self.clients.claim();
@@ -97,7 +138,6 @@ self.addEventListener("message", (event) => {
 });
 
 // ---------------------------------------------------------------
-// ---------------------------------------------------------------
 // FETCH — resilient handling for navigation and static assets
 // ---------------------------------------------------------------
 self.addEventListener("fetch", (event) => {
@@ -106,7 +146,15 @@ self.addEventListener("fetch", (event) => {
   // 1. Only handle GET requests from http/https
   if (request.method !== "GET" || !request.url.startsWith("http")) return;
 
-  // 2. Bypass API calls, Supabase endpoints, version checks, and backend functions
+  const url = new URL(request.url);
+
+  // 2. Supabase Storage Public Images — Stale-While-Revalidate
+  if (isSupabaseImageRequest(url)) {
+    event.respondWith(staleWhileRevalidateSupabaseImage(request));
+    return;
+  }
+
+  // 3. Bypass API calls, Supabase endpoints, version checks, and backend functions
   if (
     request.url.includes("/api/") ||
     request.url.includes("/version.json")
@@ -114,7 +162,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 3. Navigation requests (Page loads) — Network-first, fallback to index.html
+  // 4. Navigation requests (Page loads) — Network-first, fallback to index.html
   if (request.mode === "navigate") {
     event.respondWith(
       (async () => {
@@ -142,7 +190,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 4. Static assets (JS, CSS, images) — Network-first with silent cache fallback
+  // 5. Static assets (JS, CSS, images) — Network-first with silent cache fallback
   event.respondWith(
     (async () => {
       try {

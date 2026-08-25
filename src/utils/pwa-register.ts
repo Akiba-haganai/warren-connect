@@ -22,6 +22,8 @@ interface RegisterOptions {
   onError?: (err: Error) => void;
 }
 
+let currentRegistration: ServiceWorkerRegistration | null = null;
+
 export function registerServiceWorker({ onUpdateReady, onError }: RegisterOptions = {}) {
   if (!('serviceWorker' in navigator)) {
     // Not a fatal error — just means offline/installability features
@@ -33,6 +35,7 @@ export function registerServiceWorker({ onUpdateReady, onError }: RegisterOption
   window.addEventListener('load', async () => {
     try {
       const registration = await navigator.serviceWorker.register('/service-worker.js');
+      currentRegistration = registration;
 
       // Case 1: an update was already installed and is waiting
       // (e.g. the user closed the tab mid-update last session).
@@ -65,6 +68,16 @@ export function registerServiceWorker({ onUpdateReady, onError }: RegisterOption
     } catch (err: any) {
       onError?.(err);
     }
+  });
+}
+
+/**
+ * Call this from useVersionCheck or visibility changes to trigger
+ * an immediate check for a new service worker script.
+ */
+export function checkForServiceWorkerUpdate() {
+  currentRegistration?.update().catch(() => {
+    // Non-fatal: browser will still poll on its own schedule.
   });
 }
 

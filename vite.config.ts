@@ -56,7 +56,6 @@ export default defineConfig({
       srcDir: "public",
       filename: "service-worker.js",
       injectRegister: null,
-      cleanupOutdatedCaches: true,
       manifest: {
         name: "PLAWZA",
         short_name: "PLAWZA",

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { checkForServiceWorkerUpdate } from "@/utils/pwa-register";
 
 export function useVersionCheck() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -30,10 +31,12 @@ export function useVersionCheck() {
 
   useEffect(() => {
     checkVersion();
+    checkForServiceWorkerUpdate();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         checkVersion();
+        checkForServiceWorkerUpdate();
       }
     };
 
