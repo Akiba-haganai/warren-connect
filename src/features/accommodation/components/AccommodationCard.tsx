@@ -57,7 +57,7 @@ export default function AccommodationCard({ listing, onView, landlord }: Props) 
       </div>
 
       {listing.image_url ? (
-        <img src={listing.image_url} alt={listing.title} className="w-full object-cover" style={{ height: 180 }} loading="lazy" />
+        <img src={listing.image_url} alt={listing.title} className="w-full object-cover" style={{ height: 180 }} loading="lazy" decoding="async" />
       ) : (
         <div className="flex items-center justify-center" style={{ height: 160, background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-light))" }}>
           <Building2 size={36} color="rgba(255,255,255,0.3)" />

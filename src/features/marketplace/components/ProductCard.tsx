@@ -68,6 +68,7 @@ export default function ProductCard({ product, onView }: Props) {
               className="w-full object-cover"
               style={{ height: 160 }}
               loading="lazy"
+              decoding="async"
               onError={() => setImgError(true)}
             />
           );

@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import legacy from "@vitejs/plugin-legacy";
 import path from "node:path";
 import { VitePWA } from "vite-plugin-pwa";
 import tailwindcss from "@tailwindcss/vite";
@@ -44,31 +45,18 @@ export default defineConfig({
     tailwindcss(),
     react(),
     versionPlugin(),
+    legacy({
+      targets: ["defaults", "iOS >= 12", "Safari >= 12", "Android >= 6", "chrome >= 60"],
+      modernPolyfills: true,
+      renderLegacyChunks: true,
+    }),
     VitePWA({
+      registerType: "autoUpdate",
+      strategies: "injectManifest",
+      srcDir: "public",
+      filename: "service-worker.js",
       injectRegister: null,
-      workbox: {
-        navigateFallbackDenylist: [/^\/version\.json/],
-        globIgnores: ["**/version.json"],
-        runtimeCaching: [
-          {
-            urlPattern: /version\.json/,
-            handler: "NetworkOnly",
-          },
-          {
-            urlPattern: ({ url }) =>
-              url.hostname.endsWith(".supabase.co") &&
-              url.pathname.includes("/storage/v1/object/public/"),
-            handler: "StaleWhileRevalidate",
-            options: {
-              cacheName: "supabase-images",
-              expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
-              },
-            },
-          },
-        ],
-      },
+      cleanupOutdatedCaches: true,
       manifest: {
         name: "PLAWZA",
         short_name: "PLAWZA",
@@ -87,21 +75,14 @@ export default defineConfig({
     }),
   ],
   build: {
+    target: ["es2018", "safari12", "chrome60"],
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom") || id.includes("node_modules/react-router-dom")) {
-            return "vendor-react";
-          }
-          if (id.includes("node_modules/@supabase")) {
-            return "vendor-supabase";
-          }
-          if (id.includes("node_modules/@tanstack")) {
-            return "vendor-query";
-          }
-          if (id.includes("node_modules/lucide-react") || id.includes("node_modules/framer-motion") || id.includes("node_modules/react-hot-toast")) {
-            return "vendor-ui";
-          }
+          if (id.includes("node_modules/@sentry")) return "vendor-sentry";
+          if (id.includes("node_modules/@supabase")) return "vendor-supabase";
+          if (id.includes("node_modules/framer-motion") || id.includes("node_modules/lucide-react")) return "vendor-ui";
+          if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom/")) return "vendor-react";
         },
       },
     },

@@ -20,17 +20,12 @@ Sentry.init({
       blockAllMedia: false,
     }),
   ],
-  // Capture 100% of transactions for performance monitoring while testing
-  tracesSampleRate: 1.0, 
-  // Capture 100% of sessions for replay while testing
+  // Capture 20% of transactions for performance monitoring
+  tracesSampleRate: 0.2, 
   replaysSessionSampleRate: 1.0,
   replaysOnErrorSampleRate: 1.0,
 });
 
-// Trigger a test error so we instantly see something on the dashboard
-setTimeout(() => {
-  Sentry.captureException(new Error("Test Error: Sentry is successfully connected to Plawza!"));
-}, 2000);
 
 // Intercept Vite dynamic import chunk loading errors (occurs on new deployment)
 window.addEventListener("vite:preloadError", (event) => {
