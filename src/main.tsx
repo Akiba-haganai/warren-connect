@@ -22,7 +22,8 @@ Sentry.init({
   ],
   // Capture 20% of transactions for performance monitoring
   tracesSampleRate: 0.2, 
-  replaysSessionSampleRate: 1.0,
+  // Session Replays block the main thread during initial load, only capture on error
+  replaysSessionSampleRate: 0.0,
   replaysOnErrorSampleRate: 1.0,
 });
 
