@@ -3,13 +3,13 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { registerServiceWorker } from "@/utils/pwa-register";
-// import * as Sentry from "@sentry/react";
+import * as Sentry from "@sentry/react";
 // import { initLifecycleTelemetry } from "@/utils/uploadTelemetry";
 
 // Initialize lifecycle tracking early
 // initLifecycleTelemetry();
 
-/* 
+
 // Initialize Sentry for Live Error Tracking
 Sentry.init({
   dsn: "https://476ca570c4a0711deb35515cedb62e8b@o4511632845635584.ingest.de.sentry.io/4511951429238864",
@@ -27,7 +27,6 @@ Sentry.init({
   replaysSessionSampleRate: 0.0,
   replaysOnErrorSampleRate: 1.0,
 });
-*/
 
 
 // Intercept Vite dynamic import chunk loading errors (occurs on new deployment)
