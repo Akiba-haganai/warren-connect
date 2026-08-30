@@ -12,12 +12,15 @@ export default function DiagnosticOverlay() {
   const isDev = import.meta.env.DEV;
   const isAdmin = profile?.is_admin === true;
 
-  // Initialize Eruda Mobile DevTools for Admins / Devs
-  useEffect(() => {
-    if (isAdmin || isDev) {
-      import("eruda").then((eruda) => eruda.default.init());
-    }
-  }, [isAdmin, isDev]);
+  const [erudaLoaded, setErudaLoaded] = useState(false);
+
+  const handleLoadEruda = () => {
+    if (erudaLoaded) return;
+    import("eruda").then((eruda) => {
+      eruda.default.init();
+      setErudaLoaded(true);
+    });
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -37,9 +40,9 @@ export default function DiagnosticOverlay() {
   if (!isOpen) {
     return (
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={handleLoadEruda}
         className="fixed bottom-20 right-4 z-[999] bg-black/80 text-white p-3 rounded-full shadow-lg backdrop-blur-sm"
-        aria-label="Open Diagnostics"
+        aria-label="Load Eruda DevTools"
       >
         <Activity size={20} />
       </button>

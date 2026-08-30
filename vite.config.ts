@@ -1,6 +1,5 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import legacy from "@vitejs/plugin-legacy";
 import path from "node:path";
 import { VitePWA } from "vite-plugin-pwa";
 import tailwindcss from "@tailwindcss/vite";
@@ -45,17 +44,16 @@ export default defineConfig({
     tailwindcss(),
     react(),
     versionPlugin(),
-    legacy({
-      targets: ["defaults", "iOS >= 12", "Safari >= 12", "Android >= 6", "chrome >= 60"],
-      modernPolyfills: true,
-      renderLegacyChunks: true,
-    }),
     VitePWA({
       registerType: "autoUpdate",
       strategies: "injectManifest",
       srcDir: "public",
       filename: "service-worker.js",
       injectRegister: null,
+      injectManifest: {
+        globPatterns: ["index.html", "manifest.webmanifest"],
+        globIgnores: ["**/node_modules/**"],
+      },
       manifest: {
         name: "PLAWZA",
         short_name: "PLAWZA",
@@ -74,7 +72,7 @@ export default defineConfig({
     }),
   ],
   build: {
-    target: ["es2018", "safari12", "chrome60"],
+    target: ["es2020", "safari14", "chrome91"],
     rollupOptions: {
       output: {
         manualChunks(id) {

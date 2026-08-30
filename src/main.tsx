@@ -3,7 +3,6 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { registerServiceWorker } from "@/utils/pwa-register";
-import * as Sentry from "@sentry/react";
 // import { initLifecycleTelemetry } from "@/utils/uploadTelemetry";
 
 // Initialize lifecycle tracking early
@@ -11,22 +10,32 @@ import * as Sentry from "@sentry/react";
 
 
 // Initialize Sentry for Live Error Tracking
-Sentry.init({
-  dsn: "https://476ca570c4a0711deb35515cedb62e8b@o4511632845635584.ingest.de.sentry.io/4511951429238864",
-  environment: import.meta.env.PROD ? "production" : "development",
-  integrations: [
-    Sentry.browserTracingIntegration(),
-    Sentry.replayIntegration({
-      maskAllText: false,
-      blockAllMedia: false,
-    }),
-  ],
-  // Capture 20% of transactions for performance monitoring
-  tracesSampleRate: 0.2, 
-  // Session Replays block the main thread during initial load, only capture on error
-  replaysSessionSampleRate: 0.0,
-  replaysOnErrorSampleRate: 1.0,
-});
+function initSentry() {
+  import("@sentry/react").then((Sentry) => {
+    Sentry.init({
+      dsn: "https://476ca570c4a0711deb35515cedb62e8b@o4511632845635584.ingest.de.sentry.io/4511951429238864",
+      environment: import.meta.env.PROD ? "production" : "development",
+      integrations: [
+        Sentry.browserTracingIntegration(),
+        Sentry.replayIntegration({
+          maskAllText: false,
+          blockAllMedia: false,
+        }),
+      ],
+      // Capture 20% of transactions for performance monitoring
+      tracesSampleRate: 0.2, 
+      // Session Replays block the main thread during initial load, only capture on error
+      replaysSessionSampleRate: 0.0,
+      replaysOnErrorSampleRate: 1.0,
+    });
+  });
+}
+
+if ("requestIdleCallback" in window) {
+  requestIdleCallback(initSentry);
+} else {
+  setTimeout(initSentry, 2000);
+}
 
 
 // Intercept Vite dynamic import chunk loading errors (occurs on new deployment)

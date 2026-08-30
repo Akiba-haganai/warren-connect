@@ -27,7 +27,7 @@ export default function MainLayout() {
       <Navbar />
 
 
-      <div
+      <main
         ref={scrollRef}
         className="flex-1 overflow-y-auto"
         style={{
@@ -51,7 +51,7 @@ export default function MainLayout() {
             Privacy Policy
           </Link>
         </div>
-      </div>
+      </main>
 
       <InstallBanner />
       <OnboardingCarousel />
