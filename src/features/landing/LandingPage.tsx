@@ -42,6 +42,7 @@ export default function LandingPage() {
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
+      <main>
 
       {/* Hero */}
       <div className="px-5 pt-16 pb-10 text-center">
@@ -200,6 +201,7 @@ export default function LandingPage() {
           <Star size={10} className="text-amber-400" /> Built for Zambian students
         </p>
       </div>
+      </main>
     </div>
   );
 }

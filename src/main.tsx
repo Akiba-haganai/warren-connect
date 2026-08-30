@@ -31,11 +31,9 @@ function initSentry() {
   });
 }
 
-if ("requestIdleCallback" in window) {
-  requestIdleCallback(initSentry);
-} else {
-  setTimeout(initSentry, 2000);
-}
+// Wait for window load + 1s buffer so Sentry never blocks FCP/LCP
+// requestIdleCallback fires too early (~500ms) on slow connections
+window.addEventListener("load", () => setTimeout(initSentry, 1000), { once: true });
 
 
 // Intercept Vite dynamic import chunk loading errors (occurs on new deployment)
