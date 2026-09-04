@@ -55,6 +55,29 @@
         }
       })();
     </script>
+
+    <!-- Safe SW crash recovery – runs only once, no loops -->
+    <script>
+      try {
+        if ("serviceWorker" in navigator) {
+          var recoveryFlag = localStorage.getItem("plawza-needs-recovery");
+          if (recoveryFlag === "1") {
+            localStorage.removeItem("plawza-needs-recovery");
+            navigator.serviceWorker.getRegistrations()
+              .then(function(regs) {
+                return Promise.all(regs.map(function(r) { return r.unregister(); }));
+              })
+              .then(function() { return caches.keys(); })
+              .then(function(keys) {
+                return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+              })
+              .then(function() { window.location.reload(); });
+          } else {
+            localStorage.setItem("plawza-needs-recovery", "1");
+          }
+        }
+      } catch (_) {}
+    </script>
     <link rel="canonical" href="https://warren-plawza.vercel.app" />
     <meta name="robots" content="index, follow" />
   </head>

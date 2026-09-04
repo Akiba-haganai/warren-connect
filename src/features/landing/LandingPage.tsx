@@ -35,6 +35,9 @@ export default function LandingPage() {
         accommodations: accommodations.count ?? 0,
       });
       setStatsLoaded(true);
+    }).catch((err) => {
+      console.warn("Failed to load landing stats:", err);
+      setStatsLoaded(true);
     });
   }, []);
 

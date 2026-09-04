@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { router } from "@/routes";
@@ -18,6 +19,10 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  useEffect(() => {
+    try { localStorage.removeItem("plawza-needs-recovery"); } catch (_) {}
+  }, []);
+
   return (
     <ErrorBoundary
       onError={(error) => {
