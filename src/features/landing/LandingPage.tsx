@@ -57,6 +57,7 @@ export default function LandingPage() {
 
         <h1 className="text-4xl font-black mb-2 tracking-tight" style={{ color: "var(--color-text)" }}>
           PLAWZA
+          <span className="sr-only"> — Campus Marketplace &amp; Student Housing Hub</span>
         </h1>
         <p className="text-sm mb-2 font-semibold uppercase tracking-widest" style={{ color: "var(--color-primary)" }}>
           Your Campus. Your Marketplace.
