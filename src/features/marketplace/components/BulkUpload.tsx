@@ -199,7 +199,7 @@ export default function BulkUpload({ onClose, onCreated }: Props) {
                     <span className="truncate">{i + 1}. {p.title} – K{p.price}{p.condition ? ` (${p.condition})` : ""}</span>
                     {imagePreviews[i] ? (
                       <div className="flex items-center gap-1">
-                        <img alt="image" src={imagePreviews[i]} className="w-6 h-6 rounded object-cover" />
+                        <img alt="Descriptive image" src={imagePreviews[i]} className="w-6 h-6 rounded object-cover" />
                         <button aria-label="image" onClick={() => removeImage(i)} className="text-red-500">
                           <X size={12} />
                         </button>

@@ -222,7 +222,7 @@ export default function EditAccommodationModal({ accommodation, onClose, onUpdat
                   <div key={img.id} className="relative aspect-square rounded-2xl overflow-hidden border border-border group shadow-xs">
                     <img
                       src={storageService.getPublicUrl("accommodation-images", img.image_url)}
-                      alt=""
+                      alt="Descriptive image"
                       className="w-full h-full object-cover"
                     />
                     {idx === 0 && (
@@ -244,7 +244,7 @@ export default function EditAccommodationModal({ accommodation, onClose, onUpdat
                 {/* New pending upload photos */}
                 {newImageFiles.map((item, idx) => (
                   <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border-2 border-primary/50 group shadow-xs">
-                    <img src={item.preview} alt="" className="w-full h-full object-cover" />
+                    <img src={item.preview} alt="Descriptive image" className="w-full h-full object-cover" />
                     <span className="absolute bottom-1 left-1 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">
                       New
                     </span>

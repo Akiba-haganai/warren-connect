@@ -416,7 +416,7 @@ export default function PostDetailPage() {
       >
         <form onSubmit={handleCommentSubmit} className="flex items-center gap-2 max-w-lg mx-auto">
           {profile?.avatar_url ? (
-            <img src={profile.avatar_url} className="w-8 h-8 rounded-full object-cover shrink-0" alt="" />
+            <img src={profile.avatar_url} className="w-8 h-8 rounded-full object-cover shrink-0" alt="Descriptive image" />
           ) : (
             <div className="w-8 h-8 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs shrink-0">
               {(profile?.full_name?.[0] || user?.email?.[0] || "?").toUpperCase()}

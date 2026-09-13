@@ -11,7 +11,7 @@ interface SEOProps {
 
 const DEFAULT_TITLE = "PLAWZA — Find places. Find opportunities.";
 const DEFAULT_DESC = "Campus marketplace, accommodation, student businesses and culture.";
-const DEFAULT_IMAGE = "https://plawza.com/icons/og-image-1200x630.png";
+const DEFAULT_IMAGE = "https://warren-plawza.vercel.app/og-image-1200x630.png";
 
 export function useSEOHead({ title, description, image, url, type = "website" }: SEOProps) {
   useEffect(() => {

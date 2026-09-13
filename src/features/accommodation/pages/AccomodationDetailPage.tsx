@@ -396,7 +396,7 @@ export default function AccommodationDetailPage() {
                   }`}
                   style={{ borderColor: i === selectedImage ? "var(--color-primary)" : "transparent" }}
                 >
-                  <img src={img.image_url} alt="" className="w-full h-full object-cover" />
+                  <img src={img.image_url} alt="Descriptive image" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -569,7 +569,7 @@ export default function AccommodationDetailPage() {
   ) : (
     <>
       {profile.avatar_url ? (
-        <img src={profile.avatar_url} className="w-6 h-6 rounded-full" alt="" />
+        <img src={profile.avatar_url} className="w-6 h-6 rounded-full" alt="Descriptive image" />
       ) : (
         <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
           {(profile.full_name?.[0] ?? "?")}
@@ -646,7 +646,7 @@ export default function AccommodationDetailPage() {
           <div className="card p-4 flex items-center gap-4">
             <Link to={`/user/${accommodation.landlord.id}`} className="flex-shrink-0">
               {accommodation.landlord.avatar_url ? (
-                <img src={accommodation.landlord.avatar_url} className="w-12 h-12 rounded-full object-cover" alt="" />
+                <img src={accommodation.landlord.avatar_url} className="w-12 h-12 rounded-full object-cover" alt="Descriptive image" />
               ) : (
                 <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: "var(--color-primary)" }}>
                   {(accommodation.landlord.full_name?.[0] ?? "?").toUpperCase()}

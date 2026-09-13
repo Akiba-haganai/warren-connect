@@ -255,7 +255,7 @@ export default function ProductDetailPage() {
               }`}
               style={{ borderColor: i === selectedImage ? "var(--color-primary)" : "transparent" }}
             >
-              <img src={img.image_url} alt="" className="w-full h-full object-cover" />
+              <img src={img.image_url} alt="Descriptive image" className="w-full h-full object-cover" />
             </button>
           ))}
         </div>
@@ -337,7 +337,7 @@ export default function ProductDetailPage() {
           <div className="card p-4 flex items-center gap-4">
             <Link to={`/user/${product.seller.id}`} className="flex-shrink-0">
               {product.seller.avatar_url ? (
-                <img src={product.seller.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                <img src={product.seller.avatar_url} alt="Descriptive image" className="w-10 h-10 rounded-full object-cover" />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
                   {(product.seller.full_name?.[0] ?? "?")}

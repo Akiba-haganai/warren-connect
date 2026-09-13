@@ -291,7 +291,7 @@ export default function PublicProfilePage() {
                   <div key={rev.id} className="card p-3">
                     <div className="flex items-center gap-2 mb-1">
                       {rev.reviewer?.avatar_url ? (
-                        <img src={rev.reviewer.avatar_url} className="w-5 h-5 rounded-full" alt="" />
+                        <img src={rev.reviewer.avatar_url} className="w-5 h-5 rounded-full" alt="Descriptive image" />
                       ) : (
                         <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-white text-[10px] font-bold">
                           {(rev.reviewer?.full_name?.[0] ?? "?")}
@@ -360,7 +360,7 @@ export default function PublicProfilePage() {
               <div key={post.id} className="card p-4">
                 <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--color-text)" }}>{post.content}</p>
                 {post.image_url && (
-                  <img src={post.image_url} alt="" className="mt-3 rounded-xl w-full object-cover max-h-60" loading="lazy" />
+                  <img src={post.image_url} alt="Descriptive image" className="mt-3 rounded-xl w-full object-cover max-h-60" loading="lazy" />
                 )}
                 <div className="flex justify-end mt-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
                   {post.created_at && (

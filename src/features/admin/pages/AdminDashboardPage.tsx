@@ -443,7 +443,7 @@ export default function AdminDashboardPage() {
                   <div key={u.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2.5 min-w-0">
                       {u.avatar_url ? (
-                        <img src={u.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                        <img src={u.avatar_url} alt="Descriptive image" className="w-8 h-8 rounded-full object-cover shrink-0" />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
                           {u.full_name?.[0] || u.email?.[0] || "?"}
@@ -513,7 +513,7 @@ export default function AdminDashboardPage() {
                   <div key={u.id} className="card p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 border border-border bg-surface hover:border-slate-300 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
                       {u.avatar_url ? (
-                        <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                        <img src={u.avatar_url} alt="Descriptive image" className="w-10 h-10 rounded-full object-cover shrink-0" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0">
                           {u.full_name?.[0] || u.email?.[0] || "?"}
@@ -638,7 +638,7 @@ export default function AdminDashboardPage() {
                       <div key={item.id} className={`card p-3 flex flex-col sm:flex-row items-start justify-between gap-3 border border-border bg-surface ${item.is_hidden ? 'opacity-60 bg-red-50/20 dark:bg-red-950/10' : ''}`}>
                         <div className="flex items-start gap-3 flex-1 min-w-0">
                           {imageUrl ? (
-                            <img src={imageUrl} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border" />
+                            <img src={imageUrl} alt="Descriptive image" className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border" />
                           ) : (
                             <div className="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
                               <FileText size={20} />

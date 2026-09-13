@@ -37,7 +37,7 @@ export default function RoommateCard({
         {/* Avatar + Online Badge */}
         <Link to={`/user/${user.id}`} className="relative flex-shrink-0">
           {user.avatar_url ? (
-            <img src={user.avatar_url} className="w-13 h-13 rounded-2xl object-cover border border-border" alt="" />
+            <img src={user.avatar_url} className="w-13 h-13 rounded-2xl object-cover border border-border" alt="Descriptive image" />
           ) : (
             <div className="w-13 h-13 rounded-2xl bg-primary text-white flex items-center justify-center font-bold text-base shadow-xs">
               {(user.full_name?.[0] ?? "?").toUpperCase()}

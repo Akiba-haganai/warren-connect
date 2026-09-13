@@ -344,7 +344,7 @@ export default function ShopPage() {
         {/* Shop name + dropdown trigger */}
         <div className="relative flex items-center gap-2" ref={dropdownRef}>
           {shop.logo_url ? (
-            <img src={shop.logo_url} className="w-6 h-6 rounded-full object-cover" alt="" />
+            <img src={shop.logo_url} className="w-6 h-6 rounded-full object-cover" alt="Descriptive image" />
           ) : (
             <Store size={18} style={{ color: "var(--color-text-muted)" }} />
           )}
@@ -446,7 +446,7 @@ export default function ShopPage() {
                   <li key={collab.user_id} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       {collab.profiles?.avatar_url ? (
-                        <img src={collab.profiles.avatar_url} className="w-6 h-6 rounded-full" alt="" />
+                        <img src={collab.profiles.avatar_url} className="w-6 h-6 rounded-full" alt="Descriptive image" />
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
                           {collab.profiles?.full_name?.[0] ?? "?"}
@@ -490,7 +490,7 @@ export default function ShopPage() {
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
                     >
                       {profile.avatar_url ? (
-                        <img src={profile.avatar_url} className="w-6 h-6 rounded-full" alt="" />
+                        <img src={profile.avatar_url} className="w-6 h-6 rounded-full" alt="Descriptive image" />
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
                           {profile.full_name?.[0] ?? "?"}
@@ -629,7 +629,7 @@ export default function ShopPage() {
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     {review.reviewer?.avatar_url ? (
-                      <img src={review.reviewer.avatar_url} className="w-6 h-6 rounded-full" alt="" />
+                      <img src={review.reviewer.avatar_url} className="w-6 h-6 rounded-full" alt="Descriptive image" />
                     ) : (
                       <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
                         {review.reviewer?.full_name?.[0] ?? "?"}

@@ -15,6 +15,7 @@ export default function DiagnosticOverlay() {
   const [erudaLoaded, setErudaLoaded] = useState(false);
 
   const handleLoadEruda = () => {
+    if (import.meta.env.PROD) return; // never load in production
     if (erudaLoaded) return;
     import("eruda").then((eruda) => {
       eruda.default.init();

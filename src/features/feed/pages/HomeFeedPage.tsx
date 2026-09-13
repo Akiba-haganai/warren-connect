@@ -259,7 +259,7 @@ export default function HomeFeedPage() {
             className="p-3 rounded-2xl bg-surface border border-border flex items-center gap-3 cursor-pointer shadow-2xs hover:border-slate-300 transition-colors active:scale-[0.99]"
           >
             {profile?.avatar_url ? (
-              <img src={profile.avatar_url} className="w-9 h-9 rounded-full object-cover shrink-0" alt="" />
+              <img src={profile.avatar_url} className="w-9 h-9 rounded-full object-cover shrink-0" alt="Descriptive image" />
             ) : (
               <div className="w-9 h-9 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs shrink-0">
                 {(profile?.full_name?.[0] || user?.email?.[0] || "?").toUpperCase()}

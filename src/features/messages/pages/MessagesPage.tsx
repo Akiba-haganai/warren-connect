@@ -255,7 +255,7 @@ export default function MessagesPage() {
             <Link to={`/user/${activeOtherId}`} className="flex items-center gap-3 min-w-0 flex-1 group hover:opacity-90 transition-opacity">
               {activeOtherProfile?.avatar_url ? (
                 <div className="relative shrink-0">
-                  <img src={activeOtherProfile.avatar_url} className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800 shadow-xs group-hover:scale-105 transition-transform" alt="" />
+                  <img src={activeOtherProfile.avatar_url} className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800 shadow-xs group-hover:scale-105 transition-transform" alt="Descriptive image" />
                   {activeOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />}
                 </div>
               ) : (

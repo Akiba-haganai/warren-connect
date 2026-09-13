@@ -209,7 +209,7 @@ export default function SearchOverlay({ onClose }: Props) {
                     {item.image_url ? (
                       <img
                         src={item.image_url}
-                        alt=""
+                        alt="Descriptive image"
                         className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                       />
                     ) : (

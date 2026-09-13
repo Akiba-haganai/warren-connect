@@ -177,7 +177,7 @@ export default function LandingPage() {
       {!user && (
         <div className="px-5 pb-10">
           <div className="max-w-lg mx-auto flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/register"
+            <Link to="/marketplace"
               className="flex-1 text-center py-2.5 rounded-xl text-sm font-semibold border transition-colors shadow-xs"
               style={{ borderColor: "var(--color-border)", color: "var(--color-text)", background: "var(--color-surface)" }}>
               🏠 Explore Housing &amp; Marketplace

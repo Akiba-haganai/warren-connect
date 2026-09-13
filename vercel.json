@@ -19,7 +19,7 @@
     {
       "source": "/(sw\\.js|workbox-.*\\.js|manifest\\.webmanifest|index\\.html|version\\.json)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
       ]
     },
     {

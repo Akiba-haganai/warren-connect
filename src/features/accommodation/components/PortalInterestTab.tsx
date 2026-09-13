@@ -92,7 +92,7 @@ export default function PortalInterestTab({ listings }: Props) {
                 {entry.profile?.avatar_url ? (
                   <img
                     src={entry.profile.avatar_url}
-                    alt=""
+                    alt="Descriptive image"
                     className="w-9 h-9 rounded-full object-cover shrink-0"
                   />
                 ) : (

@@ -449,7 +449,7 @@ export default function ProductComposer({ onClose, onCreated, initialShopId }: P
               {/* Existing Photo Slots */}
               {uploadedImages.map((imgItem, i) => (
                 <div key={imgItem.path || i} className="relative rounded-xl overflow-hidden aspect-video border border-border bg-slate-100 dark:bg-slate-800">
-                  <img src={imgItem.previewUrl} alt="" className="w-full h-full object-cover" />
+                  <img src={imgItem.previewUrl} alt="Descriptive image" className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removeImage(i)}

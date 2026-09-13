@@ -130,7 +130,7 @@ export default function InterestQueue({
                 <img
                   src={entry.profile.avatar_url}
                   className="w-7 h-7 rounded-full object-cover"
-                  alt=""
+                  alt="Descriptive image"
                 />
               ) : (
                 <div
