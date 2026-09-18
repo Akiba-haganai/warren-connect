@@ -116,10 +116,10 @@ export default function LandingPage() {
 
       {/* University Badges */}
       <div className="px-5 pb-10">
-        <p className="text-xs font-bold uppercase tracking-widest text-center mb-4"
+        <h2 className="text-xs font-bold uppercase tracking-widest text-center mb-4"
           style={{ color: "var(--color-text-muted)" }}>
           <GraduationCap size={13} className="inline mr-1.5" />Serving students at
-        </p>
+        </h2>
         <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
           {UNIVERSITIES.map((u) => (
             <div key={u.name} title={u.full}
@@ -135,10 +135,10 @@ export default function LandingPage() {
 
       {/* Feature cards */}
       <div className="px-5 pb-10">
-        <p className="text-xs font-bold uppercase tracking-widest text-center mb-4"
+        <h2 className="text-xs font-bold uppercase tracking-widest text-center mb-4"
           style={{ color: "var(--color-text-muted)" }}>
           Everything you need on campus
-        </p>
+        </h2>
         <div className="grid grid-cols-2 gap-3 max-w-lg mx-auto">
           {[
             { icon: ShoppingBag, title: "Marketplace", desc: "Buy & sell student items with trust badges and price insights.", color: "text-blue-500" },

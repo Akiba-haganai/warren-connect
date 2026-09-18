@@ -72,23 +72,47 @@ export default defineConfig({
     }),
   ],
   build: {
-    target: ["es2020", "safari14", "chrome91"],
+    // Target modern browsers — drops legacy polyfills (~11 KiB saved).
+    // Safari 14 (Sept 2020) dropped; audience is primarily Android/Chrome campus users.
+    target: ["es2022", "chrome109", "firefox115", "safari16"],
     rollupOptions: {
       external: ["eruda"],
       output: {
         manualChunks(id) {
-          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom") || id.includes("node_modules/react-router-dom")) {
+          // Core React runtime — always needed
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/react-router-dom/") ||
+            id.includes("node_modules/scheduler/")
+          ) {
             return "vendor-react";
           }
+          // Supabase — needed for auth + data
           if (id.includes("node_modules/@supabase")) {
             return "vendor-supabase";
           }
+          // TanStack Query — only needed on app routes, not landing
           if (id.includes("node_modules/@tanstack")) {
             return "vendor-query";
           }
-          if (id.includes("node_modules/lucide-react") || id.includes("node_modules/framer-motion") || id.includes("node_modules/react-hot-toast")) {
-            return "vendor-ui";
+          // framer-motion — only used in lazy-loaded routes (BottomNav, modals)
+          // Split separately so it is NOT preloaded on the landing page
+          if (id.includes("node_modules/framer-motion")) {
+            return "vendor-framer";
           }
+          // Lucide icons — small, keep separate from framer
+          if (id.includes("node_modules/lucide-react")) {
+            return "vendor-icons";
+          }
+          // Toast libraries — only needed after interaction
+          if (
+            id.includes("node_modules/react-hot-toast") ||
+            id.includes("node_modules/sonner")
+          ) {
+            return "vendor-toast";
+          }
+          // Sentry — already dynamically imported after load+1s
           if (id.includes("node_modules/@sentry")) {
             return "vendor-sentry";
           }
