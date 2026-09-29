@@ -3,6 +3,24 @@ import { createClient } from "@supabase/supabase-js";
 export const runtime = "edge";
 
 export async function POST(request: Request) {
+  // --- Auth: verify caller's JWT before doing anything ---
+  const authHeader = request.headers.get("Authorization");
+  const token = authHeader?.replace("Bearer ", "").trim();
+  if (!token) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // Use anon key to verify the user's JWT — never expose service role to callers
+  const supabaseVerify = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!
+  );
+  const { data: { user }, error: authError } = await supabaseVerify.auth.getUser(token);
+  if (authError || !user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  // ---
+
   const { userId, title, body, url } = (await request.json()) as {
     userId?: string;
     title?: string;
@@ -11,9 +29,10 @@ export async function POST(request: Request) {
   };
   if (!userId || !title) return new Response("Missing fields", { status: 400 });
 
+  // Service role only used server-side, env var has no VITE_ prefix
   const supabase = createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
   const { data: subs } = await supabase
@@ -33,7 +52,7 @@ export async function POST(request: Request) {
           Authorization: `key=${process.env.VAPID_PRIVATE_KEY}`,
         },
         body: JSON.stringify({
-          to: sub.endpoint, // Note: For standard Web Push this isn't exactly how fcm.googleapis.com/fcm/send works (usually it requires a registration token in 'to'), but following prompt instructions
+          to: sub.endpoint,
           ...JSON.parse(payload),
         }),
       })

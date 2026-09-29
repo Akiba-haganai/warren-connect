@@ -106,13 +106,14 @@ export default function AuthProvider({
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("focus", handleVisibility);
 
-    // Gentle heartbeat every 30s when visible
+    // Presence heartbeat — every 5 min when visible.
+    // 30s was 10× more writes than needed for "recently online" accuracy.
     const heartbeat = setInterval(() => {
       if (document.visibilityState === "visible") {
         const user = useAuthStore.getState().user;
         if (user) updateLastSeen(user.id);
       }
-    }, 30_000);
+    }, 300_000);
 
     return () => {
       clearTimeout(timeout);

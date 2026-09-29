@@ -38,9 +38,7 @@ export const webPushService = {
 
     const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
     if (!vapidPublicKey) {
-      console.warn("[WebPush] VITE_VAPID_PUBLIC_KEY is not set in environment. Available VITE env keys:", 
-        Object.keys(import.meta.env).filter(k => k.startsWith("VITE_"))
-      );
+      console.warn("[WebPush] VITE_VAPID_PUBLIC_KEY is not configured. Push notifications will not work.");
       return { 
         success: false, 
         error: "VAPID Public Key not configured. Ensure VITE_VAPID_PUBLIC_KEY is set in Vercel and a new deployment is triggered." 
