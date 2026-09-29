@@ -1,4 +1,15 @@
-import * as Sentry from "@sentry/react";
+// Lazy Sentry accessor — avoids a static import that would pull the
+// entire 264 KB vendor-sentry chunk into the critical path via the
+// App.tsx → DiagnosticOverlay → uploadTelemetry chain.
+// The module is fetched only the first time an upload action runs.
+async function getSentry() {
+  if (typeof window === "undefined") return null;
+  try {
+    return await import("@sentry/react");
+  } catch {
+    return null;
+  }
+}
 
 const TELEMETRY_KEY = "plawza_upload_telemetry";
 
@@ -38,11 +49,13 @@ export const uploadTelemetry = {
 
     console.log(`[Telemetry] ${stage}: ${message}`, metadata || "");
 
-    Sentry.addBreadcrumb({
-      category: "image_upload",
-      message: `${stage}: ${message}`,
-      data: { attemptId: currentAttemptId, ...metadata },
-      level: stage.includes("error") || stage.includes("fail") ? "error" : "info",
+    getSentry().then((S) => {
+      S?.addBreadcrumb({
+        category: "image_upload",
+        message: `${stage}: ${message}`,
+        data: { attemptId: currentAttemptId, ...metadata },
+        level: stage.includes("error") || stage.includes("fail") ? "error" : "info",
+      });
     });
 
     try {
@@ -58,9 +71,11 @@ export const uploadTelemetry = {
 
   reportError: (stage: string, error: any, metadata?: Record<string, any>) => {
     uploadTelemetry.log(stage, error?.message || "Unknown error", { error, ...metadata });
-    Sentry.captureException(error, {
-      tags: { attemptId: currentAttemptId, stage },
-      extra: metadata,
+    getSentry().then((S) => {
+      S?.captureException(error, {
+        tags: { attemptId: currentAttemptId, stage },
+        extra: metadata,
+      });
     });
   },
 
