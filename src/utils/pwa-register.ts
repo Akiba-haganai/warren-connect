@@ -32,6 +32,12 @@ export function registerServiceWorker({ onUpdateReady, onError }: RegisterOption
     return;
   }
 
+  // Capture BEFORE register() — if no controller exists yet this is a
+  // first install. The SW's clients.claim() fires controllerchange on
+  // first install too, and we must NOT reload then (causes the double
+  // paint visible in the waterfall at row 32).
+  const hadController = !!navigator.serviceWorker.controller;
+
   window.addEventListener('load', async () => {
     try {
       const registration = await navigator.serviceWorker.register('/service-worker.js');
@@ -56,12 +62,13 @@ export function registerServiceWorker({ onUpdateReady, onError }: RegisterOption
         });
       });
 
-      // Reload exactly once, only after the new SW actually takes
-      // control. The `refreshing` guard stops the double-reload
-      // loop that happens if controllerchange fires more than once.
+      // Reload exactly once when the new SW takes control — but ONLY if
+      // there was already a controller before this page load (i.e. this
+      // is an update, not a first install). First-install controllerchange
+      // from clients.claim() must be swallowed.
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (refreshing) return;
+        if (!hadController || refreshing) return;
         refreshing = true;
         window.location.reload();
       });
