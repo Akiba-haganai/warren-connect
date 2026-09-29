@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { Home, Store, Building2, MessageCircle, Users } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth/authStore";
 import { notificationService } from "@/services/notifications/notificationService";
@@ -94,25 +93,30 @@ export default function BottomNav() {
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              {/* Active Pill Highlight */}
-              {active && (
-                <motion.span
-                  layoutId="bottom-nav-pill"
-                  className="absolute inset-x-1.5 inset-y-1.5 rounded-2xl"
-                  style={{
-                    background: "color-mix(in srgb, var(--color-primary) 15%, transparent)",
-                  }}
-                  transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                />
-              )}
+              {/* Active pill — always rendered, CSS opacity/scale transition
+                  replaces framer-motion layoutId shared element */}
+              <span
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  inset: "6px",
+                  borderRadius: "16px",
+                  background: "color-mix(in srgb, var(--color-primary) 15%, transparent)",
+                  opacity: active ? 1 : 0,
+                  transform: active ? "scale(1)" : "scale(0.85)",
+                  transition: "opacity 0.2s ease, transform 0.25s cubic-bezier(0.34,1.56,0.64,1)",
+                  pointerEvents: "none",
+                }}
+              />
 
               <div className="relative z-10 flex items-center justify-center">
-                <motion.div
-                  animate={{
-                    scale: active ? 1.15 : 1,
-                    y: active ? -2 : 0,
+                {/* Icon — CSS scale + translateY replaces motion.div animate */}
+                <span
+                  style={{
+                    display: "inline-flex",
+                    transform: active ? "scale(1.15) translateY(-2px)" : "scale(1) translateY(0)",
+                    transition: "transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",
                   }}
-                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
                 >
                   <Icon
                     size={21}
@@ -122,48 +126,41 @@ export default function BottomNav() {
                       transition: "color 0.2s ease",
                     }}
                   />
-                </motion.div>
+                </span>
 
-                {/* Minimal Notification Indicators (Clean Dots) */}
-                <AnimatePresence>
-                  {showNotifBadge && (
-                    <motion.span
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      className="absolute -top-0.5 -right-2 w-2.5 h-2.5 bg-red-500 rounded-full"
-                      style={{
-                        boxShadow: "0 0 0 2px var(--color-surface)",
-                      }}
-                    />
-                  )}
-                  {showMatchBadge && (
-                    <motion.span
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      className="absolute -top-0.5 -right-2 w-2.5 h-2.5 bg-purple-500 rounded-full"
-                      style={{
-                        boxShadow: "0 0 0 2px var(--color-surface)",
-                      }}
-                    />
-                  )}
-                </AnimatePresence>
+                {/* Notification badge — CSS keyframe pop replaces AnimatePresence */}
+                {showNotifBadge && (
+                  <span
+                    className="absolute -top-0.5 -right-2 w-2.5 h-2.5 bg-red-500 rounded-full"
+                    style={{
+                      boxShadow: "0 0 0 2px var(--color-surface)",
+                      animation: "bn-badge-pop 0.3s cubic-bezier(0.34,1.56,0.64,1) both",
+                    }}
+                  />
+                )}
+                {showMatchBadge && (
+                  <span
+                    className="absolute -top-0.5 -right-2 w-2.5 h-2.5 bg-purple-500 rounded-full"
+                    style={{
+                      boxShadow: "0 0 0 2px var(--color-surface)",
+                      animation: "bn-badge-pop 0.3s cubic-bezier(0.34,1.56,0.64,1) both",
+                    }}
+                  />
+                )}
               </div>
 
-              <motion.span
-                animate={{
-                  y: active ? -1 : 0,
-                }}
+              {/* Label — CSS translateY replaces motion.span animate */}
+              <span
                 className="relative z-10 text-[10px] leading-none"
                 style={{
                   color: active ? "var(--color-primary)" : "var(--color-text-secondary)",
                   fontWeight: active ? 700 : 500,
-                  transition: "color 0.2s ease",
+                  transform: active ? "translateY(-1px)" : "translateY(0)",
+                  transition: "color 0.2s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1), font-weight 0s",
                 }}
               >
                 {tab.label}
-              </motion.span>
+              </span>
             </Link>
           );
         })}

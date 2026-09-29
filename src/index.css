@@ -142,10 +142,12 @@ a:focus-visible {
 body {
   margin: 0;
   overflow: hidden;
+  height: 100vh;    /* fallback for browsers without dvh support */
   height: 100dvh;
 }
 
 #root {
+  height: 100vh;    /* fallback for browsers without dvh support */
   height: 100dvh;
   overflow: hidden;
 }
@@ -346,6 +348,13 @@ img {
   animation: bounce-spring 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
 }
 
+/* Badge pop-in used by BottomNav notification dots (CSS replaces framer-motion AnimatePresence) */
+@keyframes bn-badge-pop {
+  0%   { transform: scale(0); opacity: 0; }
+  70%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 /* ===== SKELETON ===== */
 .skeleton {
   border-radius: var(--radius-xl);
@@ -417,10 +426,19 @@ html, body {
   max-width: 100vw;
 }
 
-/* Minimum touch target size for accessibility */
-button, a, input, select, textarea, [role="button"] {
+/* Minimum touch target size for accessibility — scoped to opt-in class
+   so Tailwind utility sizes on small decorative elements aren't overridden */
+.touch-target {
   min-height: 44px;
   min-width: 44px;
+}
+
+/* iOS Safari zooms on focus when font-size < 16px — prevent without disabling zoom */
+@media (max-width: 768px) {
+  .input-field,
+  .glass-select {
+    font-size: 16px;
+  }
 }
 
 /* Reduced motion preference */
